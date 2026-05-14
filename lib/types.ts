@@ -1,42 +1,90 @@
 // 공통 데이터 타입 (ADR-0010).
-// 자산군 · 어댑터 · 페이지 · 백테스트 모두 이 타입만 import 한다.
+// 자산군 · 어댑터 · 페이지 · 백테스트 모두 이 타입만 import.
 // 어댑터별 raw 응답은 어댑터 내부에서 normalize 해 이 타입으로 변환.
 
 export type AssetClass = "crypto" | "us" | "kr";
 
-export type Asset = {
+/**
+ * 정규화된 lab-trading 사이트 심볼 — URL · KV 키 · D1 PK 모두 공통.
+ * 형식:
+ *   crypto: lowercase ticker  (`btc`, `eth`, `sol`, `doge`)
+ *   us:     lowercase ticker  (`aapl`, `tsla`, `nvda`)
+ *   kr:     6 자리 종목코드   (`005930`, `035720`)
+ * 자산군 prefix 는 URL 경로 `/<class>/<symbol>` 로 분리되므로 Symbol 자체엔 포함 안 함.
+ */
+export type Symbol = string;
+
+/** 정적 자산 메타. */
+export interface Asset {
   class: AssetClass;
-  /** normalize 된 사이트 내부 슬러그 — `crypto/btc`, `us/aapl`, `kr/005930` 등 */
-  symbol: string;
-  /** 거래소 공식 티커 (어댑터별 원본) */
-  ticker: string;
-  /** 종목 정식명 (원본 데이터의 표기 그대로 — 번역 X, 컨벤션 G) */
+  symbol: Symbol;
+  /** 원본 정식명 (원본 표기 그대로 — 컨벤션 G). */
   name: string;
-  /** 현지 통화 코드 (`USD`, `KRW`, etc) — 코인은 베이스 자산 기준 보조 */
+  /** 한글 표기 (있을 때만). 자산군 통합 검색 한글 alias 에 사용 (ADR-0022). */
+  nameKo?: string;
+  /** 거래소 ticker (원본). 예: AAPL, 005930, BTC. */
+  ticker?: string;
+  logoUrl?: string;
+  description?: string;
+  /** 시장 — "NASDAQ", "KOSPI", "KRW" 등. */
+  market?: string;
+  /** ISO 4217 currency — USD / KRW / USDT 등. */
   currency: string;
-};
+  isin?: string;
+  /** CoinGecko id (crypto only). */
+  cgId?: string;
+  /** CoinMarketCap id (crypto only). */
+  cmcId?: number;
+}
 
-export type Quote = {
-  symbol: string;
+/** 시세 스냅샷. */
+export interface Quote {
+  symbol: Symbol;
+  class: AssetClass;
   price: number;
-  /** 24h 변동률 (%, 부호 포함, 0.0123 = +1.23%) — UI 에서 *100 후 toFixed(2) */
-  changePct: number;
-  volume: number;
-  /** unix epoch seconds, UTC. 표시 시점에 Intl.DateTimeFormat 변환 */
-  updatedAt: number;
-};
+  currency: string;
+  /** -3.5 = -3.5%. UI 표시 시 부호 + 화살표 병기 (컨벤션 I). */
+  changePct24h: number;
+  changeAbs24h?: number;
+  volume24h?: number;
+  high24h?: number;
+  low24h?: number;
+  marketCap?: number;
+  /** 시가총액 순위 (crypto). */
+  rank?: number;
+  /** ISO 8601 (어댑터 응답 시각 또는 갱신 시각). */
+  updatedAt: string;
+  /** 어댑터 식별자 — "coingecko" / "upbit" / "binance" / "twelve-data" / "kis". */
+  source: string;
+}
 
-export type Candle = {
-  /** unix epoch seconds, UTC. 일봉이면 거래일 00:00 KST 또는 거래소 표준 시점 */
+/** 일봉 캔들. 백테스트·차트·D1 모두 공유. */
+export interface Candle {
+  /** unix epoch seconds, UTC. 일봉이면 거래일 00:00 UTC 또는 거래소 표준 시점. */
   t: number;
   o: number;
   h: number;
   l: number;
   c: number;
   v: number;
-};
+}
 
-/** ADR-0021 indicators 사전계산. wide format — candles 와 1:1 매핑 (t 가 PK). */
+/** 일봉 시리즈 + 메타. */
+export interface CandleSeries {
+  symbol: Symbol;
+  class: AssetClass;
+  currency: string;
+  timeframe: Timeframe;
+  candles: Candle[];
+  /** 어댑터 식별자. */
+  source: string;
+  /** 캐시된 시각 (어댑터 응답 시점). ISO 8601. */
+  cachedAt: string;
+}
+
+export type Timeframe = "1d" | "1w" | "1mo";
+
+/** ADR-0021 indicators 사전계산. wide format — candles 와 1:1, (symbol, t) 가 PK. */
 export type IndicatorRow = {
   t: number;
   computed_version: number;
@@ -61,18 +109,21 @@ export type IndicatorRow = {
 
 export type RankingKind = "gainers" | "losers" | "volume";
 
-export type ListOpts = {
-  /** 결과 최대 개수 — 어댑터별 상한 존재. 기본 50, 최대 100 (1차 출시). */
+export type ListAssetsOpts = {
   limit?: number;
-  /** 페이지네이션 (어댑터 지원 시) */
-  cursor?: string;
+  offset?: number;
 };
 
-export type CandleOpts = {
+export type ListQuotesOpts = {
+  limit?: number;
+};
+
+export type GetCandlesOpts = {
+  timeframe: Timeframe;
   /** unix epoch seconds — 시작 (inclusive). */
-  from: number;
+  from?: number;
   /** unix epoch seconds — 끝 (exclusive). */
-  to: number;
-  /** 시간 단위 — 1차 출시는 `1d` 만 활성. `1w` / `1mo` 는 backfill 후 활성 (ADR-0019). */
-  tf: "1d" | "1w" | "1mo";
+  to?: number;
+  /** 최대 개수 — 어댑터별 상한 존재. */
+  limit?: number;
 };
