@@ -62,3 +62,49 @@ export function getCryptoByBinancePair(pair: string): CryptoRegistryEntry | unde
 export function getCryptoByUpbitMarket(market: string): CryptoRegistryEntry | undefined {
   return byUpbitMarket.get(market.toUpperCase());
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// 미장 (US) 종목 매핑 — ADR-0006 (Twelve Data 단독, 1차 출시).
+// 더미 모드 (키 미발급) 시 GBM 시뮬레이션에 사용할 basePrice 동봉.
+// basePrice 는 2026-05 시점 대략값 — deterministic 더미라 실제 시세와 일치할 필요는 없다.
+
+export type UsRegistryEntry = {
+  /** lab-trading 사이트 심볼 (lowercase, alnum). */
+  symbol: string;
+  /** Twelve Data 티커 (uppercase). 일반적으로 symbol uppercase. */
+  ticker: string;
+  name: string;
+  nameKo?: string;
+  market: "NASDAQ" | "NYSE" | "AMEX";
+  /** 더미 GBM 시작가 (USD). 실제 API 모드에선 무시. */
+  basePrice: number;
+};
+
+export const usRegistry: UsRegistryEntry[] = [
+  {symbol: "aapl", ticker: "AAPL", name: "Apple Inc.", nameKo: "애플", market: "NASDAQ", basePrice: 220},
+  {symbol: "msft", ticker: "MSFT", name: "Microsoft Corporation", nameKo: "마이크로소프트", market: "NASDAQ", basePrice: 425},
+  {symbol: "nvda", ticker: "NVDA", name: "NVIDIA Corporation", nameKo: "엔비디아", market: "NASDAQ", basePrice: 135},
+  {symbol: "googl", ticker: "GOOGL", name: "Alphabet Inc. Class A", nameKo: "알파벳 A", market: "NASDAQ", basePrice: 185},
+  {symbol: "amzn", ticker: "AMZN", name: "Amazon.com, Inc.", nameKo: "아마존", market: "NASDAQ", basePrice: 215},
+  {symbol: "meta", ticker: "META", name: "Meta Platforms, Inc.", nameKo: "메타", market: "NASDAQ", basePrice: 595},
+  {symbol: "tsla", ticker: "TSLA", name: "Tesla, Inc.", nameKo: "테슬라", market: "NASDAQ", basePrice: 240},
+  {symbol: "jpm", ticker: "JPM", name: "JPMorgan Chase & Co.", nameKo: "JP모건체이스", market: "NYSE", basePrice: 220},
+  {symbol: "v", ticker: "V", name: "Visa Inc.", nameKo: "비자", market: "NYSE", basePrice: 280},
+  {symbol: "lly", ticker: "LLY", name: "Eli Lilly and Company", nameKo: "일라이 릴리", market: "NYSE", basePrice: 740},
+  {symbol: "xom", ticker: "XOM", name: "Exxon Mobil Corporation", nameKo: "엑손모빌", market: "NYSE", basePrice: 115},
+  {symbol: "brkb", ticker: "BRK.B", name: "Berkshire Hathaway Inc. Class B", nameKo: "버크셔 해서웨이 B", market: "NYSE", basePrice: 455},
+];
+
+const usBySymbol = new Map<string, UsRegistryEntry>(
+  usRegistry.map((e) => [e.symbol, e])
+);
+const usByTicker = new Map<string, UsRegistryEntry>(
+  usRegistry.map((e) => [e.ticker, e])
+);
+
+export function getUsBySymbol(symbol: string): UsRegistryEntry | undefined {
+  return usBySymbol.get(symbol.toLowerCase());
+}
+export function getUsByTicker(ticker: string): UsRegistryEntry | undefined {
+  return usByTicker.get(ticker.toUpperCase());
+}
