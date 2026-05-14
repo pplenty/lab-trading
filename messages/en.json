@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "siteName": "lab-trading",
+    "siteTitle": "lab-trading — Crypto · US · KR stocks + daily-bar backtest",
+    "siteDescription": "Compare prices and rankings across three asset classes, then backtest your strategy on daily bars in the same view. CAGR · MDD · Sharpe at a glance."
+  },
+  "a11y": {
+    "skipToContent": "Skip to content"
+  },
+  "home": {
+    "title": "lab-trading",
+    "subtitle": "Crypto · US · KR stocks + daily-bar backtest lab",
+    "phaseBadge": "Phase 0 closed",
+    "phaseDesc": "ADR-0001 through 0025 all Accepted. Shell boot for Phase 1 (crypto + US + backtest MVP) in progress.",
+    "kickoffNote": "This page reflects the shell-bootup state. Real quotes / charts / backtest UI will light up in follow-up PRs.",
+    "assetClasses": "Asset classes",
+    "crypto": "Crypto",
+    "us": "US stocks",
+    "kr": "KR stocks (Phase 1.5)",
+    "backtest": "Backtest lab",
+    "comingSoon": "Coming soon"
+  },
+  "sidebar": {
+    "title": "Menu",
+    "label": "Sidebar",
+    "dashboard": "Dashboard",
+    "expand": "Expand sidebar",
+    "collapse": "Collapse sidebar",
+    "resize": "Resize sidebar",
+    "openDrawer": "Open menu",
+    "comingSoonLabel": "Coming soon",
+    "groups": {
+      "crypto": "Crypto",
+      "us": "US stocks",
+      "kr": "KR stocks",
+      "backtest": "Backtest"
+    },
+    "items": {
+      "quotes": "Quotes",
+      "gainers": "Gainers",
+      "losers": "Losers",
+      "volume": "Volume",
+      "news": "News",
+      "kospi": "KOSPI",
+      "kosdaq": "KOSDAQ",
+      "backtest-new": "New strategy",
+      "backtest-saved": "My strategies"
+    }
+  },
+  "search": {
+    "placeholder": "Search symbol (Phase 1.5+)",
+    "ariaLabel": "Unified asset search",
+    "noResults": "No results",
+    "comingSoonNote": "Unified search lights up right after the shell boot."
+  },
+  "theme": {
+    "label": "Theme",
+    "ariaLabel": "Theme preset",
+    "groups": {
+      "white-base": "Light · White Base",
+      "warm": "Light · Warm",
+      "earthy": "Light · Earthy"
+    }
+  },
+  "mode": {
+    "label": "Mode",
+    "ariaLabel": "Mode",
+    "system": "System",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "colorSemantics": {
+    "label": "Up/Down colors",
+    "ariaLabel": "Up/down color semantics",
+    "korean": "Korean",
+    "global": "Global",
+    "koreanHint": "Red ▲ / Blue ▼",
+    "globalHint": "Green ▲ / Red ▼"
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "description": "Global shortcuts. Some are disabled while focused on text input.",
+    "close": "Close",
+    "search": "Search",
+    "help": "Help",
+    "escape": "Close / Escape"
+  },
+  "footer": {
+    "tagline": "Informational only · not investment advice",
+    "shortcuts": "Shortcuts",
+    "settings": "Settings",
+    "github": "GitHub"
+  },
+  "disclaimer": {
+    "general": "Informational use only. This is not investment advice; you are responsible for your own trades.",
+    "backtest": "Past performance does not guarantee future results.",
+    "dataSource": "Data"
+  },
+  "settings": {
+    "title": "Settings",
+    "openLabel": "Open settings"
+  }
+}

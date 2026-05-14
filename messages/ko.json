@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "siteName": "lab-trading",
+    "siteTitle": "lab-trading — 코인 · 해외주식 · 국내주식 + 일봉 백테스트",
+    "siteDescription": "세 자산군의 시세·랭킹을 한 곳에서 비교하고, 같은 화면에서 사용자 전략을 일봉 기준으로 백테스트한다. 수익률·MDD·Sharpe 결과 즉시 확인."
+  },
+  "a11y": {
+    "skipToContent": "본문으로 건너뛰기"
+  },
+  "home": {
+    "title": "lab-trading",
+    "subtitle": "코인 · 해외주식 · 국내주식 통합 정보 + 일봉 백테스트 랩",
+    "phaseBadge": "Phase 0 종료",
+    "phaseDesc": "ADR-0001~0025 모두 Accepted. 1차 출시(코인 + 해외주식 + 백테스트 MVP) 셸 부트 진입 직전.",
+    "kickoffNote": "이 화면은 셸 부트 후 첫 점등 상태입니다. 실제 시세·차트·백테스트 UI는 후속 PR에서 점등됩니다.",
+    "assetClasses": "자산군",
+    "crypto": "코인",
+    "us": "해외주식",
+    "kr": "국내주식 (Phase 1.5)",
+    "backtest": "백테스트 랩",
+    "comingSoon": "준비 중"
+  },
+  "sidebar": {
+    "title": "메뉴",
+    "label": "사이드 메뉴",
+    "dashboard": "대시보드",
+    "expand": "사이드바 펼치기",
+    "collapse": "사이드바 접기",
+    "resize": "사이드바 너비 조절",
+    "openDrawer": "메뉴 열기",
+    "comingSoonLabel": "준비 중",
+    "groups": {
+      "crypto": "코인",
+      "us": "해외주식",
+      "kr": "국내주식",
+      "backtest": "백테스트"
+    },
+    "items": {
+      "quotes": "시세",
+      "gainers": "상승률",
+      "losers": "하락률",
+      "volume": "거래량",
+      "news": "뉴스",
+      "kospi": "코스피",
+      "kosdaq": "코스닥",
+      "backtest-new": "새 전략",
+      "backtest-saved": "내 전략"
+    }
+  },
+  "search": {
+    "placeholder": "종목 · 심볼 검색 (Phase 1.5+)",
+    "ariaLabel": "자산군 통합 검색",
+    "noResults": "검색 결과 없음",
+    "comingSoonNote": "통합 검색은 셸 점등 직후 활성화됩니다."
+  },
+  "theme": {
+    "label": "테마",
+    "ariaLabel": "테마 프리셋 선택",
+    "groups": {
+      "white-base": "Light · White Base",
+      "warm": "Light · Warm",
+      "earthy": "Light · Earthy"
+    }
+  },
+  "mode": {
+    "label": "모드",
+    "ariaLabel": "모드 선택",
+    "system": "시스템",
+    "light": "라이트",
+    "dark": "다크"
+  },
+  "colorSemantics": {
+    "label": "상승/하락 컬러",
+    "ariaLabel": "상승/하락 컬러 시맨틱 선택",
+    "korean": "한국식",
+    "global": "글로벌식",
+    "koreanHint": "빨강 ▲ / 파랑 ▼",
+    "globalHint": "초록 ▲ / 빨강 ▼"
+  },
+  "shortcuts": {
+    "title": "키보드 단축키",
+    "description": "lab-trading 글로벌 단축키. 입력창 포커스 중에는 일부 비활성.",
+    "close": "닫기",
+    "search": "검색",
+    "help": "도움말",
+    "escape": "닫기 / 빠져나가기"
+  },
+  "footer": {
+    "tagline": "정보 제공 목적 · 투자 권유 아님",
+    "shortcuts": "단축키",
+    "settings": "설정",
+    "github": "GitHub"
+  },
+  "disclaimer": {
+    "general": "투자 권유가 아니며 정보 제공 목적입니다. 거래 결과의 책임은 사용자 본인에게 있습니다.",
+    "backtest": "과거 성과는 미래 수익을 보장하지 않습니다.",
+    "dataSource": "데이터 출처"
+  },
+  "settings": {
+    "title": "설정",
+    "openLabel": "설정 열기"
+  }
+}

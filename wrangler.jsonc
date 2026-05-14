@@ -1,0 +1,49 @@
+/**
+ * Cloudflare Workers 설정 (ADR-0003 호스팅, ADR-0009 캐싱, ADR-0021 D1).
+ * 첫 배포 시 사용자가 본인 Cloudflare 계정 + 도메인 + namespace ID 에 맞춰 갱신한다.
+ *
+ * 주요 키:
+ *   - name: Workers 프로젝트 이름 (CF 대시보드에 노출)
+ *   - compatibility_date: Workers 런타임 호환 기준일 (정기 갱신)
+ *   - compatibility_flags: nodejs_compat (Next.js 16 + opennextjs/cloudflare 필요)
+ *   - main: 어댑터가 빌드한 worker entry
+ *   - assets: 정적 자산 디렉토리
+ *   - d1_databases: ADR-0021 historical 저장소
+ *   - kv_namespaces: ADR-0009 글로벌 캐시
+ *   - r2_buckets: ADR-0021 주간 백업
+ */
+{
+  "name": "lab-trading",
+  "compatibility_date": "2025-12-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": ".open-next/worker.js",
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    // production 도메인 결정 후 .env.production 또는 Cloudflare 대시보드 vars에 박는다.
+    // dev/CI 빌드에서는 lib/site.ts 의 폴백(`http://localhost:3000`) 사용.
+    // "NEXT_PUBLIC_SITE_URL": "https://trading.krutils.com"
+  }
+  // 첫 배포 시 활성화 (ADR-0021):
+  // "d1_databases": [
+  //   {
+  //     "binding": "DB",
+  //     "database_name": "lab-trading-db",
+  //     "database_id": "<wrangler d1 create lab-trading-db 결과값>"
+  //   }
+  // ],
+  // "kv_namespaces": [
+  //   {
+  //     "binding": "CACHE_KV",
+  //     "id": "<wrangler kv namespace create lab-trading-cache 결과값>"
+  //   }
+  // ],
+  // "r2_buckets": [
+  //   {
+  //     "binding": "BACKUP",
+  //     "bucket_name": "lab-trading-backup"
+  //   }
+  // ]
+}

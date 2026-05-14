@@ -1,0 +1,121 @@
+@import "tailwindcss";
+
+/* lab-trading 베이스 토큰 + 모드 axis + 컬러 시맨틱 axis (ADR-0012).
+   :root 는 라이트 fallback default — JS 비활성 또는 inline script 실패 시 적용.
+   실제 라이트 토큰은 lib/themes.ts 의 사용자 선택 프리셋을 inline script 가 :root 에 적용.
+   다크 모드는 [data-mode="dark"] 가 라이트 inline cleanup 후 적용.
+   accent / accent-fg 는 사용자 프리셋 값 inline (라이트/다크 공통).
+
+   컬러 시맨틱 (한국식 디폴트 / 글로벌식 토글):
+     - 한국식: 빨강 ▲ / 파랑 ▼ (한국 사용자 익숙함)
+     - 글로벌식: 초록 ▲ / 빨강 ▼ (TradingView / 미장 사용자 기대)
+   라이트/다크별 4 조합 모두 명시. cascade specificity 로 글로벌+다크가 최강.
+*/
+:root {
+  --bg: #ffffff;
+  --surface: #f8f8fc;
+  --surface-hover: #eeeef8;
+  --fg: #0f172a;
+  --fg-muted: #475569;
+  --fg-subtle: #94a3b8;
+  --line: #e2e8f0;
+  --accent: #475569;
+  --accent-fg: #ffffff;
+  /* 한국식 + 라이트 (기본) */
+  --color-up: #d12121;
+  --color-down: #2563eb;
+}
+
+[data-mode="dark"] {
+  --bg: #0f0f0e;
+  --surface: #1a1a18;
+  --surface-hover: #252320;
+  --fg: #e8e6e0;
+  --fg-muted: #9e9b94;
+  --fg-subtle: #6b6964;
+  --line: #2c2a26;
+  /* 한국식 + 다크 */
+  --color-up: #ef4444;
+  --color-down: #3b82f6;
+  /* accent / accent-fg 는 inline script 가 사용자 프리셋 값 적용 — 여기서 override X */
+}
+
+/* 글로벌식 + 라이트 — :root 와 specificity 같지만 후순위로 덮음 */
+[data-color-semantics="global"] {
+  --color-up: #15803d;
+  --color-down: #d12121;
+}
+
+/* 글로벌식 + 다크 — specificity 0,0,2,0 으로 최강 */
+[data-color-semantics="global"][data-mode="dark"] {
+  --color-up: #22c55e;
+  --color-down: #ef4444;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-up: var(--color-up);
+  --color-down: var(--color-down);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-geist-sans), -apple-system, "Apple SD Gothic Neo",
+    "Noto Sans KR", system-ui, sans-serif;
+  font-feature-settings: "ss01" on, "cv11" on;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+/* 미묘한 스크롤바 — hover 시에만 thumb 노출 (yutils 차용).
+   사이드바·드롭다운 등 컨텐츠 보조 영역에 적용. */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.2s;
+}
+.sidebar-scroll:hover {
+  scrollbar-color: var(--line) transparent;
+}
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+  transition: background 0.2s;
+}
+.sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--line);
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--fg-subtle);
+}
+
+/* 수치 표시 유틸 — 변동률 / 가격 컬러를 컨벤션 I 에 맞춰 부호 + 색 병행.
+   `color-only` 사용 시 화살표 없이 색만 (랭킹 표 등). */
+.text-up {
+  color: var(--color-up);
+}
+.text-down {
+  color: var(--color-down);
+}
