@@ -48,10 +48,10 @@
     }
   },
   "search": {
-    "placeholder": "Search symbol (Phase 1.5+)",
+    "placeholder": "Symbol or name (/ or ⌘K)",
     "ariaLabel": "Unified asset search",
     "noResults": "No results",
-    "comingSoonNote": "Unified search lights up right after the shell boot."
+    "comingSoonNote": ""
   },
   "theme": {
     "label": "Theme",

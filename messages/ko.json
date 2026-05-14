@@ -48,10 +48,10 @@
     }
   },
   "search": {
-    "placeholder": "종목 · 심볼 검색 (Phase 1.5+)",
+    "placeholder": "종목 · 심볼 (/ 또는 ⌘K)",
     "ariaLabel": "자산군 통합 검색",
     "noResults": "검색 결과 없음",
-    "comingSoonNote": "통합 검색은 셸 점등 직후 활성화됩니다."
+    "comingSoonNote": ""
   },
   "theme": {
     "label": "테마",
