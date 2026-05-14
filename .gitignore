@@ -1,0 +1,65 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+!.env.example
+.dev.vars
+
+# vercel
+.vercel
+
+# cloudflare (ADR-0003, @opennextjs/cloudflare)
+/.open-next/
+/.wrangler/
+
+# D1 local sqlite (ADR-0021)
+# wrangler가 local dev 시 .wrangler/state/d1/*.sqlite 에 두지만,
+# 별도 경로에 빼둔 경우 대비.
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+!fixtures/*.sqlite
+
+# OG 이미지 — 빌드 타임 생성 (Phase 2)
+/public/og/
+
+# 백테스트 fixture·튜닝 산출물 임시
+_workspace/
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# bundle size history (ADR-0022 차용, yutils 패턴)
+# .bundle-size-history.json은 커밋 (github-actions bot이 append)
