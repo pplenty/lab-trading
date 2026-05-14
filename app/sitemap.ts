@@ -2,16 +2,13 @@ import type {MetadataRoute} from "next";
 import {routing} from "@/i18n/routing";
 import {absoluteUrl} from "@/lib/site";
 
-// 1차 출시 활성 라우트만 sitemap 에 포함 (ADR-0015).
-// stub 라우트 (kr/news/backtest-saved 등) 는 noindex 처리 — sitemap 누락.
-// 종목 상세 페이지는 후속 PR 에서 D1 의 assets 테이블을 query 해 동적 추가.
+// 활성 라우트만 sitemap 에 포함. stub (news / kospi-only / kosdaq-only / backtest-saved 등) noindex.
+// 종목 상세는 후속 PR 에서 D1 assets 테이블 query 로 동적 추가.
 //
-// 1차 출시 인덱스 페이지:
+// 활성 인덱스:
 //   - 홈 `/`
-//   - /crypto, /crypto/gainers|losers|volume
-//   - /us, /us/gainers|losers|volume
-//   - /backtest/new
-//   - /settings
+//   - /crypto · /us · /kr × {/, /gainers, /losers, /volume}
+//   - /backtest/new · /settings
 const STATIC_PATHS = [
   "",
   "/crypto",
@@ -22,6 +19,10 @@ const STATIC_PATHS = [
   "/us/gainers",
   "/us/losers",
   "/us/volume",
+  "/kr",
+  "/kr/gainers",
+  "/kr/losers",
+  "/kr/volume",
   "/backtest/new",
   "/settings",
 ];

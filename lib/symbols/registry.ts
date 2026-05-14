@@ -108,3 +108,43 @@ export function getUsBySymbol(symbol: string): UsRegistryEntry | undefined {
 export function getUsByTicker(ticker: string): UsRegistryEntry | undefined {
   return usByTicker.get(ticker.toUpperCase());
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// 국내주식 (KR) 종목 매핑 — ADR-0007 (KIS / KRX / data.go.kr / OpenDART, 4 공식 소스).
+// 1차는 KIS 키 발급 전이라 어댑터 demo 모드 (GBM 시뮬레이션).
+// 사이트 슬러그는 6자리 종목코드 그대로 (005930 = 삼성전자).
+
+export type KrRegistryEntry = {
+  /** 6자리 종목코드 (URL · D1 PK). */
+  symbol: string;
+  /** KIS / KRX / 공공데이터포털 공통 ticker (6자리 동일). */
+  ticker: string;
+  name: string;
+  nameKo: string;
+  market: "KOSPI" | "KOSDAQ";
+  /** 더미 GBM 시작가 (KRW). 실제 API 모드에선 무시. */
+  basePrice: number;
+};
+
+export const krRegistry: KrRegistryEntry[] = [
+  {symbol: "005930", ticker: "005930", name: "Samsung Electronics", nameKo: "삼성전자", market: "KOSPI", basePrice: 70000},
+  {symbol: "000660", ticker: "000660", name: "SK hynix", nameKo: "SK하이닉스", market: "KOSPI", basePrice: 200000},
+  {symbol: "373220", ticker: "373220", name: "LG Energy Solution", nameKo: "LG에너지솔루션", market: "KOSPI", basePrice: 350000},
+  {symbol: "207940", ticker: "207940", name: "Samsung Biologics", nameKo: "삼성바이오로직스", market: "KOSPI", basePrice: 900000},
+  {symbol: "005380", ticker: "005380", name: "Hyundai Motor", nameKo: "현대차", market: "KOSPI", basePrice: 240000},
+  {symbol: "005490", ticker: "005490", name: "POSCO Holdings", nameKo: "POSCO홀딩스", market: "KOSPI", basePrice: 300000},
+  {symbol: "035420", ticker: "035420", name: "NAVER", nameKo: "NAVER", market: "KOSPI", basePrice: 180000},
+  {symbol: "035720", ticker: "035720", name: "Kakao", nameKo: "카카오", market: "KOSPI", basePrice: 45000},
+  {symbol: "051910", ticker: "051910", name: "LG Chem", nameKo: "LG화학", market: "KOSPI", basePrice: 300000},
+  {symbol: "068270", ticker: "068270", name: "Celltrion", nameKo: "셀트리온", market: "KOSPI", basePrice: 190000},
+  {symbol: "247540", ticker: "247540", name: "EcoPro BM", nameKo: "에코프로비엠", market: "KOSDAQ", basePrice: 140000},
+  {symbol: "086520", ticker: "086520", name: "EcoPro", nameKo: "에코프로", market: "KOSDAQ", basePrice: 70000},
+];
+
+const krBySymbol = new Map<string, KrRegistryEntry>(
+  krRegistry.map((e) => [e.symbol, e])
+);
+
+export function getKrBySymbol(symbol: string): KrRegistryEntry | undefined {
+  return krBySymbol.get(symbol);
+}

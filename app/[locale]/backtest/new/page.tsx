@@ -2,14 +2,18 @@ import {getTranslations} from "next-intl/server";
 import {notFound} from "next/navigation";
 import {upbitAdapter} from "@/lib/adapters/upbit";
 import {twelveDataAdapter} from "@/lib/adapters/twelve-data";
+import {kisAdapter} from "@/lib/adapters/kis";
 import {toSymbol} from "@/lib/symbols/normalize";
-import {getCryptoBySymbol, getUsBySymbol} from "@/lib/symbols/registry";
+import {
+  getCryptoBySymbol,
+  getKrBySymbol,
+  getUsBySymbol,
+} from "@/lib/symbols/registry";
 import {BacktestPanel} from "@/components/panels/BacktestPanel";
 import type {AssetClass, Candle, CandleSeries} from "@/lib/types";
 
 // 백테스트 작업장 — `/backtest/new?asset=crypto&symbol=btc` URL params 로 종목 prefill.
-// 1차 출시 활성: crypto (Upbit KRW) + us (Twelve Data, 데모/실거래 자동 분기).
-// kr 은 KIS 키 발급 후 활성 (Phase 1.5).
+// 활성: crypto (Upbit KRW 라이브) + us (Twelve Data) + kr (KIS). us / kr 은 키 미발급 시 demo GBM 자동 분기.
 // candles 는 server (RSC) 가 fetch 해 BacktestPanel client 컴포넌트로 전달 (ADR-0019).
 
 type Props = {
@@ -26,11 +30,9 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
   const t = await getTranslations("home");
   const tDisc = await getTranslations("disclaimer");
 
-  if (assetClass === "kr") {
-    return <StubMessage assetLabel="국내주식" />;
-  }
-
-  const rawSymbol = sp.symbol ?? (assetClass === "us" ? "aapl" : "btc");
+  const rawSymbol =
+    sp.symbol ??
+    (assetClass === "us" ? "aapl" : assetClass === "kr" ? "005930" : "btc");
   let normalized: string;
   try {
     normalized = toSymbol(rawSymbol, assetClass);
@@ -61,7 +63,7 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
     } catch (err) {
       fetchError = err instanceof Error ? err.message : String(err);
     }
-  } else {
+  } else if (assetClass === "us") {
     const entry = getUsBySymbol(normalized);
     if (!entry) notFound();
     displayName = locale === "ko" && entry.nameKo ? entry.nameKo : entry.name;
@@ -77,6 +79,24 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
     } catch (err) {
       fetchError = err instanceof Error ? err.message : String(err);
       sourceLabel = "Twelve Data";
+    }
+  } else {
+    // kr
+    const entry = getKrBySymbol(normalized);
+    if (!entry) notFound();
+    displayName = entry.nameKo;
+    displayTicker = entry.ticker;
+    currency = "KRW";
+    try {
+      series = await kisAdapter.getCandles(entry.symbol, {
+        timeframe: "1d",
+        limit: 200,
+      });
+      isDemo = series.source.includes("demo");
+      sourceLabel = isDemo ? "KIS (demo)" : "한국투자증권 (KIS)";
+    } catch (err) {
+      fetchError = err instanceof Error ? err.message : String(err);
+      sourceLabel = "KIS";
     }
   }
 
@@ -100,8 +120,8 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
 
       {isDemo && (
         <div className="mb-4 rounded-md border border-line bg-surface/40 px-3 py-2 text-[11px] text-fg-muted">
-          ⚠️ Demo data — Twelve Data API 키 미발급 상태. 가격은 deterministic GBM
-          시뮬레이션입니다 (시연 / 백테스트 검증용).
+          ⚠️ Demo data — {assetClass === "us" ? "Twelve Data" : "KIS"} API 키 미발급
+          상태. 가격은 deterministic GBM 시뮬레이션입니다 (시연 / 백테스트 검증용).
         </div>
       )}
 
@@ -137,16 +157,3 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
   );
 }
 
-function StubMessage({assetLabel}: {assetLabel: string}) {
-  return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
-      <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
-        {assetLabel} 백테스트
-      </h1>
-      <p className="mt-3 text-sm text-fg-muted">
-        {assetLabel} 백테스트는 데이터 어댑터 키 발급 후 활성화됩니다 (KIS API).
-        현재는 코인 / 해외주식 (Demo) 만 점등되어 있습니다.
-      </p>
-    </main>
-  );
-}
