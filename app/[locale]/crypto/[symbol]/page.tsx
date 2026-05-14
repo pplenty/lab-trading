@@ -5,9 +5,11 @@ import dynamic from "next/dynamic";
 import {Link} from "@/i18n/navigation";
 import {absoluteUrl} from "@/lib/site";
 import {upbitAdapter} from "@/lib/adapters/upbit";
-import {getCryptoBySymbol} from "@/lib/symbols/registry";
+import {cryptoRegistry, getCryptoBySymbol} from "@/lib/symbols/registry";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {FinancialDelta} from "@/components/FinancialDelta";
+import {SymbolActions} from "@/components/panels/SymbolActions";
+import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
 import type {Quote, CandleSeries} from "@/lib/types";
 
 // 동적 차트는 ssr:false — lightweight-charts 가 window 의존이라 RSC 직 렌더 X.
@@ -116,6 +118,8 @@ export default async function CryptoSymbolPage({params}: PageProps) {
         )}
       </header>
 
+      <SymbolActions class="crypto" symbol={entry.symbol} />
+
       {fetchError && (
         <div className="mb-6 rounded-lg border border-line bg-surface p-4 text-sm text-fg-muted">
           <p className="font-medium text-fg">데이터 fetch 실패</p>
@@ -140,6 +144,18 @@ export default async function CryptoSymbolPage({params}: PageProps) {
           <CandleChart candles={series.candles} height={360} />
         </section>
       )}
+
+      <RelatedSymbolChips
+        class="crypto"
+        currentSymbol={entry.symbol}
+        siblings={cryptoRegistry
+          .filter((e) => e.upbitMarket)
+          .map((e) => ({
+            symbol: e.symbol,
+            label: e.nameKo ?? e.name,
+            ticker: e.symbol.toUpperCase(),
+          }))}
+      />
 
       <footer className="mt-10 border-t border-line pt-4 text-xs text-fg-subtle">
         <p>{tDisc("general")}</p>

@@ -5,9 +5,11 @@ import dynamic from "next/dynamic";
 import {Link} from "@/i18n/navigation";
 import {absoluteUrl} from "@/lib/site";
 import {twelveDataAdapter} from "@/lib/adapters/twelve-data";
-import {getUsBySymbol} from "@/lib/symbols/registry";
+import {usRegistry, getUsBySymbol} from "@/lib/symbols/registry";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {FinancialDelta} from "@/components/FinancialDelta";
+import {SymbolActions} from "@/components/panels/SymbolActions";
+import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
 import type {Quote, CandleSeries} from "@/lib/types";
 
 const CandleChart = dynamic(() =>
@@ -113,6 +115,8 @@ export default async function UsSymbolPage({params}: PageProps) {
         )}
       </header>
 
+      <SymbolActions class="us" symbol={entry.symbol} />
+
       {isDemo && (
         <div className="mb-4 rounded-md border border-line bg-surface/40 px-3 py-2 text-[11px] text-fg-muted">
           ⚠️ Demo data — Twelve Data API 키 미발급 상태. 가격은 deterministic GBM
@@ -141,6 +145,16 @@ export default async function UsSymbolPage({params}: PageProps) {
           <CandleChart candles={series.candles} height={360} />
         </section>
       )}
+
+      <RelatedSymbolChips
+        class="us"
+        currentSymbol={entry.symbol}
+        siblings={usRegistry.map((e) => ({
+          symbol: e.symbol,
+          label: e.nameKo ?? e.name,
+          ticker: e.ticker,
+        }))}
+      />
 
       <footer className="mt-10 border-t border-line pt-4 text-xs text-fg-subtle">
         <p>{tDisc("general")}</p>
