@@ -36,12 +36,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 파생상품 가격 모델링 (옵션 그릭스·선물 만기 등)
 - 한국 법상 "투자자문업"에 해당하는 추천·자문 콘텐츠
 
-## 현재 상태 (2026-05-14)
+## 현재 상태 (2026-05-15)
 
-- **Phase 0 종료 — 결정 일괄 확정.** 2026-05-14 사용자가 `DECISIONS.md` Q1-Q16 권장안에 일괄 동의. ADR-0001~0025 모두 `Accepted`.
-- 코드는 여전히 0줄. **셸 부트 진입 직전.**
-- 첫 작업 셋: yutils 차용 `package.json` + `wrangler.jsonc` + `next.config.ts` + `middleware.ts` + `open-next.config.ts` → AppShell·테마 시스템 + Drizzle 스키마 + 첫 어댑터(CoinGecko) → BTC 종목 상세 end-to-end.
-- 데이터 소스·차트 라이브러리·국내주식 API/RSS 조사는 ADR-0005~0008·ADR-0011 본문에 반영 완료.
+- **Phase 1 핵심 가치 점등 완료.** 3 자산군 × 시세·랭킹·종목상세·백테스트 모두 동작. 셸 / 차트 / 어댑터 / 백테스트 / 검색 / 대시보드 / CTA 13 커밋 / 12 feat / Vitest 93 ✓.
+- 자산군별 상태:
+  - **crypto**: Upbit Public API 라이브 (KRW, 11 코인 — LTC KRW 페어 종료 제외).
+  - **us**: Twelve Data 어댑터 — 키 자동 분기 (`TWELVE_DATA_API_KEY` 미설정 시 deterministic GBM 더미 + "Demo" 배지).
+  - **kr**: KIS Open API 어댑터 — 키 자동 분기 (`KIS_APP_KEY/SECRET` 미설정 시 GBM 더미 + 호가 단위 정수 quantize).
+- 활성 라우트: 대시보드(/), 3 자산군 × {/, /gainers, /losers, /volume, /[symbol]}, /backtest/new, /search, /settings. stub: /crypto·us·kr/news, /kr/kospi, /kr/kosdaq, /backtest/saved.
+- 다음 진입: 사용자 키 발급 (Twelve Data 무료 / KIS 계좌+모의투자) → 라이브 자동 전환 + D1 namespace 생성 + indicators backfill cron + CF Workers 배포.
 
 ## 결정 추적 (ADR)
 
@@ -484,3 +487,4 @@ wrangler.jsonc
 | 2026-05-13 | ADR-0021 추가 (Historical 데이터 + 지표 저장소) + 컨벤션 R (SQL dialect 회피 정책) 추가 | docs/adr/ADR-0021, CLAUDE.md 컨벤션 R, README 인덱스 | 사용자 질문 — "백테스트 지표 데이터 저장 + DB 마이그레이션 가능성". D1 + Drizzle + R2 백업으로 잠금, lock-in 최소화 정책 명시 |
 | 2026-05-13 | 보조 ADR 4건 (0022~0025) + ADR-0019/0020 정합 갱신 + DESIGN_PREVIEW.md + RUN_PLAYBOOK.md + 결정 무관 인프라(.gitignore/.env.example/.editorconfig) + Obsidian 매핑 등록 | docs/adr/ADR-0022~0025, docs/DESIGN_PREVIEW.md, docs/RUN_PLAYBOOK.md, .gitignore, .env.example, .editorconfig, ~/.claude/claude-brain.json | 사용자 결정 대기 중 자율 진행 — 검색·분석·통화·휴장 보조 결정 + UI 와이어프레임 + 운영 절차로 검토 자료 풍부화 |
 | 2026-05-14 | Phase 0 종료 — ADR-0001~0025 모두 `Accepted` 전환 + 각 ADR 헤더에 `결정 확정: 2026-05-14` 라인 추가 + DECISIONS.md 사용자 답변 박음 + README/CLAUDE/00-Index 동기화 | docs/adr/ADR-0001~0025, docs/adr/README.md, DECISIONS.md, README.md, CLAUDE.md, ~/claude-brain/claude-brain/LabTrading/00-Index.md | 사용자가 DECISIONS.md Q1-Q16 권장안 일괄 동의. Phase 1 셸 부트 진입 준비 완료 |
+| 2026-05-15 | Phase 1 핵심 가치 점등 — 셸 부트(yutils 차용) + 백테스트 코어(indicators/metrics/3 presets/engine, Vitest 62) + Binance/Upbit/Twelve Data(GBM demo)/KIS(GBM demo) 4 어댑터 + ADR-0010 model + 차트(Sparkline/Candle wrapper) + crypto/us/kr 인덱스+랭킹+상세 페이지 + 백테스트 라이브 UI + 대시보드(3 자산군 top movers + 백테스트 빠른 진입) + 통합 검색(정적 인덱스, ADR-0022) + 종목 상세 CTA + 자매 chips | app/, components/, lib/ (94 파일 / ~7700 줄), 12 feat 커밋, Vitest 93 ✓ | 키 없이 진행 가능한 모든 작업 마무리. 사용자가 Twelve Data + KIS 키 발급 후 즉시 라이브 전환 가능 |

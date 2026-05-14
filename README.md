@@ -2,63 +2,117 @@
 
 코인 · 해외주식 · 국내주식 통합 정보 사이트 + **일봉 백테스트 랩**.
 
-세 자산군의 시세·랭킹·뉴스를 한 곳에서 비교하고, 같은 화면에서 사용자 전략을 일봉 기준으로 백테스트하여 수익률·MDD·Sharpe 결과를 즉시 확인할 수 있다.
+세 자산군의 시세·랭킹을 한 곳에서 비교하고, 같은 화면에서 사용자 전략을 일봉 기준으로 백테스트하여 수익률·MDD·Sharpe 결과를 즉시 확인할 수 있다.
 
-## 현재 상태 (2026-05-14)
+## 현재 상태 (2026-05-15)
 
-**Phase 0 종료 — 결정 일괄 확정.** ADR-0001~0025 모두 `Accepted` ([`DECISIONS.md`](DECISIONS.md) Q1-Q16 권장 동의). 코드는 여전히 0 줄, 셸 부트 진입 직전.
+**Phase 1 핵심 가치 점등 완료.** 3 자산군(코인 / 해외주식 / 국내주식) × 시세·랭킹·종목상세·백테스트 모두 동작. 데이터 키 발급 전 임시로 더미 GBM 모드 자동 분기.
 
-산출물:
-- `CLAUDE.md` — 프로젝트 가이드, 컨벤션 A-R, 아키텍처, 하네스
-- `DECISIONS.md` — 사용자 결정 체크리스트 Q1-Q16 + 확정 답변
-- `docs/adr/` — ADR-0000~0025 (26개, **모두 Accepted**)
-- `docs/DESIGN_PREVIEW.md` — ASCII 와이어프레임
-- `docs/RUN_PLAYBOOK.md` — 운영 절차 / 장애 대응 / 출시 체크리스트
-- `.claude/skills/adr-new/` — ADR 작성 스킬
-- `.env.example`, `.gitignore`, `.editorconfig`
+| 자산군 | 데이터 | 상태 |
+|---|---|---|
+| **crypto** | Upbit Public API (KRW) | **라이브** — 12 코인 실시간 시세 |
+| **us** | Twelve Data | Demo (GBM 시뮬) — `TWELVE_DATA_API_KEY` 발급 시 라이브 자동 전환 |
+| **kr** | KIS Open API | Demo (GBM 시뮬, 호가 단위 정수 quantize) — `KIS_APP_KEY/SECRET` 발급 시 활성 |
 
-## 다음 단계
+활성 라우트: 대시보드 + 3 자산군 × {인덱스, gainers, losers, volume, 종목상세} + 백테스트 작업장 + 통합 검색 + 설정.
 
-1. **셸 부트 (yutils 차용)** — `package.json` + `wrangler.jsonc` + `next.config.ts` + `middleware.ts` + `open-next.config.ts`
-2. **AppShell·테마 시스템 차용** — `app/layout.tsx` + `app/[locale]/layout.tsx` + `lib/themes.ts` + `components/AppShell.tsx` + `Header`/`Footer`/`ThemeSwitcher` 등
-3. **DB 스키마 + 어댑터 인터페이스** — `lib/db/d1/schema.ts` (Drizzle, candles/indicators/assets) + `lib/types.ts` (Asset/Quote/Candle/IndicatorRow) + `lib/adapters/types.ts`
-4. **첫 어댑터 점등** — `lib/adapters/coingecko.ts` (DataAdapter 인터페이스 검증) + BTC 종목 상세 페이지 1개 (`/ko/crypto/btc`) — 셸 → 어댑터 → 차트 → 통계 end-to-end
-5. **백테스트 MVP** — buy-and-hold BTC 5년 점등
-6. **Twelve Data + 해외 자산군 점등** → Phase 1 출시
+코드: TypeScript strict / ESLint 9 / **Vitest 93 ✓** (전 9 파일).
 
-## 기술 스택 (예정)
+## 빌드 / 실행
+
+```bash
+bun install                 # 의존성 (~660 패키지)
+bun run dev                 # http://localhost:3000/ko (Turbopack)
+bun run typecheck           # tsc --noEmit (strict)
+bun run test                # Vitest run-once
+bun run test:watch          # Vitest watch
+bun run build               # Next.js build
+bun run cf:build            # opennextjs-cloudflare build
+bun run cf:deploy           # CF Workers 배포 (wrangler 로그인 필요)
+bun run db:generate         # Drizzle 마이그레이션 SQL 생성
+```
+
+## 데이터 소스 키 발급 (라이브 전환)
+
+키 발급 후 `.dev.vars` 또는 `wrangler secret put`:
+
+| 자산군 | 환경 변수 | 발급 링크 | 라이브 효과 |
+|---|---|---|---|
+| us | `TWELVE_DATA_API_KEY` | https://twelvedata.com/account/api-keys | `/us/*` 실시간 시세 + 5년 historical |
+| kr | `KIS_APP_KEY` / `KIS_APP_SECRET` | https://apiportal.koreainvestment.com/intro | `/kr/*` 실시간 시세 (사용자 계좌 + 모의투자 필요, ADR-0007) |
+
+키 없이도 `/crypto/*` 는 Upbit 라이브 + `/us/*` `/kr/*` 는 deterministic GBM 더미로 모든 페이지 동작.
+
+## 아키텍처 한눈
+
+```
+사용자 ──▶ Cloudflare Workers (Next 16 + @opennextjs/cloudflare)
+            │
+            ├─ RSC (server component)
+            │   └─ DataAdapter (ADR-0010)
+            │       ├─ upbitAdapter        (crypto / KRW / Upbit Public)
+            │       ├─ binanceAdapter      (crypto / USDT / Binance Public)
+            │       ├─ twelveDataAdapter   (us / USD / 키 자동 분기)
+            │       └─ kisAdapter          (kr / KRW / 키 자동 분기)
+            │
+            ├─ Client Component
+            │   ├─ BacktestPanel  → runBacktest(candles, strategy)
+            │   ├─ CandleChart    → lightweight-charts v5 (dynamic, ssr:false)
+            │   ├─ Sparkline      → 자체 SVG (RSC 호환)
+            │   └─ SearchBox      → 정적 인덱스 36 종목 (Phase 1.5 D1 fallback)
+            │
+            └─ 저장소 (Phase 1.5+, ADR-0021)
+                ├─ D1 — historical 5y candles + indicators 17 (사전계산)
+                ├─ KV — 글로벌 캐시 (시세 30s, 랭킹 5min)
+                └─ R2 — 주간 SQL dump 백업
+```
+
+## 백테스트 엔진 (ADR-0019/0020)
+
+- **3 preset**: Buy and Hold · SMA Crossover · RSI Reversion
+- **체결**: 다음 봉 시가 (룩어헤드 회피) / 같은 봉 종가 옵션
+- **비용**: 수수료 0.10% + 슬리피지 0.05% + KR 거래세 0.18% (옵션)
+- **포지션**: 100% or 0% (단일 자산 단일 포지션, 분할 매매는 Phase 2)
+- **지표**: 17종 사전계산 가능 (SMA 5/20/50/100/200, EMA 12/26/50, RSI14, MACD/BB/ATR/VolSMA) — D1 indicators 우선, 사용자 정의 파라미터는 streaming fallback
+- **메트릭스**: Total Return / CAGR / MDD / Sharpe / Sortino / Win Rate / Trade Count / Avg Hold Days
+- **결정론**: 같은 입력 → 같은 결과 (Vitest 12 ✓)
+
+## 기술 스택
 
 | 항목 | 값 | 결정 |
 |---|---|---|
 | 프레임워크 | Next.js 16 (App Router) | ADR-0002 |
 | 런타임 | React 19 + Node 22+ | ADR-0002 |
 | 스타일 | Tailwind v4 + 자체 토큰 | ADR-0002 |
-| i18n | next-intl 4 (ko 단독) | ADR-0004 |
+| i18n | next-intl 4 (ko 단독, en 스켈레톤) | ADR-0004 |
 | 패키지 매니저 | bun 1.3+ | ADR-0002 |
 | 배포 | Cloudflare Workers + `@opennextjs/cloudflare` | ADR-0003 |
-| 차트 | TradingView Lightweight Charts v5 + 자체 SVG Sparkline | ADR-0011 |
-
-## 데이터 소스 (예정)
-
-| 자산군 | 1차 출시 | Phase 1.5+ |
-|---|---|---|
-| 코인 | CoinGecko Demo + Upbit + Binance | DefiLlama (DeFi 보강) |
-| 해외주식 | Twelve Data | FMP / Polygon (펀더멘털·정확도 보강) |
-| 국내주식 | (Phase 1.5) KIS + KRX + 공공데이터포털 + OpenDART | — |
-| 뉴스 | (Phase 2) 한경 + 매경 + 파이낸셜뉴스 + 토큰포스트 | — |
+| 차트 | TradingView Lightweight Charts v5 + 자체 SVG | ADR-0011 |
+| DB | Cloudflare D1 (SQLite) + Drizzle ORM | ADR-0021 |
+| 테스트 | Vitest 4 (node env) | — |
 
 ## 결정 추적
 
-모든 결정은 [`docs/adr/`](docs/adr/) ADR로 박는다. 인덱스: [`docs/adr/README.md`](docs/adr/README.md).
+- [`docs/adr/`](docs/adr/) — ADR-0000~0025 (26건, 모두 Accepted)
+- [`DECISIONS.md`](DECISIONS.md) — 사용자 결정 체크리스트 (Q1-Q16 완료)
+- 새 결정은 `adr-new` 슬래시 스킬로
 
-새 결정은 `adr-new` 슬래시 스킬로.
+## 다음 단계
+
+1. **사용자 키 발급** (Phase 1.5 시작 조건):
+   - Twelve Data 무료 — 미장 `/us/*` 라이브
+   - KIS 계좌 + 모의투자 — 국내 `/kr/*` 라이브
+2. **D1 namespace 생성** + Drizzle 마이그레이션 apply + indicators 사전계산 backfill (cron)
+3. **CoinGecko 어댑터 추가** — 글로벌 시가총액 / 로고 / USD 보조 표기 (보강)
+4. **Cloudflare 배포** + 도메인 `trading.krutils.com` CNAME (ADR-0018)
+5. **Phase 2 후보**: 뉴스 RSS 활성화 / 영어 i18n / 백테스트 결과 공유 페이지 / Web Worker 백테스트 이전 (Phase 1.1)
 
 ## 문서
 
-- [`CLAUDE.md`](CLAUDE.md) — 프로젝트 가이드라인, 컨벤션, 아키텍처
-- [`DECISIONS.md`](DECISIONS.md) — 사용자 결정 체크리스트 (아침 검토용)
+- [`CLAUDE.md`](CLAUDE.md) — 프로젝트 가이드라인, 컨벤션 A-R, 아키텍처, 하네스
+- [`DECISIONS.md`](DECISIONS.md) — 사용자 결정 체크리스트
 - [`docs/adr/`](docs/adr/) — Architecture Decision Records (26건, 모두 Accepted)
-- [`docs/DESIGN_PREVIEW.md`](docs/DESIGN_PREVIEW.md) — ASCII 와이어프레임 (대시보드, 종목 상세, 백테스트)
+- [`docs/DESIGN_PREVIEW.md`](docs/DESIGN_PREVIEW.md) — ASCII 와이어프레임
 - [`docs/RUN_PLAYBOOK.md`](docs/RUN_PLAYBOOK.md) — 운영 절차, 장애 대응, 출시 체크리스트
 
 ## 자매 프로젝트
