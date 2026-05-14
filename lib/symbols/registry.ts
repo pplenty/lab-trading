@@ -30,9 +30,11 @@ export const cryptoRegistry: CryptoRegistryEntry[] = [
   {symbol: "trx", name: "TRON", nameKo: "트론", cgId: "tron", binancePair: "TRXUSDT", upbitMarket: "KRW-TRX"},
   {symbol: "avax", name: "Avalanche", nameKo: "아발란체", cgId: "avalanche-2", binancePair: "AVAXUSDT", upbitMarket: "KRW-AVAX"},
   {symbol: "link", name: "Chainlink", nameKo: "체인링크", cgId: "chainlink", binancePair: "LINKUSDT", upbitMarket: "KRW-LINK"},
-  {symbol: "matic", name: "Polygon", nameKo: "폴리곤", cgId: "matic-network", binancePair: "MATICUSDT", upbitMarket: "KRW-MATIC"},
+  // Polygon — 2024 MATIC → POL 마이그레이션 후 Upbit 마켓은 KRW-POL. Binance / CoinGecko 는 아직 두 티커 노출하므로 binancePair / cgId 는 그대로 둠.
+  {symbol: "matic", name: "Polygon", nameKo: "폴리곤", cgId: "matic-network", binancePair: "MATICUSDT", upbitMarket: "KRW-POL"},
   {symbol: "dot", name: "Polkadot", nameKo: "폴카닷", cgId: "polkadot", binancePair: "DOTUSDT", upbitMarket: "KRW-DOT"},
-  {symbol: "ltc", name: "Litecoin", nameKo: "라이트코인", cgId: "litecoin", binancePair: "LTCUSDT", upbitMarket: "KRW-LTC"},
+  // Litecoin — Upbit 는 2018 KRW 페어 종료 (BTC 페어만 운영). Upbit 어댑터에서 자동 제외.
+  {symbol: "ltc", name: "Litecoin", nameKo: "라이트코인", cgId: "litecoin", binancePair: "LTCUSDT", upbitMarket: ""},
 ];
 
 const bySymbol = new Map<string, CryptoRegistryEntry>(
