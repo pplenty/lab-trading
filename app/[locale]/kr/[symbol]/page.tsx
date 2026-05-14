@@ -8,6 +8,8 @@ import {kisAdapter} from "@/lib/adapters/kis";
 import {krRegistry, getKrBySymbol} from "@/lib/symbols/registry";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {FinancialDelta} from "@/components/FinancialDelta";
+import {FavoriteButton} from "@/components/FavoriteButton";
+import {RecentTracker} from "@/components/RecentTracker";
 import {SymbolActions} from "@/components/panels/SymbolActions";
 import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
 import type {Quote, CandleSeries} from "@/lib/types";
@@ -85,6 +87,8 @@ export default async function KrSymbolPage({params}: PageProps) {
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10 sm:py-12">
+      <RecentTracker class="kr" symbol={entry.symbol} />
+
       <nav className="mb-6 text-xs text-fg-subtle">
         <Link href="/kr" className="hover:text-fg">
           {t("kr").replace(" (Phase 1.5)", "")}
@@ -95,10 +99,13 @@ export default async function KrSymbolPage({params}: PageProps) {
 
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
-            {entry.nameKo}{" "}
-            <span className="text-fg-subtle">({entry.ticker})</span>
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
+              {entry.nameKo}{" "}
+              <span className="text-fg-subtle">({entry.ticker})</span>
+            </h1>
+            <FavoriteButton class="kr" symbol={entry.symbol} label={entry.nameKo} />
+          </div>
           <p className="text-xs text-fg-subtle">{entry.market}</p>
         </div>
         {quote && (

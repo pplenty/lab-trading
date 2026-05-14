@@ -8,6 +8,8 @@ import {twelveDataAdapter} from "@/lib/adapters/twelve-data";
 import {usRegistry, getUsBySymbol} from "@/lib/symbols/registry";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {FinancialDelta} from "@/components/FinancialDelta";
+import {FavoriteButton} from "@/components/FavoriteButton";
+import {RecentTracker} from "@/components/RecentTracker";
 import {SymbolActions} from "@/components/panels/SymbolActions";
 import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
 import type {Quote, CandleSeries} from "@/lib/types";
@@ -92,12 +94,17 @@ export default async function UsSymbolPage({params}: PageProps) {
         <span className="text-fg-muted">{entry.ticker}</span>
       </nav>
 
+      <RecentTracker class="us" symbol={entry.symbol} />
+
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
-            {entry.nameKo ?? entry.name}{" "}
-            <span className="text-fg-subtle">({entry.ticker})</span>
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
+              {entry.nameKo ?? entry.name}{" "}
+              <span className="text-fg-subtle">({entry.ticker})</span>
+            </h1>
+            <FavoriteButton class="us" symbol={entry.symbol} label={entry.nameKo ?? entry.name} />
+          </div>
           <p className="text-xs text-fg-subtle">{entry.market}</p>
         </div>
         {quote && (

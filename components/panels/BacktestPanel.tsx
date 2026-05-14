@@ -5,6 +5,7 @@ import {runBacktest} from "@/lib/backtest/run";
 import {strategies, getStrategy} from "@/lib/backtest/strategies/registry";
 import type {Candle, AssetClass} from "@/lib/types";
 import {BacktestResultCard} from "./BacktestResultCard";
+import {SaveStrategyButton} from "./SaveStrategyButton";
 
 // 백테스트 클라이언트 패널 — 전략 selector + 파라미터 슬라이더 + 결과.
 // candles 와 자산 메타는 server (RSC) 가 prop 으로 전달 (ADR-0019: 데이터는 서버 캐시 후 클라이언트).
@@ -19,13 +20,28 @@ type Props = {
   class: AssetClass;
   currency: string;
   candles: Candle[];
+  /** prefill (저장된 전략 로드 시). */
+  initialStrategyId?: string;
+  initialParams?: Record<string, number>;
+  /** 종목 표시명 — "전략 저장" 의 디폴트 라벨에 사용. */
+  symbolLabel?: string;
 };
 
-export function BacktestPanel({symbol, class: cls, currency, candles}: Props) {
-  const [strategyId, setStrategyId] = useState<string>("buy-and-hold");
+export function BacktestPanel({
+  symbol,
+  class: cls,
+  currency,
+  candles,
+  initialStrategyId,
+  initialParams,
+  symbolLabel,
+}: Props) {
+  const [strategyId, setStrategyId] = useState<string>(
+    initialStrategyId ?? "buy-and-hold"
+  );
   const strategy = getStrategy(strategyId);
 
-  // 전략 변경 시 디폴트 파라미터로 reset.
+  // 전략 변경 시 디폴트 파라미터로 reset (initialParams 가 strategyId 와 매칭되면 그것 우선).
   const defaultParams = useMemo<Record<string, number>>(() => {
     const s = getStrategy(strategyId);
     if (!s) return {};
@@ -34,7 +50,11 @@ export function BacktestPanel({symbol, class: cls, currency, candles}: Props) {
     return out;
   }, [strategyId]);
 
-  const [params, setParams] = useState<Record<string, number>>(defaultParams);
+  const [params, setParams] = useState<Record<string, number>>(
+    initialParams && strategyId === initialStrategyId
+      ? {...defaultParams, ...initialParams}
+      : defaultParams
+  );
 
   // strategyId 변경 시 params reset.
   if (strategy && Object.keys(params).length !== strategy.params.length) {
@@ -131,9 +151,21 @@ export function BacktestPanel({symbol, class: cls, currency, candles}: Props) {
           </div>
         )}
 
-        <p className="mt-3 text-[10px] text-fg-subtle">
-          수수료 0.10% · 슬리피지 0.05% · 다음 봉 시가 체결 (룩어헤드 회피, ADR-0019)
-        </p>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[10px] text-fg-subtle">
+            수수료 0.10% · 슬리피지 0.05% · 다음 봉 시가 체결 (룩어헤드 회피, ADR-0019)
+          </p>
+          {strategy && (
+            <SaveStrategyButton
+              strategyId={strategyId}
+              params={params}
+              class={cls}
+              symbol={symbol}
+              defaultLabel={symbolLabel ?? symbol.toUpperCase()}
+              strategyName={strategy.name}
+            />
+          )}
+        </div>
       </section>
 
       {result ? (

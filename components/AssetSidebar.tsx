@@ -1,15 +1,16 @@
 "use client";
 
-import {Bitcoin, Globe, Landmark, FlaskConical, BarChart3} from "lucide-react";
-import {useTranslations} from "next-intl";
+import {Bitcoin, Clock, Globe, Landmark, FlaskConical, BarChart3, Star} from "lucide-react";
+import {useLocale, useTranslations} from "next-intl";
 import {Link, usePathname} from "@/i18n/navigation";
 import {ChevronLeftIcon} from "@/components/icons";
+import {useFavorites, parseFavoriteId, type FavoriteId} from "@/lib/favorites";
+import {useRecents} from "@/lib/recents";
+import {getAssetMeta} from "@/lib/symbols/registry";
+import type {AssetClass} from "@/lib/types";
 
-// 자산군 메뉴 사이드바 (ADR-0014).
-// yutils 의 ToolsSidebar 가 카테고리 + 도구 N개 그리드라면, lab-trading 은 자산군 4개 × 하위 N개 트리.
-// 1차 출시 활성: crypto · us · backtest. kr · news 는 stub (라벨 "준비 중", disabled).
-//
-// 셸 부트 단계에서는 카테고리 collapse · 검색 필터 · 즐겨찾기는 생략 (Phase 1.x 확장).
+// 자산군 메뉴 사이드바 (ADR-0014) + 즐겨찾기 / 최근 본 종목 (ADR-0016 localStorage).
+// 즐겨찾기·최근 그룹은 항목이 있을 때만 노출 (mount 후 useSyncExternalStore 로 hydration).
 
 type Item = {
   href: string;
@@ -65,7 +66,7 @@ const GROUPS: Group[] = [
     Icon: FlaskConical,
     items: [
       {href: "/backtest/new", labelKey: "backtest-new"},
-      {href: "/backtest/saved", labelKey: "backtest-saved", stub: true},
+      {href: "/backtest/saved", labelKey: "backtest-saved"},
     ],
   },
 ];
@@ -78,7 +79,10 @@ export function AssetSidebar({onClose}: Props) {
   const t = useTranslations("sidebar");
   const tItems = useTranslations("sidebar.items");
   const tGroups = useTranslations("sidebar.groups");
+  const locale = useLocale();
   const pathname = usePathname();
+  const {favorites} = useFavorites();
+  const {recents} = useRecents();
 
   return (
     <nav aria-label={t("label")}>
@@ -108,8 +112,8 @@ export function AssetSidebar({onClose}: Props) {
             aria-current={dashboardActive ? "page" : undefined}
             className={
               dashboardActive
-                ? "mb-6 flex items-center gap-2 rounded-lg border border-fg bg-surface-hover px-3 py-2 text-sm font-medium text-fg"
-                : "mb-6 flex items-center gap-2 rounded-lg border border-line bg-bg px-3 py-2 text-sm font-medium text-fg transition-colors hover:border-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                ? "mb-4 flex items-center gap-2 rounded-lg border border-fg bg-surface-hover px-3 py-2 text-sm font-medium text-fg"
+                : "mb-4 flex items-center gap-2 rounded-lg border border-line bg-bg px-3 py-2 text-sm font-medium text-fg transition-colors hover:border-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             }
           >
             <BarChart3
@@ -122,7 +126,29 @@ export function AssetSidebar({onClose}: Props) {
         );
       })()}
 
-      <div className="flex flex-col gap-6 pr-1">
+      <div className="flex flex-col gap-5 pr-1">
+        {favorites.length > 0 && (
+          <AssetList
+            heading="즐겨찾기"
+            HeadingIcon={Star}
+            iconClass="fill-accent text-accent"
+            items={favorites}
+            count={favorites.length}
+            pathname={pathname}
+            locale={locale}
+          />
+        )}
+        {recents.length > 0 && (
+          <AssetList
+            heading="최근 본"
+            HeadingIcon={Clock}
+            iconClass="text-fg-muted"
+            items={recents.map((r) => `${r.class}:${r.symbol}` as FavoriteId)}
+            count={recents.length}
+            pathname={pathname}
+            locale={locale}
+          />
+        )}
         {GROUPS.map(({id, Icon, items}) => (
           <div key={id}>
             <div className="mb-1 flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-fg-subtle">
@@ -174,5 +200,68 @@ export function AssetSidebar({onClose}: Props) {
         ))}
       </div>
     </nav>
+  );
+}
+
+function AssetList({
+  heading,
+  HeadingIcon,
+  iconClass,
+  items,
+  count,
+  pathname,
+  locale,
+}: {
+  heading: string;
+  HeadingIcon: typeof Star;
+  iconClass: string;
+  items: FavoriteId[];
+  count: number;
+  pathname: string;
+  locale: string;
+}) {
+  return (
+    <div>
+      <div className="mb-1 flex items-center gap-1.5 px-2 py-1">
+        <HeadingIcon
+          size={13}
+          className={`shrink-0 ${iconClass}`}
+          aria-hidden="true"
+        />
+        <span className="flex-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-fg-subtle">
+          {heading}
+        </span>
+        <span className="text-fg-subtle">{count}</span>
+      </div>
+      <ul className="flex flex-col gap-0.5">
+        {items.map((id) => {
+          const {class: cls, symbol} = parseFavoriteId(id);
+          const meta = getAssetMeta(cls as AssetClass, symbol);
+          if (!meta) return null;
+          const href = `/${cls}/${symbol}`;
+          const active = pathname === href;
+          const display =
+            locale === "ko" && meta.nameKo ? meta.nameKo : meta.name;
+          return (
+            <li key={id}>
+              <Link
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={
+                  active
+                    ? "flex items-center justify-between gap-2 rounded-md bg-surface-hover px-3 py-1.5 text-sm font-medium text-fg"
+                    : "flex items-center justify-between gap-2 rounded-md px-3 py-1.5 text-sm text-fg-muted transition-colors hover:bg-surface hover:text-fg"
+                }
+              >
+                <span className="truncate">{display}</span>
+                <span className="shrink-0 text-[10px] uppercase tracking-wider text-fg-subtle">
+                  {cls}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }

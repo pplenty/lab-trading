@@ -8,6 +8,8 @@ import {upbitAdapter} from "@/lib/adapters/upbit";
 import {cryptoRegistry, getCryptoBySymbol} from "@/lib/symbols/registry";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {FinancialDelta} from "@/components/FinancialDelta";
+import {FavoriteButton} from "@/components/FavoriteButton";
+import {RecentTracker} from "@/components/RecentTracker";
 import {SymbolActions} from "@/components/panels/SymbolActions";
 import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
 import type {Quote, CandleSeries} from "@/lib/types";
@@ -96,12 +98,15 @@ export default async function CryptoSymbolPage({params}: PageProps) {
         <span className="text-fg-muted">{entry.symbol.toUpperCase()}</span>
       </nav>
 
+      <RecentTracker class="crypto" symbol={entry.symbol} />
+
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
+        <div className="flex items-center gap-2">
           <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
             {entry.nameKo ?? entry.name}{" "}
             <span className="text-fg-subtle">({entry.symbol.toUpperCase()})</span>
           </h1>
+          <FavoriteButton class="crypto" symbol={entry.symbol} label={entry.nameKo ?? entry.name} />
         </div>
         {quote && (
           <div className="flex flex-col items-end gap-1 text-right">

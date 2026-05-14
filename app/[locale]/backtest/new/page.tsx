@@ -18,20 +18,34 @@ import type {AssetClass, Candle, CandleSeries} from "@/lib/types";
 
 type Props = {
   params: Promise<{locale: string}>;
-  searchParams: Promise<{asset?: string; symbol?: string}>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
 export default async function BacktestNewPage({params, searchParams}: Props) {
   const {locale} = await params;
   const sp = await searchParams;
+  const assetParam = sp.asset;
   const assetClass: AssetClass =
-    sp.asset === "us" || sp.asset === "kr" ? sp.asset : "crypto";
+    assetParam === "us" || assetParam === "kr" ? assetParam : "crypto";
 
   const t = await getTranslations("home");
   const tDisc = await getTranslations("disclaimer");
 
+  // strategy + 파라미터 URL prefill (저장된 전략 로드 시).
+  const initialStrategyId =
+    typeof sp.strategy === "string" ? sp.strategy : undefined;
+  const RESERVED_KEYS = new Set(["asset", "symbol", "strategy"]);
+  const initialParams: Record<string, number> = {};
+  for (const [k, v] of Object.entries(sp)) {
+    if (RESERVED_KEYS.has(k)) continue;
+    const single = Array.isArray(v) ? v[0] : v;
+    if (single === undefined) continue;
+    const n = Number(single);
+    if (Number.isFinite(n)) initialParams[k] = n;
+  }
+
   const rawSymbol =
-    sp.symbol ??
+    (typeof sp.symbol === "string" ? sp.symbol : undefined) ??
     (assetClass === "us" ? "aapl" : assetClass === "kr" ? "005930" : "btc");
   let normalized: string;
   try {
@@ -138,6 +152,11 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
           class={assetClass}
           currency={currency}
           candles={candles}
+          initialStrategyId={initialStrategyId}
+          initialParams={
+            Object.keys(initialParams).length > 0 ? initialParams : undefined
+          }
+          symbolLabel={displayName}
         />
       ) : !fetchError ? (
         <p className="rounded-md border border-line bg-surface p-4 text-sm text-fg-muted">

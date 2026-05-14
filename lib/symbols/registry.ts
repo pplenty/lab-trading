@@ -148,3 +148,35 @@ const krBySymbol = new Map<string, KrRegistryEntry>(
 export function getKrBySymbol(symbol: string): KrRegistryEntry | undefined {
   return krBySymbol.get(symbol);
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// 자산군 무관 통합 lookup — 즐겨찾기 / 최근 본 / 검색 등에서 사용.
+
+import type {AssetClass} from "@/lib/types";
+
+export type AssetMeta = {
+  name: string;
+  nameKo?: string;
+  ticker: string;
+};
+
+export function getAssetMeta(
+  cls: AssetClass,
+  symbol: string
+): AssetMeta | null {
+  if (cls === "crypto") {
+    const e = getCryptoBySymbol(symbol);
+    return e
+      ? {name: e.name, nameKo: e.nameKo, ticker: e.symbol.toUpperCase()}
+      : null;
+  }
+  if (cls === "us") {
+    const e = getUsBySymbol(symbol);
+    return e ? {name: e.name, nameKo: e.nameKo, ticker: e.ticker} : null;
+  }
+  if (cls === "kr") {
+    const e = getKrBySymbol(symbol);
+    return e ? {name: e.name, nameKo: e.nameKo, ticker: e.ticker} : null;
+  }
+  return null;
+}
