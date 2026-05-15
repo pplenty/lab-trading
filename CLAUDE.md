@@ -38,12 +38,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 현재 상태 (2026-05-15)
 
-- **Phase 1 핵심 가치 점등 완료.** 3 자산군 × 시세·랭킹·종목상세·백테스트 모두 동작. 셸 / 차트 / 어댑터 / 백테스트 / 검색 / 대시보드 / CTA 13 커밋 / 12 feat / Vitest 93 ✓.
+- **Phase 1 핵심 가치 점등 + UX polish 완료.** 3 자산군 × 시세·랭킹·종목상세·백테스트 + 대시보드 / 통합 검색 / 즐겨찾기·최근 / 저장된 전략 / URL 공유 / 종목 미니뷰 모두 동작. **20 커밋 / 18 feat / 2 docs / Vitest 95 ✓ / 104 파일 / ~9080 줄**.
 - 자산군별 상태:
-  - **crypto**: Upbit Public API 라이브 (KRW, 11 코인 — LTC KRW 페어 종료 제외).
+  - **crypto**: Upbit Public API 라이브 (KRW, 11 코인 — LTC KRW 페어 종료 제외) + CoinGecko 보조 (USD / 시가총액 / 시총 순위).
   - **us**: Twelve Data 어댑터 — 키 자동 분기 (`TWELVE_DATA_API_KEY` 미설정 시 deterministic GBM 더미 + "Demo" 배지).
   - **kr**: KIS Open API 어댑터 — 키 자동 분기 (`KIS_APP_KEY/SECRET` 미설정 시 GBM 더미 + 호가 단위 정수 quantize).
-- 활성 라우트: 대시보드(/), 3 자산군 × {/, /gainers, /losers, /volume, /[symbol]}, /backtest/new, /search, /settings. stub: /crypto·us·kr/news, /kr/kospi, /kr/kosdaq, /backtest/saved.
+- 활성 라우트: 대시보드(/), 3 자산군 × {/, /gainers, /losers, /volume, /[symbol]}, /backtest/new, /backtest/saved, /settings + 404 catch-all. stub: /crypto·us·kr/news, /kr/kospi, /kr/kosdaq.
+- 사용자 자산 (localStorage, ADR-0016): 즐겨찾기 ⭐ + 최근 본 ⏰ + 저장된 전략 + 결과 URL 공유 (`/backtest/new?asset=...&symbol=...&strategy=...&<param>=...` prefill).
+- 도메인: `trading.jdgrid.com` 최종 확정 (2026-05-15 — yutils 와 브랜드 분리).
 - 다음 진입: 사용자 키 발급 (Twelve Data 무료 / KIS 계좌+모의투자) → 라이브 자동 전환 + D1 namespace 생성 + indicators backfill cron + CF Workers 배포.
 
 ## 결정 추적 (ADR)
@@ -489,3 +491,4 @@ wrangler.jsonc
 | 2026-05-14 | Phase 0 종료 — ADR-0001~0025 모두 `Accepted` 전환 + 각 ADR 헤더에 `결정 확정: 2026-05-14` 라인 추가 + DECISIONS.md 사용자 답변 박음 + README/CLAUDE/00-Index 동기화 | docs/adr/ADR-0001~0025, docs/adr/README.md, DECISIONS.md, README.md, CLAUDE.md, ~/claude-brain/claude-brain/LabTrading/00-Index.md | 사용자가 DECISIONS.md Q1-Q16 권장안 일괄 동의. Phase 1 셸 부트 진입 준비 완료 |
 | 2026-05-15 | 도메인 최종 확정 — `trading.krutils.com` → `trading.jdgrid.com` 변경 + ADR-0018 변경 이력 추가 + .env.example/wrangler.jsonc/README/RUN_PLAYBOOK/DECISIONS 동기화 | docs/adr/ADR-0018, .env.example, wrangler.jsonc, README.md, docs/RUN_PLAYBOOK.md, DECISIONS.md | 사용자가 별도 보유 도메인 `jdgrid.com` 활용 — yutils 와 브랜드 분리, lab-trading 독립 자산으로 운영 |
 | 2026-05-15 | Phase 1 핵심 가치 점등 — 셸 부트(yutils 차용) + 백테스트 코어(indicators/metrics/3 presets/engine, Vitest 62) + Binance/Upbit/Twelve Data(GBM demo)/KIS(GBM demo) 4 어댑터 + ADR-0010 model + 차트(Sparkline/Candle wrapper) + crypto/us/kr 인덱스+랭킹+상세 페이지 + 백테스트 라이브 UI + 대시보드(3 자산군 top movers + 백테스트 빠른 진입) + 통합 검색(정적 인덱스, ADR-0022) + 종목 상세 CTA + 자매 chips | app/, components/, lib/ (94 파일 / ~7700 줄), 12 feat 커밋, Vitest 93 ✓ | 키 없이 진행 가능한 모든 작업 마무리. 사용자가 Twelve Data + KIS 키 발급 후 즉시 라이브 전환 가능 |
+| 2026-05-15 | Phase 1 깊이 + UX polish — CoinGecko 어댑터 추가 (5번째) + 코인 종목 상세에 USD/시가총액/순위 보조 + localStorage 즐겨찾기 ⭐ + 최근 본 ⏰ + 저장된 전략 (ADR-0016/0020) + 종목 상세 백테스트 미니뷰 (SSR runBacktest) + trades 표 (round-trip PnL) + 결과 URL 복사 + 404 catch-all 라우트 | app/[locale]/{[...path],backtest/saved,not-found}, components/{Favorite,Recent,Save,CopyResult,Saved,SymbolBacktest,Trades}, lib/{favorites,recents,strategies/saved} | 7 후속 커밋. 사용자 가치 명제 강화 — "한 화면에서 백테스트" 미니뷰 + 결과 공유 URL + 사용자 자산 (계정 없이 localStorage). Vitest 95 ✓ / 104 파일 / ~9080 줄 |

@@ -14,9 +14,13 @@
 | **us** | Twelve Data | Demo (GBM 시뮬) — `TWELVE_DATA_API_KEY` 발급 시 라이브 자동 전환 |
 | **kr** | KIS Open API | Demo (GBM 시뮬, 호가 단위 정수 quantize) — `KIS_APP_KEY/SECRET` 발급 시 활성 |
 
-활성 라우트: 대시보드 + 3 자산군 × {인덱스, gainers, losers, volume, 종목상세} + 백테스트 작업장 + 통합 검색 + 설정.
+활성 라우트: 대시보드 + 3 자산군 × {인덱스, gainers, losers, volume, 종목상세} + 백테스트 작업장 + 저장된 전략 + 통합 검색 + 설정 + 404.
 
-코드: TypeScript strict / ESLint 9 / **Vitest 93 ✓** (전 9 파일).
+**사용자 자산** (localStorage, ADR-0016): 즐겨찾기 ⭐ + 최근 본 종목 ⏰ + 저장된 백테스트 전략 (URL prefill 공유 가능).
+**보조 데이터** (CoinGecko): 코인 종목 상세에 USD 가격 + 시가총액 + 시총 순위 노출.
+**종목 ↔ 백테스트 연결**: 종목 상세 페이지 안에 buy-and-hold 미니뷰 (SSR runBacktest) + ⚡ 전체 백테스트 CTA + 자매 종목 chip nav.
+
+코드: TypeScript strict / ESLint 9 / **Vitest 95 ✓** (104 파일 / ~9080 줄).
 
 ## 빌드 / 실행
 
@@ -49,17 +53,23 @@ bun run db:generate         # Drizzle 마이그레이션 SQL 생성
 사용자 ──▶ Cloudflare Workers (Next 16 + @opennextjs/cloudflare)
             │
             ├─ RSC (server component)
-            │   └─ DataAdapter (ADR-0010)
-            │       ├─ upbitAdapter        (crypto / KRW / Upbit Public)
-            │       ├─ binanceAdapter      (crypto / USDT / Binance Public)
-            │       ├─ twelveDataAdapter   (us / USD / 키 자동 분기)
-            │       └─ kisAdapter          (kr / KRW / 키 자동 분기)
+            │   ├─ DataAdapter (ADR-0010) — 5 어댑터
+            │   │   ├─ upbitAdapter        (crypto / KRW / Upbit Public · 라이브)
+            │   │   ├─ binanceAdapter      (crypto / USDT / Binance Public · 라이브)
+            │   │   ├─ coingeckoAdapter    (crypto / USD / 시가총액·순위·로고 보조)
+            │   │   ├─ twelveDataAdapter   (us / USD / 키 자동 분기)
+            │   │   └─ kisAdapter          (kr / KRW / 키 자동 분기 · 호가 quantize)
+            │   └─ runBacktest()           (pure function — RSC 에서 직접 호출 가능,
+            │                              종목 상세 미니뷰에 활용)
             │
             ├─ Client Component
-            │   ├─ BacktestPanel  → runBacktest(candles, strategy)
+            │   ├─ BacktestPanel  → runBacktest + URL 복사 + 전략 저장
             │   ├─ CandleChart    → lightweight-charts v5 (dynamic, ssr:false)
             │   ├─ Sparkline      → 자체 SVG (RSC 호환)
-            │   └─ SearchBox      → 정적 인덱스 36 종목 (Phase 1.5 D1 fallback)
+            │   ├─ LineChart      → 자체 SVG multi-series (equity curve, RSC 호환)
+            │   ├─ SearchBox      → 정적 인덱스 36 종목 (Phase 1.5 D1 fallback)
+            │   ├─ FavoriteButton ⭐ + RecentTracker ⏰  → localStorage
+            │   └─ SavedStrategiesPanel    → /backtest/saved
             │
             └─ 저장소 (Phase 1.5+, ADR-0021)
                 ├─ D1 — historical 5y candles + indicators 17 (사전계산)
@@ -103,9 +113,8 @@ bun run db:generate         # Drizzle 마이그레이션 SQL 생성
    - Twelve Data 무료 — 미장 `/us/*` 라이브
    - KIS 계좌 + 모의투자 — 국내 `/kr/*` 라이브
 2. **D1 namespace 생성** + Drizzle 마이그레이션 apply + indicators 사전계산 backfill (cron)
-3. **CoinGecko 어댑터 추가** — 글로벌 시가총액 / 로고 / USD 보조 표기 (보강)
-4. **Cloudflare 배포** + 도메인 `trading.jdgrid.com` CNAME (ADR-0018)
-5. **Phase 2 후보**: 뉴스 RSS 활성화 / 영어 i18n / 백테스트 결과 공유 페이지 / Web Worker 백테스트 이전 (Phase 1.1)
+3. **Cloudflare 배포** + 도메인 `trading.jdgrid.com` CNAME (ADR-0018)
+4. **Phase 2 후보**: 뉴스 RSS 활성화 / 영어 i18n / Web Worker 백테스트 이전 (Phase 1.1) / 백테스트 결과 PDF 또는 이미지 export
 
 ## 문서
 
