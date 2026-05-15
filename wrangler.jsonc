@@ -24,9 +24,7 @@
 		"binding": "ASSETS"
 	},
 	"vars": {
-		// production 도메인 결정 후 Cloudflare 대시보드 vars 에 박는다.
-		// dev/CI 빌드에서는 lib/site.ts 의 폴백(`http://localhost:3000`) 사용.
-		// "NEXT_PUBLIC_SITE_URL": "https://trading.jdgrid.com"
+		"NEXT_PUBLIC_SITE_URL": "https://trading.jdgrid.com"
 	},
 	// Cloudflare Bindings — CF 대시보드 또는 wrangler 로 namespace 생성 후 ID 박기.
 	// 미설정 시 lib/db/d1/client.ts 의 getDb() 가 throw — backfill / cron 라우트만 영향.
@@ -37,6 +35,7 @@
 			"binding": "lab_trading_db",
 			"database_name": "lab-trading-db",
 			"database_id": "2b56a9f8-7dd0-4804-a205-745f39e82d96",
+			"migrations_dir": "drizzle",
 			"remote": true
 		}
 		// {
@@ -59,6 +58,11 @@
 	],
 	// ADR-0021 — 주간 SQL dump 백업
 	"r2_buckets": [
+		{
+			"bucket_name": "lab-trading-backup",
+			"binding": "lab_trading_backup",
+			"remote": true
+		}
 		// {
 		//   "binding": "BACKUP",
 		//   "bucket_name": "lab-trading-backup"
@@ -67,9 +71,11 @@
 	// Cron Triggers — 매일 06:00 UTC (15:00 KST, KOSPI 폐장 후) 증분 backfill
 	// wrangler.jsonc 의 crons 가 활성이면 Workers Scheduled handler 또는 fetch URL 자동 호출.
 	// 본 프로젝트는 라우트(/api/cron/backfill) 패턴 — Workers Cron 이 해당 URL 을 호출하도록 별도 셋업.
+	// opennextjs/cloudflare 의 worker.js 는 fetch handler 만 export — Workers Cron 의
+	// scheduled handler 호출이 불가. 외부 cron (GitHub Actions / cron-job.org) 으로
+	// POST /api/cron/backfill + Bearer BACKFILL_TOKEN 직접 호출하는 패턴 사용.
+	// 가이드: docs/RUN_PLAYBOOK.md 참조.
 	"triggers": {
-		"crons": [
-			// "0 6 * * *"  // D1 namespace 셋업 후 활성화
-		]
+		"crons": []
 	}
 }

@@ -122,39 +122,51 @@ export class D1CandleRepo implements CandleRepo {
   async upsertMany(symbol: string, candles: Candle[]): Promise<number> {
     if (candles.length === 0) return 0;
     const now = Math.floor(Date.now() / 1000);
-    // D1 (SQLite) 의 SQLITE_MAX_VARIABLE_NUMBER 가 100 인 환경 있음 — 50 봉씩 청크.
-    const CHUNK = 50;
-    let inserted = 0;
-    for (let i = 0; i < candles.length; i += CHUNK) {
-      const slice = candles.slice(i, i + CHUNK);
-      await this.db
-        .insert(schema.candles)
-        .values(
-          slice.map((c) => ({
-            symbol,
-            t: c.t,
-            o: c.o,
-            h: c.h,
-            l: c.l,
-            c: c.c,
-            v: c.v,
-            ingested_at: now,
-          }))
-        )
-        .onConflictDoUpdate({
-          target: [schema.candles.symbol, schema.candles.t],
-          set: {
-            o: schema.candles.o,
-            h: schema.candles.h,
-            l: schema.candles.l,
-            c: schema.candles.c,
-            v: schema.candles.v,
-            ingested_at: now,
-          },
-        });
-      inserted += slice.length;
+    // D1 의 SQL 변수 한도 100 — candles row 는 8 컬럼 → 10 rows/statement.
+    // D1 batch API 로 statement N개를 1 round-trip 에 합쳐 remote D1 지연 흡수.
+    const ROW_CHUNK = 10;
+    const BATCH_MAX = 50; // batch 당 statement 안전 한도
+    const stmts = [] as ReturnType<typeof this.buildCandleUpsert>[];
+    for (let i = 0; i < candles.length; i += ROW_CHUNK) {
+      stmts.push(this.buildCandleUpsert(symbol, candles.slice(i, i + ROW_CHUNK), now));
     }
-    return inserted;
+    for (let i = 0; i < stmts.length; i += BATCH_MAX) {
+      const slice = stmts.slice(i, i + BATCH_MAX);
+      if (slice.length === 1) {
+        await slice[0];
+      } else {
+        await this.db.batch(slice as [typeof slice[0], ...typeof slice]);
+      }
+    }
+    return candles.length;
+  }
+
+  private buildCandleUpsert(symbol: string, slice: Candle[], now: number) {
+    return this.db
+      .insert(schema.candles)
+      .values(
+        slice.map((c) => ({
+          symbol,
+          t: c.t,
+          o: c.o,
+          h: c.h,
+          l: c.l,
+          c: c.c,
+          v: c.v,
+          ingested_at: now,
+        }))
+      )
+      .onConflictDoUpdate({
+        target: [schema.candles.symbol, schema.candles.t],
+        set: {
+          o: schema.candles.o,
+          h: schema.candles.h,
+          l: schema.candles.l,
+          c: schema.candles.c,
+          v: schema.candles.v,
+          ingested_at: now,
+        },
+      });
   }
 
   async latestT(symbol: string): Promise<number | null> {
@@ -217,64 +229,83 @@ export class D1IndicatorRepo implements IndicatorRepo {
   ): Promise<number> {
     if (rows.length === 0) return 0;
     const now = Math.floor(Date.now() / 1000);
-    const CHUNK = 30;
-    let inserted = 0;
-    for (let i = 0; i < rows.length; i += CHUNK) {
-      const slice = rows.slice(i, i + CHUNK);
-      await this.db
-        .insert(schema.indicators)
-        .values(
-          slice.map((r) => ({
-            symbol,
-            t: r.t,
-            computed_version: version,
-            sma_5: r.sma_5 ?? null,
-            sma_20: r.sma_20 ?? null,
-            sma_50: r.sma_50 ?? null,
-            sma_100: r.sma_100 ?? null,
-            sma_200: r.sma_200 ?? null,
-            ema_12: r.ema_12 ?? null,
-            ema_26: r.ema_26 ?? null,
-            ema_50: r.ema_50 ?? null,
-            rsi_14: r.rsi_14 ?? null,
-            macd: r.macd ?? null,
-            macd_signal: r.macd_signal ?? null,
-            macd_hist: r.macd_hist ?? null,
-            bb_upper: r.bb_upper ?? null,
-            bb_middle: r.bb_middle ?? null,
-            bb_lower: r.bb_lower ?? null,
-            atr_14: r.atr_14 ?? null,
-            vol_sma_20: r.vol_sma_20 ?? null,
-            computed_at: now,
-          }))
-        )
-        .onConflictDoUpdate({
-          target: [schema.indicators.symbol, schema.indicators.t],
-          set: {
-            computed_version: version,
-            sma_5: schema.indicators.sma_5,
-            sma_20: schema.indicators.sma_20,
-            sma_50: schema.indicators.sma_50,
-            sma_100: schema.indicators.sma_100,
-            sma_200: schema.indicators.sma_200,
-            ema_12: schema.indicators.ema_12,
-            ema_26: schema.indicators.ema_26,
-            ema_50: schema.indicators.ema_50,
-            rsi_14: schema.indicators.rsi_14,
-            macd: schema.indicators.macd,
-            macd_signal: schema.indicators.macd_signal,
-            macd_hist: schema.indicators.macd_hist,
-            bb_upper: schema.indicators.bb_upper,
-            bb_middle: schema.indicators.bb_middle,
-            bb_lower: schema.indicators.bb_lower,
-            atr_14: schema.indicators.atr_14,
-            vol_sma_20: schema.indicators.vol_sma_20,
-            computed_at: now,
-          },
-        });
-      inserted += slice.length;
+    // indicators row 는 21 컬럼 → 4 rows/statement. batch 로 round-trip 합침.
+    const ROW_CHUNK = 4;
+    const BATCH_MAX = 50;
+    const stmts = [] as ReturnType<typeof this.buildIndicatorUpsert>[];
+    for (let i = 0; i < rows.length; i += ROW_CHUNK) {
+      stmts.push(
+        this.buildIndicatorUpsert(symbol, version, rows.slice(i, i + ROW_CHUNK), now)
+      );
     }
-    return inserted;
+    for (let i = 0; i < stmts.length; i += BATCH_MAX) {
+      const slice = stmts.slice(i, i + BATCH_MAX);
+      if (slice.length === 1) {
+        await slice[0];
+      } else {
+        await this.db.batch(slice as [typeof slice[0], ...typeof slice]);
+      }
+    }
+    return rows.length;
+  }
+
+  private buildIndicatorUpsert(
+    symbol: string,
+    version: number,
+    slice: IndicatorRow[],
+    now: number
+  ) {
+    return this.db
+      .insert(schema.indicators)
+      .values(
+        slice.map((r) => ({
+          symbol,
+          t: r.t,
+          computed_version: version,
+          sma_5: r.sma_5 ?? null,
+          sma_20: r.sma_20 ?? null,
+          sma_50: r.sma_50 ?? null,
+          sma_100: r.sma_100 ?? null,
+          sma_200: r.sma_200 ?? null,
+          ema_12: r.ema_12 ?? null,
+          ema_26: r.ema_26 ?? null,
+          ema_50: r.ema_50 ?? null,
+          rsi_14: r.rsi_14 ?? null,
+          macd: r.macd ?? null,
+          macd_signal: r.macd_signal ?? null,
+          macd_hist: r.macd_hist ?? null,
+          bb_upper: r.bb_upper ?? null,
+          bb_middle: r.bb_middle ?? null,
+          bb_lower: r.bb_lower ?? null,
+          atr_14: r.atr_14 ?? null,
+          vol_sma_20: r.vol_sma_20 ?? null,
+          computed_at: now,
+        }))
+      )
+      .onConflictDoUpdate({
+        target: [schema.indicators.symbol, schema.indicators.t],
+        set: {
+          computed_version: version,
+          sma_5: schema.indicators.sma_5,
+          sma_20: schema.indicators.sma_20,
+          sma_50: schema.indicators.sma_50,
+          sma_100: schema.indicators.sma_100,
+          sma_200: schema.indicators.sma_200,
+          ema_12: schema.indicators.ema_12,
+          ema_26: schema.indicators.ema_26,
+          ema_50: schema.indicators.ema_50,
+          rsi_14: schema.indicators.rsi_14,
+          macd: schema.indicators.macd,
+          macd_signal: schema.indicators.macd_signal,
+          macd_hist: schema.indicators.macd_hist,
+          bb_upper: schema.indicators.bb_upper,
+          bb_middle: schema.indicators.bb_middle,
+          bb_lower: schema.indicators.bb_lower,
+          atr_14: schema.indicators.atr_14,
+          vol_sma_20: schema.indicators.vol_sma_20,
+          computed_at: now,
+        },
+      });
   }
 
   async latestT(symbol: string, version: number): Promise<number | null> {

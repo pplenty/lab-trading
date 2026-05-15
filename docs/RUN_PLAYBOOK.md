@@ -51,13 +51,39 @@
 
 ## 일상 운영
 
-### 매일 (자동 cron)
+### 매일 cron 호출 패턴 (외부 트리거)
 
-| 작업 | 시각 (UTC) | Worker | 설명 |
-|---|---|---|---|
-| 인기 종목 시세 백필 | 매일 18:00 | `cron-daily-quotes.ts` | top 200 × 3 자산군 어제 봉 D1 upsert |
-| 자산 마스터 갱신 | 일요일 17:00 | `cron-asset-master.ts` | 종목 신규 상장·이름 변경 반영 |
-| 외부 API 한도 알림 | 매시간 | `cron-api-quota.ts` | 잔량 < 20% 시 운영자 알림 (Phase 2 — email/Slack) |
+`opennextjs/cloudflare` 의 worker.js 는 fetch handler 만 export 하므로 CF Workers Cron Trigger 는 직접 사용 불가. 대신 **외부 트리거** 가 `/api/cron/backfill` 을 호출한다.
+
+대안 1 — **GitHub Actions** (`.github/workflows/cron-backfill.yml`):
+```yaml
+on:
+  schedule:
+    - cron: "0 6 * * *"   # 매일 06:00 UTC
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -X POST "https://trading.jdgrid.com/api/cron/backfill" \
+               -H "Authorization: Bearer ${{ secrets.BACKFILL_TOKEN }}"
+```
+
+대안 2 — **cron-job.org / EasyCron** UI 에서 동일 URL + Authorization 헤더 등록.
+
+대안 3 — **별도 Workers 스크립트** (`workers/cron.ts`) 가 `scheduled` handler 만 가지고 fetch 호출. wrangler.jsonc 의 두 번째 worker.
+
+### 단일 종목 backfill (5년치)
+
+5년치 일괄 호출은 D1 round-trip 누적으로 30초 worker timeout 초과. 종목 단위 호출 권장:
+```bash
+TOKEN=$(grep BACKFILL_TOKEN .dev.vars | sed 's/BACKFILL_TOKEN="\(.*\)"/\1/')
+for s in btc eth sol xrp doge ada trx avax link matic dot; do
+  curl -X POST "http://localhost:8787/api/backfill?asset=crypto-upbit&symbol=$s&days=1825" \
+       -H "Authorization: Bearer $TOKEN"
+  echo
+done
+```
 
 ### 매주 (자동 cron, ADR-0021)
 

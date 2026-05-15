@@ -11,7 +11,6 @@ import {
 // CF Cron 요청은 `cf-worker` user-agent + scheduled time header — Workers 표준.
 // 또는 외부 cron 서비스 (CF Workflows, GitHub Actions) 가 BACKFILL_TOKEN 으로 호출.
 
-export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 function isAuthorized(req: Request): boolean {

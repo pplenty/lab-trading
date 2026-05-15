@@ -46,13 +46,67 @@ const DAY_SEC = 86400;
 // OAuth 토큰 in-memory 캐시 (module-level)
 // ──────────────────────────────────────────────────────────────────────────
 
-let cachedToken: {token: string; expiresAtMs: number} | null = null;
+import type {KVNamespace} from "@cloudflare/workers-types";
+
+type TokenCache = {token: string; expiresAtMs: number};
+let cachedToken: TokenCache | null = null;
+
+const KV_TOKEN_KEY = "kis:oauth-token";
+
+async function getKvNamespace(): Promise<KVNamespace | null> {
+  try {
+    const {getCloudflareContext} = await import("@opennextjs/cloudflare");
+    let env: unknown;
+    try {
+      env = getCloudflareContext().env;
+    } catch {
+      env = (await getCloudflareContext({async: true})).env;
+    }
+    const e = env as {lab_trading_cache?: KVNamespace; LAB_KV?: KVNamespace};
+    return e.lab_trading_cache ?? e.LAB_KV ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function loadTokenFromKv(): Promise<TokenCache | null> {
+  const kv = await getKvNamespace();
+  if (!kv) return null;
+  try {
+    const raw = await kv.get(KV_TOKEN_KEY, "json");
+    if (!raw) return null;
+    const t = raw as TokenCache;
+    if (!t.expiresAtMs || t.expiresAtMs <= Date.now() + 60_000) return null;
+    return t;
+  } catch {
+    return null;
+  }
+}
+
+async function saveTokenToKv(token: TokenCache): Promise<void> {
+  const kv = await getKvNamespace();
+  if (!kv) return;
+  const ttl = Math.floor((token.expiresAtMs - Date.now()) / 1000);
+  if (ttl < 60) return;
+  try {
+    await kv.put(KV_TOKEN_KEY, JSON.stringify(token), {expirationTtl: ttl});
+  } catch {
+    // best-effort — KV 실패는 다음 호출에 OAuth 재시도로 회복.
+  }
+}
 
 async function getAccessToken(): Promise<string> {
-  // 만료 60초 전엔 미리 재발급
+  // 1) in-memory 캐시 (가장 빠름, 같은 worker 인스턴스 안)
   if (cachedToken && cachedToken.expiresAtMs > Date.now() + 60_000) {
     return cachedToken.token;
   }
+  // 2) KV 캐시 (cold start 후 신규 인스턴스 — OAuth 1분 한도 회피)
+  const kvToken = await loadTokenFromKv();
+  if (kvToken) {
+    cachedToken = kvToken;
+    return kvToken.token;
+  }
+  // 3) 신규 발급
   const res = await fetch(`${kisBaseUrl()}/oauth2/tokenP`, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
@@ -74,6 +128,8 @@ async function getAccessToken(): Promise<string> {
     token: data.access_token,
     expiresAtMs: Date.now() + data.expires_in * 1000,
   };
+  // 4) KV 에 best-effort 저장 — 다음 cold start 가 1분 한도 안 걸림.
+  await saveTokenToKv(cachedToken);
   return cachedToken.token;
 }
 
@@ -194,14 +250,21 @@ async function liveGetCandles(
     headers: kisAuthHeaders(token, "FHKST03010100"),
   });
   if (!res.ok) {
-    throw new Error(`kis.getCandles ${symbol}: HTTP ${res.status}`);
+    const body = await res.text().catch(() => "(no body)");
+    throw new Error(
+      `kis.getCandles ${symbol}: HTTP ${res.status} [date1=${formatDate(startDate)} date2=${formatDate(endDate)}] body=${body.slice(0, 200)}`
+    );
   }
   const data = (await res.json()) as {
     rt_cd: string;
+    msg_cd?: string;
+    msg1?: string;
     output2: KisCandleRow[];
   };
   if (data.rt_cd !== "0") {
-    throw new Error(`kis.getCandles ${symbol}: rt_cd=${data.rt_cd}`);
+    throw new Error(
+      `kis.getCandles ${symbol}: rt_cd=${data.rt_cd} msg_cd=${data.msg_cd ?? "?"} msg=${data.msg1 ?? "?"}`
+    );
   }
   // 응답은 최신 → 과거. 시간순 정렬.
   const candles = (data.output2 ?? [])

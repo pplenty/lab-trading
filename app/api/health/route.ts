@@ -4,7 +4,6 @@ import {NextResponse} from "next/server";
 // 응답은 JSON. 의도적으로 작고 결정적 — 외부 API 의존성 0 (어댑터 호출 안 함).
 // 어댑터 키 발급 여부는 server-side env 확인으로 단순 boolean. 키 값 자체는 노출 X.
 
-export const runtime = "edge";
 export const dynamic = "force-dynamic";
 
 const VERSION = "0.1.0";

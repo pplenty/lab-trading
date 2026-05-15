@@ -28,12 +28,21 @@ const DAY_SEC = 86400;
 
 type Asset = "crypto-upbit" | "crypto-binance" | "us" | "kr";
 
-const ADAPTER_MAP: Record<Asset, {adapter: DataAdapter; daysPerCall: number}> = {
-  "crypto-upbit": {adapter: upbitAdapter, daysPerCall: 200},
-  "crypto-binance": {adapter: {} as DataAdapter, daysPerCall: 1000}, // binanceAdapter 는 별도 등록 필요 (Phase 1.5 후속)
-  us: {adapter: twelveDataAdapter, daysPerCall: 5000},
-  kr: {adapter: kisAdapter, daysPerCall: 100},
+// delayMs — chunk 간 sleep. KIS 가 초당 호출 한도 (모의 ~2/s, 실전 ~20/s) 라 충분히 띄움.
+// Upbit/Binance/Twelve Data 는 단일 종목 직렬 호출에선 한도 여유 충분.
+const ADAPTER_MAP: Record<
+  Asset,
+  {adapter: DataAdapter; daysPerCall: number; delayMs: number}
+> = {
+  "crypto-upbit": {adapter: upbitAdapter, daysPerCall: 200, delayMs: 0},
+  "crypto-binance": {adapter: {} as DataAdapter, daysPerCall: 1000, delayMs: 0}, // binanceAdapter 는 별도 등록 필요
+  us: {adapter: twelveDataAdapter, daysPerCall: 5000, delayMs: 0},
+  kr: {adapter: kisAdapter, daysPerCall: 100, delayMs: 1100},
 };
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 /** [start, end] 페어로 toT 부터 거꾸로 chunk 생성. */
 function chunkRanges(
@@ -66,6 +75,8 @@ export async function backfillSymbol(opts: {
   symbol: string;
   fromT: number;
   toT: number;
+  /** chunk 호출 사이 대기 (rate limit 회피). 기본 0. */
+  delayMs?: number;
 }): Promise<BackfillResult> {
   const db = await getDb();
   const candleRepo = new D1CandleRepo(db);
@@ -74,8 +85,12 @@ export async function backfillSymbol(opts: {
   const ranges = chunkRanges(opts.fromT, opts.toT, opts.daysPerCall);
   const collected: Candle[] = [];
   let rangesFetched = 0;
-  for (const [start, end] of ranges) {
+  let lastError: string | undefined;
+  for (let i = 0; i < ranges.length; i++) {
+    const [start, end] = ranges[i];
     try {
+      // 첫 호출 제외 chunk 간 rate-limit 회피 sleep.
+      if (i > 0 && opts.delayMs && opts.delayMs > 0) await sleep(opts.delayMs);
       const series = await opts.adapter.getCandles(opts.symbol, {
         timeframe: "1d",
         from: start,
@@ -87,13 +102,10 @@ export async function backfillSymbol(opts: {
       // 어댑터가 빈 응답 (더 이상 historical 없음) → early exit
       if (series.candles.length === 0) break;
     } catch (err) {
-      return {
-        symbol: opts.symbol,
-        candlesInserted: 0,
-        indicatorsInserted: 0,
-        rangesFetched,
-        error: err instanceof Error ? err.message : String(err),
-      };
+      // partial success — 일부 chunk 실패해도 지금까지 collected 데이터는 UPSERT.
+      // (어댑터가 너무 과거 거부할 때 / rate limit 일시 차단 등에서 데이터 손실 방지)
+      lastError = err instanceof Error ? err.message : String(err);
+      break;
     }
   }
 
@@ -115,6 +127,8 @@ export async function backfillSymbol(opts: {
     candlesInserted,
     indicatorsInserted,
     rangesFetched,
+    // 일부 chunk 실패가 있었지만 부분 데이터는 저장된 경우 error 도 함께 노출 (관찰용).
+    ...(lastError ? {error: lastError} : {}),
   };
 }
 
@@ -135,6 +149,7 @@ export async function backfillAssetClass(opts: {
       symbol,
       fromT: opts.fromT,
       toT: opts.toT,
+      delayMs: cfg.delayMs,
     });
     results.push(r);
   }
@@ -163,6 +178,7 @@ export async function incrementalBackfill(opts: {
       symbol,
       fromT,
       toT: now,
+      delayMs: cfg.delayMs,
     });
     results.push(r);
   }

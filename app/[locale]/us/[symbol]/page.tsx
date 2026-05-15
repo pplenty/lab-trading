@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import {Link} from "@/i18n/navigation";
 import {absoluteUrl} from "@/lib/site";
 import {twelveDataAdapter} from "@/lib/adapters/twelve-data";
+import {loadCandleSeries} from "@/lib/data/candles";
 import {usRegistry, getUsBySymbol} from "@/lib/symbols/registry";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {FinancialDelta} from "@/components/FinancialDelta";
@@ -84,7 +85,7 @@ export default async function UsSymbolPage({params}: PageProps) {
   try {
     [quote, series] = await Promise.all([
       twelveDataAdapter.getQuote(entry.symbol),
-      twelveDataAdapter.getCandles(entry.symbol, {timeframe: "1d", limit: 200}),
+      loadCandleSeries({asset: "us", symbol: entry.symbol, limit: 200}),
     ]);
   } catch (err) {
     fetchError = err instanceof Error ? err.message : String(err);

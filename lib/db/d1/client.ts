@@ -19,16 +19,23 @@ let cached: LabTradingDB | null = null;
  */
 export async function getDb(): Promise<LabTradingDB> {
   if (cached) return cached;
-  const {env} = await getCloudflareContext({async: true});
+  // getCloudflareContext: try sync 먼저, async fallback (cf:preview / production 양쪽 호환).
+  let env: unknown;
+  try {
+    env = getCloudflareContext().env;
+  } catch {
+    env = (await getCloudflareContext({async: true})).env;
+  }
   // binding 이름 유연하게 — `DB` (관용) 또는 `lab_trading_db` (snake_case) 둘 다 지원.
-  const cfEnv = env as unknown as {
+  const cfEnv = env as {
     DB?: D1Database;
     lab_trading_db?: D1Database;
   };
   const d1 = cfEnv.DB ?? cfEnv.lab_trading_db;
   if (!d1) {
+    const keys = env ? Object.keys(env as object).join(", ") : "(no env)";
     throw new Error(
-      "D1 binding 미설정 — wrangler.jsonc 의 d1_databases binding 을 'DB' 또는 'lab_trading_db' 로 설정하세요."
+      `D1 binding 미설정 — wrangler.jsonc 의 d1_databases binding 이름 확인 필요. 현재 env keys: ${keys}`
     );
   }
   cached = drizzle(d1, {schema});
@@ -41,8 +48,13 @@ export async function getDb(): Promise<LabTradingDB> {
  */
 export async function isDbAvailable(): Promise<boolean> {
   try {
-    const {env} = await getCloudflareContext({async: true});
-    const cfEnv = env as unknown as {
+    let env: unknown;
+    try {
+      env = getCloudflareContext().env;
+    } catch {
+      env = (await getCloudflareContext({async: true})).env;
+    }
+    const cfEnv = env as {
       DB?: D1Database;
       lab_trading_db?: D1Database;
     };

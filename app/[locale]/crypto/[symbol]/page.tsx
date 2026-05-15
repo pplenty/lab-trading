@@ -6,6 +6,7 @@ import {Link} from "@/i18n/navigation";
 import {absoluteUrl} from "@/lib/site";
 import {upbitAdapter} from "@/lib/adapters/upbit";
 import {coingeckoAdapter} from "@/lib/adapters/coingecko";
+import {loadCandleSeries} from "@/lib/data/candles";
 import {cryptoRegistry, getCryptoBySymbol} from "@/lib/symbols/registry";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {FinancialDelta} from "@/components/FinancialDelta";
@@ -92,7 +93,7 @@ export default async function CryptoSymbolPage({params}: PageProps) {
   try {
     [quote, series] = await Promise.all([
       upbitAdapter.getQuote(entry.symbol),
-      upbitAdapter.getCandles(entry.symbol, {timeframe: "1d", limit: 200}),
+      loadCandleSeries({asset: "crypto", symbol: entry.symbol, limit: 200}),
     ]);
   } catch (err) {
     fetchError = err instanceof Error ? err.message : String(err);

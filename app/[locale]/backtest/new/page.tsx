@@ -1,8 +1,6 @@
 import {getTranslations} from "next-intl/server";
 import {notFound} from "next/navigation";
-import {upbitAdapter} from "@/lib/adapters/upbit";
-import {twelveDataAdapter} from "@/lib/adapters/twelve-data";
-import {kisAdapter} from "@/lib/adapters/kis";
+import {loadCandleSeries} from "@/lib/data/candles";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {
   getCryptoBySymbol,
@@ -70,8 +68,9 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
     currency = "KRW";
     sourceLabel = "Upbit KRW";
     try {
-      series = await upbitAdapter.getCandles(entry.symbol, {
-        timeframe: "1d",
+      series = await loadCandleSeries({
+        asset: "crypto",
+        symbol: entry.symbol,
         limit: 200,
       });
     } catch (err) {
@@ -84,8 +83,9 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
     displayTicker = entry.ticker;
     currency = "USD";
     try {
-      series = await twelveDataAdapter.getCandles(entry.symbol, {
-        timeframe: "1d",
+      series = await loadCandleSeries({
+        asset: "us",
+        symbol: entry.symbol,
         limit: 200,
       });
       isDemo = series.source.includes("demo");
@@ -102,8 +102,9 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
     displayTicker = entry.ticker;
     currency = "KRW";
     try {
-      series = await kisAdapter.getCandles(entry.symbol, {
-        timeframe: "1d",
+      series = await loadCandleSeries({
+        asset: "kr",
+        symbol: entry.symbol,
         limit: 200,
       });
       isDemo = series.source.includes("demo");
