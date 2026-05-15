@@ -9,6 +9,7 @@ import {
 } from "@/lib/symbols/registry";
 import {AssetClassCard} from "@/components/panels/AssetClassCard";
 import {BacktestQuickLinks} from "@/components/panels/BacktestQuickLinks";
+import {siteJsonLd} from "@/lib/seo/site-jsonld";
 import type {Quote} from "@/lib/types";
 
 // 대시보드 / 홈 — 3 자산군 통합 첫 진입 화면.
@@ -57,6 +58,11 @@ export default async function HomePage({
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10 sm:py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{__html: siteJsonLd(locale)}}
+      />
+
       <header className="mb-10 flex flex-col gap-3">
         <h1 className="text-3xl font-semibold tracking-tight text-fg sm:text-4xl">
           {t("title")}

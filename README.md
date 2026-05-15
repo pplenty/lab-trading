@@ -14,13 +14,15 @@
 | **us** | Twelve Data | Demo (GBM 시뮬) — `TWELVE_DATA_API_KEY` 발급 시 라이브 자동 전환 |
 | **kr** | KIS Open API | Demo (GBM 시뮬, 호가 단위 정수 quantize) — `KIS_APP_KEY/SECRET` 발급 시 활성 |
 
-활성 라우트: 대시보드 + 3 자산군 × {인덱스, gainers, losers, volume, 종목상세} + 백테스트 작업장 + 저장된 전략 + 통합 검색 + 설정 + 404.
+활성 라우트: 대시보드 + 3 자산군 × {인덱스, gainers, losers, volume, 종목상세} + 백테스트 작업장 + 저장된 전략 + 통합 검색 + 설정 + 404 + `/api/health`.
 
-**사용자 자산** (localStorage, ADR-0016): 즐겨찾기 ⭐ + 최근 본 종목 ⏰ + 저장된 백테스트 전략 (URL prefill 공유 가능).
+**사용자 자산** (localStorage, ADR-0016): 즐겨찾기 ⭐ + 최근 본 종목 ⏰ + 저장된 백테스트 전략 (URL prefill 공유 가능). Settings 에서 일괄 reset.
 **보조 데이터** (CoinGecko): 코인 종목 상세에 USD 가격 + 시가총액 + 시총 순위 노출.
 **종목 ↔ 백테스트 연결**: 종목 상세 페이지 안에 buy-and-hold 미니뷰 (SSR runBacktest) + ⚡ 전체 백테스트 CTA + 자매 종목 chip nav.
+**SEO** (ADR-0015 D): 종목 상세에 schema.org FinancialProduct + BreadcrumbList JSON-LD + OpenGraph + Twitter card. 홈에 WebSite + SearchAction.
+**a11y**: AppShell drag handle 키보드 (Arrow ±8px, Shift+Arrow ±32px, Home/End), 컬러 + 부호/화살표 병기, role=combobox 검색.
 
-코드: TypeScript strict / ESLint 9 / **Vitest 95 ✓** (104 파일 / ~9080 줄).
+코드: TypeScript strict / ESLint 9 / **Vitest 95 ✓** (107 파일 / ~9300 줄).
 
 ## 빌드 / 실행
 
