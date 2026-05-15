@@ -1,0 +1,52 @@
+name: Daily incremental backfill
+
+# 매일 06:00 UTC (= 15:00 KST, KOSPI 폐장 후 1시간) `/api/cron/backfill` 호출.
+# 응답에 자산군별 candles/indicators inserted 카운트가 들어오므로 실패 감지 용이.
+# 수동 트리거도 허용 (workflow_dispatch) — 신규 종목 추가 직후 재실행 등.
+# 가이드: docs/RUN_PLAYBOOK.md "매일 cron 호출 패턴".
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger /api/cron/backfill
+        env:
+          BACKFILL_TOKEN: ${{ secrets.BACKFILL_TOKEN }}
+          SITE: https://trading.jdgrid.com
+        run: |
+          set -euo pipefail
+
+          if [ -z "${BACKFILL_TOKEN:-}" ]; then
+            echo "::error::BACKFILL_TOKEN secret is missing in this repo"
+            exit 1
+          fi
+
+          # body + HTTP code 동시 캡처
+          body=$(mktemp)
+          code=$(curl -sS -o "$body" -w "%{http_code}" \
+                      -X POST "$SITE/api/cron/backfill" \
+                      -H "Authorization: Bearer $BACKFILL_TOKEN" \
+                      --max-time 540) || code=000
+
+          echo "HTTP $code"
+          cat "$body"
+          echo
+
+          if [ "$code" != "200" ]; then
+            echo "::error::cron backfill failed with HTTP $code"
+            exit 1
+          fi
+
+          # body 에 한 자산군이라도 errors > 0 이면 warning (실패가 아니라 관찰)
+          if grep -q '"errors":[1-9]' "$body"; then
+            echo "::warning::일부 종목 errors > 0 — body 참조"
+          fi
