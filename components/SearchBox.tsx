@@ -1,6 +1,7 @@
 "use client";
 
 import {useEffect, useId, useMemo, useRef, useState} from "react";
+import {ArrowRight} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import {Link, useRouter} from "@/i18n/navigation";
 import {searchAssets} from "@/lib/search";
@@ -8,6 +9,7 @@ import {searchAssets} from "@/lib/search";
 // 자산군 통합 검색 (ADR-0022).
 // 정적 인덱스 36 종목 (registry crypto/us/kr) — Phase 1.5 D1 LIKE fallback 확장.
 // combobox 패턴: ↓↑ navigate, Enter 진입, Escape 닫기, / · ⌘K 글로벌 focus.
+// listbox 마지막 행은 "전체 결과 페이지 → /search?q=..." fallthrough.
 
 export function SearchBox() {
   const t = useTranslations("search");
@@ -21,6 +23,9 @@ export function SearchBox() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const results = useMemo(() => searchAssets(query, 8), [query]);
+  // 마지막 옵션은 "전체 결과 보기" 가상 항목 — activeIndex === results.length 면 이게 활성.
+  const totalOptions = results.length + 1;
+  const viewAllIndex = results.length;
 
   // 글로벌 / · ⌘K → 인풋 focus.
   useEffect(() => {
@@ -65,6 +70,13 @@ export function SearchBox() {
     setActiveIndex(0);
   }
 
+  function goToSearchPage() {
+    const q = query.trim();
+    if (!q) return;
+    router.push(`/search?q=${encodeURIComponent(q)}`);
+    handleSelect();
+  }
+
   function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Escape") {
       e.preventDefault();
@@ -72,34 +84,41 @@ export function SearchBox() {
       else inputRef.current?.blur();
       return;
     }
-    if (!open || results.length === 0) return;
+    if (!open || totalOptions === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setActiveIndex((i) => (i + 1) % results.length);
+      setActiveIndex((i) => (i + 1) % totalOptions);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setActiveIndex((i) => (i - 1 + results.length) % results.length);
+      setActiveIndex((i) => (i - 1 + totalOptions) % totalOptions);
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const selected = results[activeIndex];
-      if (selected) {
-        router.push(`/${selected.class}/${selected.symbol}`);
-        handleSelect();
+      if (activeIndex === viewAllIndex) {
+        goToSearchPage();
+      } else {
+        const selected = results[activeIndex];
+        if (selected) {
+          router.push(`/${selected.class}/${selected.symbol}`);
+          handleSelect();
+        }
       }
     } else if (e.key === "Home") {
       e.preventDefault();
       setActiveIndex(0);
     } else if (e.key === "End") {
       e.preventDefault();
-      setActiveIndex(results.length - 1);
+      setActiveIndex(totalOptions - 1);
     }
   }
 
   const showDropdown = open && query.trim().length > 0;
-  const activeId =
-    showDropdown && results[activeIndex]
-      ? `${listboxId}-${results[activeIndex].class}-${results[activeIndex].symbol}`
-      : undefined;
+  const activeId = !showDropdown
+    ? undefined
+    : activeIndex === viewAllIndex
+      ? `${listboxId}-view-all`
+      : results[activeIndex]
+        ? `${listboxId}-${results[activeIndex].class}-${results[activeIndex].symbol}`
+        : undefined;
 
   return (
     <div ref={containerRef} className="relative w-full">
@@ -139,51 +158,75 @@ export function SearchBox() {
           role="listbox"
           className="absolute right-0 top-full z-20 mt-2 w-72 overflow-hidden rounded-lg border border-line bg-bg shadow-lg"
         >
-          {results.length === 0 ? (
-            <div className="px-4 py-3 text-xs text-fg-muted">
-              {t("noResults")}
-            </div>
-          ) : (
-            <ul>
-              {results.map((entry, idx) => {
-                const isActive = idx === activeIndex;
-                const optionId = `${listboxId}-${entry.class}-${entry.symbol}`;
-                const displayName =
-                  locale === "ko" && entry.nameKo ? entry.nameKo : entry.name;
-                return (
-                  <li key={`${entry.class}:${entry.symbol}`}>
-                    <Link
-                      id={optionId}
-                      role="option"
-                      aria-selected={isActive}
-                      href={`/${entry.class}/${entry.symbol}`}
-                      onClick={handleSelect}
-                      onMouseEnter={() => setActiveIndex(idx)}
-                      className={
-                        isActive
-                          ? "block bg-surface-hover px-4 py-2.5"
-                          : "block px-4 py-2.5 transition-colors hover:bg-surface"
-                      }
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="flex flex-1 flex-col text-sm">
-                          <span className="truncate font-medium text-fg">
-                            {displayName}
-                          </span>
-                          <span className="truncate text-[11px] text-fg-subtle">
-                            {entry.ticker}
-                          </span>
+          <ul>
+            {results.map((entry, idx) => {
+              const isActive = idx === activeIndex;
+              const optionId = `${listboxId}-${entry.class}-${entry.symbol}`;
+              const displayName =
+                locale === "ko" && entry.nameKo ? entry.nameKo : entry.name;
+              return (
+                <li key={`${entry.class}:${entry.symbol}`}>
+                  <Link
+                    id={optionId}
+                    role="option"
+                    aria-selected={isActive}
+                    href={`/${entry.class}/${entry.symbol}`}
+                    onClick={handleSelect}
+                    onMouseEnter={() => setActiveIndex(idx)}
+                    className={
+                      isActive
+                        ? "block bg-surface-hover px-4 py-2.5"
+                        : "block px-4 py-2.5 transition-colors hover:bg-surface"
+                    }
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="flex flex-1 flex-col text-sm">
+                        <span className="truncate font-medium text-fg">
+                          {displayName}
                         </span>
-                        <span className="text-[10px] uppercase tracking-wider text-fg-subtle">
-                          {entry.classLabel}
+                        <span className="truncate text-[11px] text-fg-subtle">
+                          {entry.ticker}
                         </span>
-                      </div>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+                      </span>
+                      <span className="text-[10px] uppercase tracking-wider text-fg-subtle">
+                        {entry.classLabel}
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+            {results.length === 0 && (
+              <li className="px-4 py-3 text-xs text-fg-muted">
+                {t("noResults")}
+              </li>
+            )}
+            {/* 마지막: 전체 결과 페이지 fallthrough */}
+            <li
+              id={`${listboxId}-view-all`}
+              role="option"
+              aria-selected={activeIndex === viewAllIndex}
+              onMouseEnter={() => setActiveIndex(viewAllIndex)}
+              onClick={goToSearchPage}
+              className={
+                activeIndex === viewAllIndex
+                  ? "cursor-pointer border-t border-line bg-surface-hover px-4 py-2.5"
+                  : "cursor-pointer border-t border-line px-4 py-2.5 transition-colors hover:bg-surface"
+              }
+            >
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <span className="flex items-center gap-1.5 text-fg-muted">
+                  <ArrowRight size={11} aria-hidden="true" />
+                  <span className="truncate">
+                    &ldquo;{query}&rdquo; 전체 결과 보기
+                  </span>
+                </span>
+                <span className="text-[10px] uppercase tracking-wider text-fg-subtle">
+                  Enter
+                </span>
+              </div>
+            </li>
+          </ul>
         </div>
       )}
     </div>

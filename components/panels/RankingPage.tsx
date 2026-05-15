@@ -2,6 +2,7 @@ import {getTranslations} from "next-intl/server";
 import type {AssetClass, Quote, RankingKind} from "@/lib/types";
 import type {DataAdapter} from "@/lib/adapters/types";
 import {QuoteTable} from "./QuoteTable";
+import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
 
 // 자산군 × 랭킹 종류 공용 페이지 컴포넌트.
 // 각 자산군의 어댑터 (rankings 구현) 를 위임 받아 표만 렌더.
@@ -62,6 +63,21 @@ export async function RankingPage({
           <p className="font-medium text-fg">데이터 fetch 실패</p>
           <p className="mt-1 text-xs">{fetchError}</p>
         </div>
+      )}
+
+      {quotes.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: assetListJsonLd({
+              class: cls,
+              locale,
+              quotes,
+              nameMap,
+              listName: `${assetLabel} · ${label}`,
+            }),
+          }}
+        />
       )}
 
       <QuoteTable class={cls} quotes={quotes} nameMap={nameMap} locale={locale} />
