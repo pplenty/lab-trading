@@ -169,7 +169,11 @@ export function BacktestPanel({
       </section>
 
       {result ? (
-        <BacktestResultCard result={result} initialCapital={INITIAL_CAPITAL} />
+        <BacktestResultCard
+          result={result}
+          initialCapital={INITIAL_CAPITAL}
+          currency={currency}
+        />
       ) : (
         <p className="rounded-md border border-line bg-surface p-4 text-sm text-fg-muted">
           데이터가 부족해 백테스트를 실행할 수 없습니다.

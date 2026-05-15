@@ -1,14 +1,17 @@
 import {FinancialDelta} from "@/components/FinancialDelta";
 import {LineChart, type LineSeries} from "@/components/charts/LineChart";
+import {TradesTable} from "./TradesTable";
 import type {BacktestResult} from "@/lib/backtest/types";
 
-// 백테스트 결과 카드 — 메트릭스 8 항목 + equity curve (전략 + buy-and-hold baseline).
+// 백테스트 결과 카드 — 메트릭스 8 항목 + equity curve + trades 표.
 // ADR-0019 의 `BacktestResult.metrics` 그대로 표시.
 
 type Props = {
   result: BacktestResult;
   /** 초기 자본. equity → return % 변환에 사용. */
   initialCapital: number;
+  /** 통화 — TradesTable 의 가격 포맷에 사용. */
+  currency: string;
 };
 
 const compactFmt = new Intl.NumberFormat(undefined, {
@@ -21,7 +24,7 @@ function fmtPct(v: number, digits = 2) {
   return `${sign}${v.toFixed(digits)}%`;
 }
 
-export function BacktestResultCard({result, initialCapital}: Props) {
+export function BacktestResultCard({result, initialCapital, currency}: Props) {
   const m = result.metrics;
   const equitySeries: LineSeries = {
     label: "Strategy",
@@ -108,6 +111,8 @@ export function BacktestResultCard({result, initialCapital}: Props) {
           ariaLabel="Equity curve"
         />
       </section>
+
+      <TradesTable trades={result.trades} currency={currency} maxRows={20} />
     </div>
   );
 }
