@@ -2,6 +2,7 @@ import {getTranslations} from "next-intl/server";
 import {kisAdapter} from "@/lib/adapters/kis";
 import {krRegistry} from "@/lib/symbols/registry";
 import {QuoteTable} from "@/components/panels/QuoteTable";
+import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
 import type {Quote} from "@/lib/types";
 
 // 국내주식 자산군 인덱스 — KOSPI + KOSDAQ 통합. KIS 키 발급 전이라 demo GBM.
@@ -61,6 +62,21 @@ export default async function KrIndexPage({params}: Props) {
           <p className="font-medium text-fg">데이터 fetch 실패</p>
           <p className="mt-1 text-xs">{fetchError}</p>
         </div>
+      )}
+
+      {quotes.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: assetListJsonLd({
+              class: "kr",
+              locale,
+              quotes,
+              nameMap,
+              listName: "국내주식 시세 (KOSPI + KOSDAQ KRW)",
+            }),
+          }}
+        />
       )}
 
       <QuoteTable class="kr" quotes={quotes} nameMap={nameMap} locale={locale} />

@@ -2,13 +2,9 @@ import type {MetadataRoute} from "next";
 import {routing} from "@/i18n/routing";
 import {absoluteUrl} from "@/lib/site";
 
-// 활성 라우트만 sitemap 에 포함. stub (news / kospi-only / kosdaq-only / backtest-saved 등) noindex.
+// 활성 라우트만 sitemap 에 포함. stub (news / kospi-only / kosdaq-only) noindex.
+// /search 는 generateMetadata 에서 robots noindex (검색 결과 페이지 관행).
 // 종목 상세는 후속 PR 에서 D1 assets 테이블 query 로 동적 추가.
-//
-// 활성 인덱스:
-//   - 홈 `/`
-//   - /crypto · /us · /kr × {/, /gainers, /losers, /volume}
-//   - /backtest/new · /settings
 const STATIC_PATHS = [
   "",
   "/crypto",
@@ -24,6 +20,7 @@ const STATIC_PATHS = [
   "/kr/losers",
   "/kr/volume",
   "/backtest/new",
+  "/backtest/saved",
   "/settings",
 ];
 

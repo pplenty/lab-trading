@@ -2,6 +2,7 @@ import {getTranslations} from "next-intl/server";
 import {twelveDataAdapter} from "@/lib/adapters/twelve-data";
 import {usRegistry} from "@/lib/symbols/registry";
 import {QuoteTable} from "@/components/panels/QuoteTable";
+import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
 import type {Quote} from "@/lib/types";
 
 // 해외주식 자산군 인덱스 — Twelve Data (키 발급 시 실제 API, 미발급 시 GBM 더미).
@@ -60,6 +61,21 @@ export default async function UsIndexPage({params}: Props) {
           <p className="font-medium text-fg">데이터 fetch 실패</p>
           <p className="mt-1 text-xs">{fetchError}</p>
         </div>
+      )}
+
+      {quotes.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: assetListJsonLd({
+              class: "us",
+              locale,
+              quotes,
+              nameMap,
+              listName: "해외주식 시세 (Twelve Data USD)",
+            }),
+          }}
+        />
       )}
 
       <QuoteTable class="us" quotes={quotes} nameMap={nameMap} locale={locale} />

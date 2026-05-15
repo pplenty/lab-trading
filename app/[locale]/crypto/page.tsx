@@ -2,6 +2,7 @@ import {getTranslations} from "next-intl/server";
 import {upbitAdapter} from "@/lib/adapters/upbit";
 import {cryptoRegistry} from "@/lib/symbols/registry";
 import {QuoteTable} from "@/components/panels/QuoteTable";
+import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
 import type {Quote} from "@/lib/types";
 
 // 코인 자산군 인덱스 — Upbit (KRW) listQuotes.
@@ -54,6 +55,21 @@ export default async function CryptoIndexPage({params}: Props) {
           <p className="font-medium text-fg">데이터 fetch 실패</p>
           <p className="mt-1 text-xs">{fetchError}</p>
         </div>
+      )}
+
+      {quotes.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: assetListJsonLd({
+              class: "crypto",
+              locale,
+              quotes,
+              nameMap,
+              listName: "코인 시세 (Upbit KRW)",
+            }),
+          }}
+        />
       )}
 
       <QuoteTable class="crypto" quotes={quotes} nameMap={nameMap} locale={locale} />
