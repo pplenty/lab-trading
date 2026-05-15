@@ -1,4 +1,4 @@
-import {and, asc, eq, gte, lt, like, or} from "drizzle-orm";
+import {and, asc, desc, eq, gte, lt, like, or} from "drizzle-orm";
 import type {LabTradingDB} from "./client";
 import * as schema from "./schema";
 import type {Asset, Candle, IndicatorRow} from "@/lib/types";
@@ -174,7 +174,7 @@ export class D1CandleRepo implements CandleRepo {
       .select({t: schema.candles.t})
       .from(schema.candles)
       .where(eq(schema.candles.symbol, symbol))
-      .orderBy(asc(schema.candles.t))
+      .orderBy(desc(schema.candles.t))
       .limit(1);
     return rows.length > 0 ? rows[0].t : null;
   }
@@ -318,7 +318,7 @@ export class D1IndicatorRepo implements IndicatorRepo {
           eq(schema.indicators.computed_version, version)
         )
       )
-      .orderBy(asc(schema.indicators.t))
+      .orderBy(desc(schema.indicators.t))
       .limit(1);
     return rows.length > 0 ? rows[0].t : null;
   }
