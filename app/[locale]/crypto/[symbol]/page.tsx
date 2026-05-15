@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import {Link} from "@/i18n/navigation";
 import {absoluteUrl} from "@/lib/site";
 import {upbitAdapter} from "@/lib/adapters/upbit";
+import {coingeckoAdapter} from "@/lib/adapters/coingecko";
 import {cryptoRegistry, getCryptoBySymbol} from "@/lib/symbols/registry";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {FinancialDelta} from "@/components/FinancialDelta";
@@ -68,6 +69,7 @@ export default async function CryptoSymbolPage({params}: PageProps) {
 
   let quote: Quote | null = null;
   let series: CandleSeries | null = null;
+  let cgQuote: Quote | null = null;
   let fetchError: string | null = null;
 
   try {
@@ -77,6 +79,13 @@ export default async function CryptoSymbolPage({params}: PageProps) {
     ]);
   } catch (err) {
     fetchError = err instanceof Error ? err.message : String(err);
+  }
+
+  // CoinGecko 글로벌 보조 — USD 가격 / 시가총액 / rank. rate limit 으로 실패해도 메인 데이터에 영향 X.
+  try {
+    cgQuote = await coingeckoAdapter.getQuote(entry.symbol);
+  } catch {
+    cgQuote = null;
   }
 
   const priceFmt = new Intl.NumberFormat("ko-KR", {
@@ -142,6 +151,37 @@ export default async function CryptoSymbolPage({params}: PageProps) {
           <Stat label="24h Low" value={quote.low24h !== undefined ? priceFmt.format(quote.low24h) : "—"} />
           <Stat label="24h Volume (KRW)" value={quote.volume24h !== undefined ? volFmt.format(quote.volume24h) : "—"} />
           <Stat label="Source" value="Upbit" />
+        </section>
+      )}
+
+      {cgQuote && (
+        <section className="mb-6 grid gap-3 text-sm sm:grid-cols-4">
+          <Stat
+            label="USD 가격"
+            value={new Intl.NumberFormat(undefined, {
+              style: "currency",
+              currency: "USD",
+              maximumFractionDigits: cgQuote.price < 1 ? 6 : 2,
+            }).format(cgQuote.price)}
+          />
+          <Stat
+            label="시가총액 (USD)"
+            value={
+              cgQuote.marketCap !== undefined
+                ? new Intl.NumberFormat(undefined, {
+                    style: "currency",
+                    currency: "USD",
+                    notation: "compact",
+                    maximumFractionDigits: 2,
+                  }).format(cgQuote.marketCap)
+                : "—"
+            }
+          />
+          <Stat
+            label="시총 순위"
+            value={cgQuote.rank !== undefined ? `#${cgQuote.rank}` : "—"}
+          />
+          <Stat label="Global source" value="CoinGecko" />
         </section>
       )}
 
