@@ -18,6 +18,10 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
+	// workers.dev 서브도메인 (lab-trading.<account>.workers.dev) — 디버그/롤백 진입점으로 유지.
+	// preview URLs — version-bound URL 자동 생성 (배포 전 검증). 필요 없으면 false 로.
+	"workers_dev": true,
+	"preview_urls": true,
 	"main": ".open-next/worker.js",
 	"assets": {
 		"directory": ".open-next/assets",

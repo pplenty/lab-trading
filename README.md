@@ -6,23 +6,29 @@
 
 ## 현재 상태 (2026-05-15)
 
-**Phase 1 핵심 가치 점등 완료.** 3 자산군(코인 / 해외주식 / 국내주식) × 시세·랭킹·종목상세·백테스트 모두 동작. 데이터 키 발급 전 임시로 더미 GBM 모드 자동 분기.
+**Production 라이브 — <https://trading.jdgrid.com>**. 3 자산군 × 시세·랭킹·종목상세·백테스트 모두 **라이브 데이터** + **D1 historical 5년치 (49,091 candles + 48,232 indicators)** 채워짐.
 
-| 자산군 | 데이터 | 상태 |
-|---|---|---|
-| **crypto** | Upbit Public API (KRW) | **라이브** — 12 코인 실시간 시세 |
-| **us** | Twelve Data | Demo (GBM 시뮬) — `TWELVE_DATA_API_KEY` 발급 시 라이브 자동 전환 |
-| **kr** | KIS Open API | Demo (GBM 시뮬, 호가 단위 정수 quantize) — `KIS_APP_KEY/SECRET` 발급 시 활성 |
+| 자산군 | 데이터 | 상태 | D1 채움 |
+|---|---|---|---|
+| **crypto** | Upbit Public API (KRW) + CoinGecko 보조 (USD / mcap / rank) | **라이브** — 11 코인 | 19,506 candles (5년 8 + 상장한도 3) |
+| **us** | Twelve Data | **라이브** — 12 종목 | 15,072 candles (12종 × 1256 영업일봉) |
+| **kr** | KIS Open API | **라이브** — 12 종목 | 14,513 candles (KIS pagination fix 후 5년치) |
 
-활성 라우트: 대시보드 + 3 자산군 × {인덱스, gainers, losers, volume, 종목상세} + 백테스트 작업장 + 저장된 전략 + 통합 검색 + 설정 + 404 + `/api/health`.
+페이지·백테스트는 `lib/data/candles.ts` 의 `loadCandleSeries` 헬퍼로 **D1 우선 + 어댑터 fallback**. backfill 가 채운 D1 가 적중하면 외부 API 호출 0회.
+
+활성 라우트: 대시보드 + 3 자산군 × {인덱스, gainers, losers, volume, 종목상세} + 백테스트 작업장 + 저장된 전략 + 통합 검색 + 설정 + 404 + `/api/{health,backfill,cron/backfill}`.
+
+**운영**:
+- **CF Workers** — `lab-trading.jason-parsing.workers.dev` + Custom Domain `trading.jdgrid.com`. wrangler secrets 9개.
+- **Cron** — GitHub Actions 매일 06:00 UTC `/api/cron/backfill` 호출 (`opennextjs/cloudflare` 가 fetch handler 만 export → 외부 cron 패턴). 워크플로 `.github/workflows/cron-backfill.yml`.
+- **KV 토큰 캐시** — `lab_trading_cache` 에 KIS OAuth 토큰 저장 (cold start `EGW00133` 1분 한도 회피).
 
 **사용자 자산** (localStorage, ADR-0016): 즐겨찾기 ⭐ + 최근 본 종목 ⏰ + 저장된 백테스트 전략 (URL prefill 공유 가능). Settings 에서 일괄 reset.
-**보조 데이터** (CoinGecko): 코인 종목 상세에 USD 가격 + 시가총액 + 시총 순위 노출.
 **종목 ↔ 백테스트 연결**: 종목 상세 페이지 안에 buy-and-hold 미니뷰 (SSR runBacktest) + ⚡ 전체 백테스트 CTA + 자매 종목 chip nav.
 **SEO** (ADR-0015 D): 종목 상세에 schema.org FinancialProduct + BreadcrumbList JSON-LD + OpenGraph + Twitter card. 홈에 WebSite + SearchAction.
 **a11y**: AppShell drag handle 키보드 (Arrow ±8px, Shift+Arrow ±32px, Home/End), 컬러 + 부호/화살표 병기, role=combobox 검색.
 
-코드: TypeScript strict / ESLint 9 / **Vitest 95 ✓** (107 파일 / ~9300 줄).
+코드: TypeScript strict / ESLint 9 / **Vitest 97 ✓** (105 파일 / ~9,800 줄).
 
 ## 빌드 / 실행
 
