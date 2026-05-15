@@ -78,8 +78,23 @@ export function AppShell({children}: {children: React.ReactNode}) {
               aria-valuemin={MIN_WIDTH}
               aria-valuemax={MAX_WIDTH}
               title={t("resize")}
+              tabIndex={0}
               onMouseDown={startDrag}
-              className="w-1 shrink-0 cursor-ew-resize bg-transparent transition-colors hover:bg-accent/40 active:bg-accent"
+              onKeyDown={(e) => {
+                const step = e.shiftKey ? 32 : 8;
+                let next: number | null = null;
+                if (e.key === "ArrowLeft") next = width - step;
+                else if (e.key === "ArrowRight") next = width + step;
+                else if (e.key === "Home") next = MIN_WIDTH;
+                else if (e.key === "End") next = MAX_WIDTH;
+                if (next !== null) {
+                  e.preventDefault();
+                  setWidthStr(
+                    String(Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, next)))
+                  );
+                }
+              }}
+              className="w-1 shrink-0 cursor-ew-resize bg-transparent transition-colors hover:bg-accent/40 active:bg-accent focus-visible:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             />
           </div>
         </aside>

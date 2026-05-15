@@ -13,6 +13,7 @@ import {RecentTracker} from "@/components/RecentTracker";
 import {SymbolActions} from "@/components/panels/SymbolActions";
 import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
 import {SymbolBacktestPreview} from "@/components/panels/SymbolBacktestPreview";
+import {assetJsonLd} from "@/lib/seo/asset-jsonld";
 import type {Quote, CandleSeries} from "@/lib/types";
 
 const CandleChart = dynamic(() =>
@@ -34,10 +35,26 @@ export async function generateMetadata({
   const entry = getUsBySymbol(normalized);
   if (!entry) return {};
   const name = locale === "ko" ? entry.nameKo ?? entry.name : entry.name;
+  const url = absoluteUrl(`/${locale}/us/${entry.symbol}`);
+  const description = `${name} (${entry.ticker}) 실시간 시세 · 일봉 차트 · 일봉 백테스트. ${entry.market} 상장.`;
   return {
     title: `${name} (${entry.ticker}) 시세 · 차트`,
+    description,
+    openGraph: {
+      title: `${name} (${entry.ticker})`,
+      description,
+      url,
+      siteName: "lab-trading",
+      locale,
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title: `${name} (${entry.ticker})`,
+      description,
+    },
     alternates: {
-      canonical: absoluteUrl(`/${locale}/us/${entry.symbol}`),
+      canonical: url,
     },
   };
 }
@@ -96,6 +113,21 @@ export default async function UsSymbolPage({params}: PageProps) {
       </nav>
 
       <RecentTracker class="us" symbol={entry.symbol} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: assetJsonLd({
+            class: "us",
+            symbol: entry.symbol,
+            ticker: entry.ticker,
+            name: entry.name,
+            nameKo: entry.nameKo,
+            market: entry.market,
+            locale: "ko",
+            quote,
+          }),
+        }}
+      />
 
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">

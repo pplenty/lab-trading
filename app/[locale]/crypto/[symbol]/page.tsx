@@ -14,6 +14,7 @@ import {RecentTracker} from "@/components/RecentTracker";
 import {SymbolActions} from "@/components/panels/SymbolActions";
 import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
 import {SymbolBacktestPreview} from "@/components/panels/SymbolBacktestPreview";
+import {assetJsonLd} from "@/lib/seo/asset-jsonld";
 import type {Quote, CandleSeries} from "@/lib/types";
 
 // 동적 차트는 ssr:false — lightweight-charts 가 window 의존이라 RSC 직 렌더 X.
@@ -39,10 +40,26 @@ export async function generateMetadata({
   const entry = getCryptoBySymbol(normalized);
   if (!entry) return {};
   const name = locale === "ko" ? entry.nameKo ?? entry.name : entry.name;
+  const url = absoluteUrl(`/${locale}/crypto/${entry.symbol}`);
+  const description = `${name} (${entry.symbol.toUpperCase()}) 실시간 시세 · 일봉 차트 · 일봉 백테스트. Upbit KRW + CoinGecko 글로벌 데이터.`;
   return {
     title: `${name} (${entry.symbol.toUpperCase()}) 시세 · 차트`,
+    description,
+    openGraph: {
+      title: `${name} (${entry.symbol.toUpperCase()})`,
+      description,
+      url,
+      siteName: "lab-trading",
+      locale,
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title: `${name} (${entry.symbol.toUpperCase()})`,
+      description,
+    },
     alternates: {
-      canonical: absoluteUrl(`/${locale}/crypto/${entry.symbol}`),
+      canonical: url,
     },
   };
 }
@@ -109,6 +126,22 @@ export default async function CryptoSymbolPage({params}: PageProps) {
       </nav>
 
       <RecentTracker class="crypto" symbol={entry.symbol} />
+      <script
+        type="application/ld+json"
+        // schema.org FinancialProduct + BreadcrumbList — SEO rich snippet
+        dangerouslySetInnerHTML={{
+          __html: assetJsonLd({
+            class: "crypto",
+            symbol: entry.symbol,
+            ticker: entry.symbol.toUpperCase(),
+            name: entry.name,
+            nameKo: entry.nameKo,
+            market: "Crypto",
+            locale: "ko",
+            quote,
+          }),
+        }}
+      />
 
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div className="flex items-center gap-2">

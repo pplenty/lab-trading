@@ -13,6 +13,7 @@ import {RecentTracker} from "@/components/RecentTracker";
 import {SymbolActions} from "@/components/panels/SymbolActions";
 import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
 import {SymbolBacktestPreview} from "@/components/panels/SymbolBacktestPreview";
+import {assetJsonLd} from "@/lib/seo/asset-jsonld";
 import type {Quote, CandleSeries} from "@/lib/types";
 
 const CandleChart = dynamic(() =>
@@ -34,10 +35,26 @@ export async function generateMetadata({
   const entry = getKrBySymbol(normalized);
   if (!entry) return {};
   const name = locale === "ko" ? entry.nameKo : entry.name;
+  const url = absoluteUrl(`/${locale}/kr/${entry.symbol}`);
+  const description = `${name} (${entry.ticker}) 일봉 시세 · 차트 · 백테스트. ${entry.market} 상장.`;
   return {
     title: `${name} (${entry.ticker}) 시세 · 차트`,
+    description,
+    openGraph: {
+      title: `${name} (${entry.ticker})`,
+      description,
+      url,
+      siteName: "lab-trading",
+      locale,
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title: `${name} (${entry.ticker})`,
+      description,
+    },
     alternates: {
-      canonical: absoluteUrl(`/${locale}/kr/${entry.symbol}`),
+      canonical: url,
     },
   };
 }
@@ -89,6 +106,21 @@ export default async function KrSymbolPage({params}: PageProps) {
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10 sm:py-12">
       <RecentTracker class="kr" symbol={entry.symbol} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: assetJsonLd({
+            class: "kr",
+            symbol: entry.symbol,
+            ticker: entry.ticker,
+            name: entry.name,
+            nameKo: entry.nameKo,
+            market: entry.market,
+            locale: "ko",
+            quote,
+          }),
+        }}
+      />
 
       <nav className="mb-6 text-xs text-fg-subtle">
         <Link href="/kr" className="hover:text-fg">
