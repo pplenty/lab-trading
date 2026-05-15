@@ -1,0 +1,62 @@
+# wrangler dev 가 자동 로드하는 환경 변수 파일 (Cloudflare Workers 표준).
+# `.dev.vars` 로 복사 후 키를 박는다 — `.dev.vars` 는 .gitignore 처리됨 (git X).
+#
+# 로컬 dev (`bun run dev` 또는 `bun run cf:preview`):
+#   wrangler 가 .dev.vars 를 process.env 로 주입.
+#
+# 프로덕션 (CF Workers):
+#   `wrangler secret put TWELVE_DATA_API_KEY` 로 CF 측 암호화 저장.
+#   `.dev.vars` 는 절대 production 에 올라가지 X.
+
+# ─────────────────────────────────────────────────────────────────
+# 사이트 URL (canonical / OG / sitemap)
+# ─────────────────────────────────────────────────────────────────
+
+# dev 에서는 lib/site.ts 의 폴백(`http://localhost:3000`) 사용 — 미설정 가능.
+# 프로덕션 도메인 결정 후 set.
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
+# ─────────────────────────────────────────────────────────────────
+# 해외 주식 (Twelve Data, ADR-0006) — 가입 1분
+# ─────────────────────────────────────────────────────────────────
+
+# 무료 800 credits/day · 8 req/min · 글로벌 90+ 거래소.
+# 발급: https://twelvedata.com/account/api-keys
+# 미설정 시 demo GBM 자동 분기 ([[Demo Mode Adapter Auto-Branching]] 패턴).
+TWELVE_DATA_API_KEY=
+
+# ─────────────────────────────────────────────────────────────────
+# 코인 보조 (CoinGecko, ADR-0005) — 가입 1분, 선택
+# ─────────────────────────────────────────────────────────────────
+
+# 무료 Demo: 30 req/min · 10K req/mo. 미설정 시 무인증 호출 (rate limit ↓).
+# 발급: https://www.coingecko.com/en/developers/dashboard
+COINGECKO_API_KEY=
+
+# ─────────────────────────────────────────────────────────────────
+# 국내 주식 (KIS, ADR-0007) — 한국투자증권 비대면 계좌 + 모의투자 필요 (Phase 1.5)
+# ─────────────────────────────────────────────────────────────────
+
+# 발급: https://apiportal.koreainvestment.com/intro
+# 비대면 계좌 → 모의투자 가입 → AppKey/Secret 발급
+# 미설정 시 demo GBM 자동 분기 (호가 단위 정수 quantize).
+KIS_APP_KEY=
+KIS_APP_SECRET=
+# 모의(`vts`) vs 실(`prod`) 환경
+KIS_ENV=vts
+
+# ─────────────────────────────────────────────────────────────────
+# 국내 보조 (Phase 1.5 후속)
+# ─────────────────────────────────────────────────────────────────
+
+# KRX OPEN API — 일별 종마감
+# 발급: https://openapi.krx.co.kr/
+KRX_API_KEY=
+
+# 공공데이터포털 — 금융위 주식시세정보 (백테스트 historical 메인)
+# 발급: https://www.data.go.kr/data/15094808/openapi.do
+DATA_GO_KR_KEY=
+
+# OpenDART — 전자공시 (공시·재무)
+# 발급: https://opendart.fss.or.kr/
+OPENDART_API_KEY=
