@@ -12,6 +12,7 @@ import {FavoriteButton} from "@/components/FavoriteButton";
 import {RecentTracker} from "@/components/RecentTracker";
 import {SymbolActions} from "@/components/panels/SymbolActions";
 import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
+import {SymbolBacktestPreview} from "@/components/panels/SymbolBacktestPreview";
 import type {Quote, CandleSeries} from "@/lib/types";
 
 const CandleChart = dynamic(() =>
@@ -152,6 +153,15 @@ export default async function KrSymbolPage({params}: PageProps) {
         <section className="mb-6 rounded-lg border border-line bg-surface/30 p-3">
           <CandleChart candles={series.candles} height={360} />
         </section>
+      )}
+
+      {series && series.candles.length >= 30 && (
+        <SymbolBacktestPreview
+          class="kr"
+          symbol={entry.symbol}
+          candles={series.candles}
+          currency="KRW"
+        />
       )}
 
       <RelatedSymbolChips
