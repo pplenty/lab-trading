@@ -104,7 +104,7 @@ bun run db:generate         # Drizzle 마이그레이션 SQL 생성
    - KIS 계좌 + 모의투자 — 국내 `/kr/*` 라이브
 2. **D1 namespace 생성** + Drizzle 마이그레이션 apply + indicators 사전계산 backfill (cron)
 3. **CoinGecko 어댑터 추가** — 글로벌 시가총액 / 로고 / USD 보조 표기 (보강)
-4. **Cloudflare 배포** + 도메인 `trading.krutils.com` CNAME (ADR-0018)
+4. **Cloudflare 배포** + 도메인 `trading.jdgrid.com` CNAME (ADR-0018)
 5. **Phase 2 후보**: 뉴스 RSS 활성화 / 영어 i18n / 백테스트 결과 공유 페이지 / Web Worker 백테스트 이전 (Phase 1.1)
 
 ## 문서

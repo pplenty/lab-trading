@@ -36,7 +36,7 @@
 - [ ] `bun run cf:preview` 로컬 Workers 시뮬레이션 정상
 - [ ] CF Web Analytics 사이트 등록 + beacon script 활성
 - [ ] CF Workers Logs / Tail Worker 활성화 (Logpush → R2 옵션)
-- [ ] 도메인 `trading.krutils.com` DNS CNAME OK
+- [ ] 도메인 `trading.jdgrid.com` DNS CNAME OK
 - [ ] HTTPS 인증서 유효 (CF auto)
 - [ ] 404 페이지 동작
 - [ ] OG image 1차 (정적 또는 default) 노출

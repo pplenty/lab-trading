@@ -206,19 +206,15 @@
 
 ---
 
-## **[Q13] 도메인 — `trading.krutils.com` 서브?**
+## **[Q13] 도메인 — `trading.jdgrid.com` ✅ 확정 (2026-05-15)**
 
-**권장:** `trading.krutils.com` (기존 `krutils.com` 서브). 비용 0 + yutils 자매 사이트 인지.
+**최종:** `trading.jdgrid.com` (사용자 별도 보유 도메인 `jdgrid.com` 의 서브). 비용 0 + yutils 와 브랜드 분리.
 
-**대안 서브:** `lab.krutils.com`, `markets.krutils.com`, `finance.krutils.com`.
+원안은 `trading.krutils.com` (yutils 자매 인지) 이었으나, 사용자가 별도 부모 도메인을 활용해 lab-trading 을 독립 자산으로 운영하기로 결정 — 추후 매각·rebrand 가치 측면에서 유리.
 
-**Phase 2+ 옵션:** 별도 도메인 등록 (`labtrading.io`, `labtrading.app`).
+**Phase 2+ 옵션 (필요 시):** 별도 도메인 등록 (`labtrading.io`, `labtrading.app`).
 
-- 동의 (trading.krutils.com) → ADR-0018 그대로
-- 다른 서브 선택
-- 새 도메인 등록
-
-→ ADR-0018
+→ ADR-0018 (도메인 최종 확정 섹션)
 
 ---
 
@@ -313,7 +309,7 @@
 - [ ] CoinGecko Demo API 키 발급 (`COINGECKO_API_KEY`)
 - [ ] Twelve Data API 키 발급 (`TWELVE_DATA_API_KEY`)
 - [ ] CF Workers 배포 환경 준비 (`bunx wrangler login`)
-- [ ] 도메인 `trading.krutils.com` (또는 선택 서브) CF DNS CNAME 셋업
+- [ ] 도메인 `trading.jdgrid.com` CF DNS CNAME 셋업 (ADR-0018)
 - [ ] D1 namespace 생성 (`wrangler d1 create lab-trading-db`) + binding `DB`
 - [ ] R2 bucket 생성 (`wrangler r2 bucket create lab-trading-backup`) + binding `BACKUP`
 
@@ -348,7 +344,7 @@
 [Q10] 동의 — 자산군 × 시세/gainers/losers/volume/news + 백테스트 + stub disabled
 [Q11] 동의 — ADR-0015 페이지 셋 그대로
 [Q12] 동의 — localStorage 단독, 가입 Phase 3+
-[Q13] 동의 — trading.krutils.com
+[Q13] 변경 — trading.jdgrid.com (2026-05-15 확정, jdgrid.com 서브, yutils 와 브랜드 분리)
 [Q14] 동의 — 브라우저 메인 스레드 (1.1 Web Worker)
 [Q15] 동의 — Preset 3종 (buy-and-hold / SMA-cross / RSI-reversion)
 [Q16] 동의 — D1 + Drizzle + 주간 R2 백업 + 컨벤션 R

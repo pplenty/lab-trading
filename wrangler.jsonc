@@ -24,7 +24,7 @@
   "vars": {
     // production 도메인 결정 후 .env.production 또는 Cloudflare 대시보드 vars에 박는다.
     // dev/CI 빌드에서는 lib/site.ts 의 폴백(`http://localhost:3000`) 사용.
-    // "NEXT_PUBLIC_SITE_URL": "https://trading.krutils.com"
+    // "NEXT_PUBLIC_SITE_URL": "https://trading.jdgrid.com"
   }
   // 첫 배포 시 활성화 (ADR-0021):
   // "d1_databases": [
