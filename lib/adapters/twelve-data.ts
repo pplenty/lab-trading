@@ -223,8 +223,16 @@ export const twelveDataAdapter: DataAdapter = {
     if (!res.ok) {
       throw new Error(`twelve-data.getQuote ${symbol}: HTTP ${res.status}`);
     }
-    const raw = (await res.json()) as TwelveQuote;
-    return normalizeTwelveQuote(raw, symbol);
+    const raw = (await res.json()) as
+      | TwelveQuote
+      | {status: string; code?: number; message?: string};
+    if ("status" in raw && raw.status === "error") {
+      const e = raw as {status: string; code?: number; message?: string};
+      throw new Error(
+        `twelve-data.getQuote ${symbol}: code=${e.code ?? "?"} ${e.message ?? "error"}`
+      );
+    }
+    return normalizeTwelveQuote(raw as TwelveQuote, symbol);
   },
 
   async listQuotes(opts?: ListQuotesOpts): Promise<Quote[]> {
@@ -243,7 +251,17 @@ export const twelveDataAdapter: DataAdapter = {
       throw new Error(`twelve-data.listQuotes: HTTP ${res.status}`);
     }
     // 단일 ticker 응답은 객체, 다중은 {AAPL: {...}, ...} 형태.
-    const raw = (await res.json()) as Record<string, TwelveQuote> | TwelveQuote;
+    // credit 한도 초과 / 인증 실패 등은 HTTP 200 + {status:"error", code, message} 형태 — throw.
+    const raw = (await res.json()) as
+      | Record<string, TwelveQuote>
+      | TwelveQuote
+      | {status: string; code?: number; message?: string};
+    if ("status" in raw && raw.status === "error") {
+      const e = raw as {status: string; code?: number; message?: string};
+      throw new Error(
+        `twelve-data.listQuotes: code=${e.code ?? "?"} ${e.message ?? "error"}`
+      );
+    }
     const out: Quote[] = [];
     if ("symbol" in raw && typeof raw.symbol === "string") {
       const single = raw as TwelveQuote;

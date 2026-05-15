@@ -50,7 +50,7 @@ export async function generateMetadata({
       title: `${name} (${entry.symbol.toUpperCase()})`,
       description,
       url,
-      siteName: "lab-trading",
+      siteName: "trading",
       locale,
       type: "website",
     },

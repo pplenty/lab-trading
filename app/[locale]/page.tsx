@@ -1,7 +1,5 @@
 import {getTranslations} from "next-intl/server";
-import {upbitAdapter} from "@/lib/adapters/upbit";
-import {twelveDataAdapter} from "@/lib/adapters/twelve-data";
-import {kisAdapter} from "@/lib/adapters/kis";
+import {loadQuotesList} from "@/lib/data/quotes";
 import {
   cryptoRegistry,
   krRegistry,
@@ -37,9 +35,27 @@ export default async function HomePage({
   const tDisc = await getTranslations("disclaimer");
 
   const [crypto, us, kr] = await Promise.all([
-    fetchQuotes(() => upbitAdapter.listQuotes({limit: 50})),
-    fetchQuotes(() => twelveDataAdapter.listQuotes({limit: 50})),
-    fetchQuotes(() => kisAdapter.listQuotes({limit: 50})),
+    fetchQuotes(() =>
+      loadQuotesList({
+        asset: "crypto",
+        symbols: cryptoRegistry.filter((e) => e.upbitMarket).map((e) => e.symbol),
+        listOpts: {limit: 50},
+      })
+    ),
+    fetchQuotes(() =>
+      loadQuotesList({
+        asset: "us",
+        symbols: usRegistry.map((e) => e.symbol),
+        listOpts: {limit: 50},
+      })
+    ),
+    fetchQuotes(() =>
+      loadQuotesList({
+        asset: "kr",
+        symbols: krRegistry.map((e) => e.symbol),
+        listOpts: {limit: 50},
+      })
+    ),
   ]);
 
   const cryptoNameMap = Object.fromEntries(

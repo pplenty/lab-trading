@@ -4,7 +4,7 @@ import {notFound} from "next/navigation";
 import dynamic from "next/dynamic";
 import {Link} from "@/i18n/navigation";
 import {absoluteUrl} from "@/lib/site";
-import {twelveDataAdapter} from "@/lib/adapters/twelve-data";
+import {loadQuote} from "@/lib/data/quotes";
 import {loadCandleSeries} from "@/lib/data/candles";
 import {usRegistry, getUsBySymbol} from "@/lib/symbols/registry";
 import {toSymbol} from "@/lib/symbols/normalize";
@@ -45,7 +45,7 @@ export async function generateMetadata({
       title: `${name} (${entry.ticker})`,
       description,
       url,
-      siteName: "lab-trading",
+      siteName: "trading",
       locale,
       type: "website",
     },
@@ -84,7 +84,7 @@ export default async function UsSymbolPage({params}: PageProps) {
 
   try {
     [quote, series] = await Promise.all([
-      twelveDataAdapter.getQuote(entry.symbol),
+      loadQuote("us", entry.symbol),
       loadCandleSeries({asset: "us", symbol: entry.symbol, limit: 200}),
     ]);
   } catch (err) {

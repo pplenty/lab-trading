@@ -45,7 +45,7 @@ export async function generateMetadata({
       title: `${name} (${entry.ticker})`,
       description,
       url,
-      siteName: "lab-trading",
+      siteName: "trading",
       locale,
       type: "website",
     },

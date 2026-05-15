@@ -1,14 +1,14 @@
 {
   "meta": {
-    "siteName": "lab-trading",
-    "siteTitle": "lab-trading — Crypto · US · KR stocks + daily-bar backtest",
+    "siteName": "trading",
+    "siteTitle": "trading — Crypto · US · KR stocks + daily-bar backtest",
     "siteDescription": "Compare prices and rankings across three asset classes, then backtest your strategy on daily bars in the same view. CAGR · MDD · Sharpe at a glance."
   },
   "a11y": {
     "skipToContent": "Skip to content"
   },
   "home": {
-    "title": "lab-trading",
+    "title": "trading",
     "subtitle": "Crypto · US · KR stocks + daily-bar backtest lab",
     "phaseBadge": "Phase 0 closed",
     "phaseDesc": "ADR-0001 through 0025 all Accepted. Shell boot for Phase 1 (crypto + US + backtest MVP) in progress.",
@@ -89,7 +89,7 @@
     "tagline": "Informational only · not investment advice",
     "shortcuts": "Shortcuts",
     "settings": "Settings",
-    "github": "GitHub"
+    "contact": "Contact"
   },
   "disclaimer": {
     "general": "Informational use only. This is not investment advice; you are responsible for your own trades.",

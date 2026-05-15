@@ -66,7 +66,7 @@ export function assetJsonLd({
       {
         "@type": "ListItem",
         position: 1,
-        name: "lab-trading",
+        name: "trading",
         item: absoluteUrl(`/${locale}`),
       },
       {

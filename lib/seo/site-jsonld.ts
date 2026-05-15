@@ -11,7 +11,7 @@ export function siteJsonLd(locale: string): string {
   const data = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "lab-trading",
+    name: "trading",
     alternateName: "Lab Trading",
     description:
       "코인 · 해외주식 · 국내주식 통합 정보 사이트 + 일봉 백테스트 랩",
@@ -19,7 +19,7 @@ export function siteJsonLd(locale: string): string {
     inLanguage: locale,
     publisher: {
       "@type": "Organization",
-      name: "lab-trading",
+      name: "trading",
       url: home,
     },
     potentialAction: {

@@ -15,7 +15,7 @@ export async function Header() {
           href="/"
           className="text-base font-semibold tracking-tight text-fg transition-colors hover:text-accent"
         >
-          lab-trading
+          trading
         </Link>
         <div className="order-3 w-full sm:order-none sm:w-auto sm:flex-1 sm:max-w-xs sm:ml-auto">
           <SearchBox />

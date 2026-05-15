@@ -1,5 +1,5 @@
 import {getTranslations} from "next-intl/server";
-import {twelveDataAdapter} from "@/lib/adapters/twelve-data";
+import {loadQuotesList} from "@/lib/data/quotes";
 import {usRegistry} from "@/lib/symbols/registry";
 import {QuoteTable} from "@/components/panels/QuoteTable";
 import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
@@ -22,7 +22,11 @@ export default async function UsIndexPage({params}: Props) {
   let fetchError: string | null = null;
 
   try {
-    quotes = await twelveDataAdapter.listQuotes({limit: 50});
+    quotes = await loadQuotesList({
+      asset: "us",
+      symbols: usRegistry.map((e) => e.symbol),
+      listOpts: {limit: 50},
+    });
     quotes.sort((a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0));
   } catch (err) {
     fetchError = err instanceof Error ? err.message : String(err);

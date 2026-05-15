@@ -1,14 +1,14 @@
 {
   "meta": {
-    "siteName": "lab-trading",
-    "siteTitle": "lab-trading — 코인 · 해외주식 · 국내주식 + 일봉 백테스트",
+    "siteName": "trading",
+    "siteTitle": "trading — 코인 · 해외주식 · 국내주식 + 일봉 백테스트",
     "siteDescription": "세 자산군의 시세·랭킹을 한 곳에서 비교하고, 같은 화면에서 사용자 전략을 일봉 기준으로 백테스트한다. 수익률·MDD·Sharpe 결과 즉시 확인."
   },
   "a11y": {
     "skipToContent": "본문으로 건너뛰기"
   },
   "home": {
-    "title": "lab-trading",
+    "title": "trading",
     "subtitle": "코인 · 해외주식 · 국내주식 통합 정보 + 일봉 백테스트 랩",
     "phaseBadge": "Phase 0 종료",
     "phaseDesc": "ADR-0001~0025 모두 Accepted. 1차 출시(코인 + 해외주식 + 백테스트 MVP) 셸 부트 진입 직전.",
@@ -89,7 +89,7 @@
     "tagline": "정보 제공 목적 · 투자 권유 아님",
     "shortcuts": "단축키",
     "settings": "설정",
-    "github": "GitHub"
+    "contact": "문의"
   },
   "disclaimer": {
     "general": "투자 권유가 아니며 정보 제공 목적입니다. 거래 결과의 책임은 사용자 본인에게 있습니다.",
