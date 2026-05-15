@@ -6,6 +6,7 @@ import {strategies, getStrategy} from "@/lib/backtest/strategies/registry";
 import type {Candle, AssetClass} from "@/lib/types";
 import {BacktestResultCard} from "./BacktestResultCard";
 import {SaveStrategyButton} from "./SaveStrategyButton";
+import {CopyResultUrlButton} from "./CopyResultUrlButton";
 
 // 백테스트 클라이언트 패널 — 전략 selector + 파라미터 슬라이더 + 결과.
 // candles 와 자산 메타는 server (RSC) 가 prop 으로 전달 (ADR-0019: 데이터는 서버 캐시 후 클라이언트).
@@ -156,14 +157,22 @@ export function BacktestPanel({
             수수료 0.10% · 슬리피지 0.05% · 다음 봉 시가 체결 (룩어헤드 회피, ADR-0019)
           </p>
           {strategy && (
-            <SaveStrategyButton
-              strategyId={strategyId}
-              params={params}
-              class={cls}
-              symbol={symbol}
-              defaultLabel={symbolLabel ?? symbol.toUpperCase()}
-              strategyName={strategy.name}
-            />
+            <div className="flex flex-wrap gap-2">
+              <CopyResultUrlButton
+                class={cls}
+                symbol={symbol}
+                strategyId={strategyId}
+                params={params}
+              />
+              <SaveStrategyButton
+                strategyId={strategyId}
+                params={params}
+                class={cls}
+                symbol={symbol}
+                defaultLabel={symbolLabel ?? symbol.toUpperCase()}
+                strategyName={strategy.name}
+              />
+            </div>
           )}
         </div>
       </section>
