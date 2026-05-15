@@ -1,0 +1,170 @@
+import type {DataAdapter} from "@/lib/adapters/types";
+import type {Candle} from "@/lib/types";
+import {upbitAdapter} from "@/lib/adapters/upbit";
+import {twelveDataAdapter} from "@/lib/adapters/twelve-data";
+import {kisAdapter} from "@/lib/adapters/kis";
+import {getDb} from "@/lib/db/d1/client";
+import {
+  D1CandleRepo,
+  D1IndicatorRepo,
+} from "@/lib/db/d1/repos";
+import {computeIndicators, INDICATORS_VERSION} from "./indicators-batch";
+
+// Historical 데이터 백필 orchestrator (ADR-0021).
+//
+// 두 모드:
+//   1) one-shot 5 년 backfill — POST /api/backfill?asset=...&days=1825
+//      어댑터의 getCandles 를 range chunk 로 반복 호출 → candles + indicators UPSERT.
+//   2) 증분 cron — POST /api/cron/backfill
+//      각 등록 종목의 latestT 조회 → 그 이후 봉만 fetch + indicators 부분 재계산.
+//
+// 어댑터별 1 회 호출 최대 봉 수:
+//   Upbit       200 (KRW 일봉)
+//   Binance     1000
+//   Twelve Data 5000  → 5년치 1 회 OK
+//   KIS         100
+
+const DAY_SEC = 86400;
+
+type Asset = "crypto-upbit" | "crypto-binance" | "us" | "kr";
+
+const ADAPTER_MAP: Record<Asset, {adapter: DataAdapter; daysPerCall: number}> = {
+  "crypto-upbit": {adapter: upbitAdapter, daysPerCall: 200},
+  "crypto-binance": {adapter: {} as DataAdapter, daysPerCall: 1000}, // binanceAdapter 는 별도 등록 필요 (Phase 1.5 후속)
+  us: {adapter: twelveDataAdapter, daysPerCall: 5000},
+  kr: {adapter: kisAdapter, daysPerCall: 100},
+};
+
+/** [start, end] 페어로 toT 부터 거꾸로 chunk 생성. */
+function chunkRanges(
+  fromT: number,
+  toT: number,
+  daysPerCall: number
+): Array<[number, number]> {
+  const ranges: Array<[number, number]> = [];
+  let cursor = toT;
+  while (cursor > fromT) {
+    const start = Math.max(fromT, cursor - daysPerCall * DAY_SEC);
+    ranges.push([start, cursor]);
+    cursor = start;
+  }
+  return ranges;
+}
+
+export type BackfillResult = {
+  symbol: string;
+  candlesInserted: number;
+  indicatorsInserted: number;
+  rangesFetched: number;
+  error?: string;
+};
+
+/** 단일 종목 backfill — adapter 페이지네이션 + UPSERT + indicators. */
+export async function backfillSymbol(opts: {
+  adapter: DataAdapter;
+  daysPerCall: number;
+  symbol: string;
+  fromT: number;
+  toT: number;
+}): Promise<BackfillResult> {
+  const db = await getDb();
+  const candleRepo = new D1CandleRepo(db);
+  const indicatorRepo = new D1IndicatorRepo(db);
+
+  const ranges = chunkRanges(opts.fromT, opts.toT, opts.daysPerCall);
+  const collected: Candle[] = [];
+  let rangesFetched = 0;
+  for (const [start, end] of ranges) {
+    try {
+      const series = await opts.adapter.getCandles(opts.symbol, {
+        timeframe: "1d",
+        from: start,
+        to: end,
+        limit: opts.daysPerCall,
+      });
+      collected.push(...series.candles);
+      rangesFetched++;
+      // 어댑터가 빈 응답 (더 이상 historical 없음) → early exit
+      if (series.candles.length === 0) break;
+    } catch (err) {
+      return {
+        symbol: opts.symbol,
+        candlesInserted: 0,
+        indicatorsInserted: 0,
+        rangesFetched,
+        error: err instanceof Error ? err.message : String(err),
+      };
+    }
+  }
+
+  // dedupe by t, sort 시간순.
+  const dedupedMap = new Map<number, Candle>();
+  for (const c of collected) dedupedMap.set(c.t, c);
+  const candles = Array.from(dedupedMap.values()).sort((a, b) => a.t - b.t);
+
+  const candlesInserted = await candleRepo.upsertMany(opts.symbol, candles);
+  const indicators = computeIndicators(candles);
+  const indicatorsInserted = await indicatorRepo.upsertMany(
+    opts.symbol,
+    INDICATORS_VERSION,
+    indicators
+  );
+
+  return {
+    symbol: opts.symbol,
+    candlesInserted,
+    indicatorsInserted,
+    rangesFetched,
+  };
+}
+
+/** 자산군 단위 backfill — 여러 종목 순차 처리 (rate limit 안전). */
+export async function backfillAssetClass(opts: {
+  asset: Asset;
+  symbols: string[];
+  fromT: number;
+  toT: number;
+}): Promise<BackfillResult[]> {
+  const cfg = ADAPTER_MAP[opts.asset];
+  if (!cfg) throw new Error(`backfill: unknown asset ${opts.asset}`);
+  const results: BackfillResult[] = [];
+  for (const symbol of opts.symbols) {
+    const r = await backfillSymbol({
+      adapter: cfg.adapter,
+      daysPerCall: cfg.daysPerCall,
+      symbol,
+      fromT: opts.fromT,
+      toT: opts.toT,
+    });
+    results.push(r);
+  }
+  return results;
+}
+
+/** 증분 backfill — 각 종목 latestT 이후 새 봉만 (cron 용도). */
+export async function incrementalBackfill(opts: {
+  asset: Asset;
+  symbols: string[];
+}): Promise<BackfillResult[]> {
+  const db = await getDb();
+  const candleRepo = new D1CandleRepo(db);
+  const now = Math.floor(Date.now() / 1000);
+  const results: BackfillResult[] = [];
+  const cfg = ADAPTER_MAP[opts.asset];
+  if (!cfg) throw new Error(`backfill: unknown asset ${opts.asset}`);
+
+  for (const symbol of opts.symbols) {
+    const latestT = await candleRepo.latestT(symbol);
+    // 처음 backfill 이면 fromT 1년 전, 그렇지 않으면 latestT 직후.
+    const fromT = latestT ?? now - 365 * DAY_SEC;
+    const r = await backfillSymbol({
+      adapter: cfg.adapter,
+      daysPerCall: cfg.daysPerCall,
+      symbol,
+      fromT,
+      toT: now,
+    });
+    results.push(r);
+  }
+  return results;
+}

@@ -25,8 +25,7 @@ export async function GET() {
         binance: "live",
         coingecko: env.COINGECKO_API_KEY ? "keyed" : "anonymous",
         twelveData: env.TWELVE_DATA_API_KEY ? "live" : "demo",
-        kis:
-          env.KIS_APP_KEY && env.KIS_APP_SECRET ? "live (pending)" : "demo",
+        kis: env.KIS_APP_KEY && env.KIS_APP_SECRET ? "live" : "demo",
       },
       site: env.NEXT_PUBLIC_SITE_URL ?? null,
     },

@@ -13,37 +13,63 @@
  *   - r2_buckets: ADR-0021 주간 백업
  */
 {
-  "name": "lab-trading",
-  "compatibility_date": "2025-12-01",
-  "compatibility_flags": ["nodejs_compat"],
-  "main": ".open-next/worker.js",
-  "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS"
-  },
-  "vars": {
-    // production 도메인 결정 후 .env.production 또는 Cloudflare 대시보드 vars에 박는다.
-    // dev/CI 빌드에서는 lib/site.ts 의 폴백(`http://localhost:3000`) 사용.
-    // "NEXT_PUBLIC_SITE_URL": "https://trading.jdgrid.com"
-  }
-  // 첫 배포 시 활성화 (ADR-0021):
-  // "d1_databases": [
-  //   {
-  //     "binding": "DB",
-  //     "database_name": "lab-trading-db",
-  //     "database_id": "<wrangler d1 create lab-trading-db 결과값>"
-  //   }
-  // ],
-  // "kv_namespaces": [
-  //   {
-  //     "binding": "CACHE_KV",
-  //     "id": "<wrangler kv namespace create lab-trading-cache 결과값>"
-  //   }
-  // ],
-  // "r2_buckets": [
-  //   {
-  //     "binding": "BACKUP",
-  //     "bucket_name": "lab-trading-backup"
-  //   }
-  // ]
+	"name": "lab-trading",
+	"compatibility_date": "2025-12-01",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"main": ".open-next/worker.js",
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"vars": {
+		// production 도메인 결정 후 Cloudflare 대시보드 vars 에 박는다.
+		// dev/CI 빌드에서는 lib/site.ts 의 폴백(`http://localhost:3000`) 사용.
+		// "NEXT_PUBLIC_SITE_URL": "https://trading.jdgrid.com"
+	},
+	// Cloudflare Bindings — CF 대시보드 또는 wrangler 로 namespace 생성 후 ID 박기.
+	// 미설정 시 lib/db/d1/client.ts 의 getDb() 가 throw — backfill / cron 라우트만 영향.
+	// 페이지는 D1 의존성 없이 어댑터 직접 호출 (현재 흐름) 으로 정상 동작.
+	// ADR-0021 — D1 (SQLite) historical 5년치 + 사전계산 17 indicators
+	"d1_databases": [
+		{
+			"binding": "lab_trading_db",
+			"database_name": "lab-trading-db",
+			"database_id": "2b56a9f8-7dd0-4804-a205-745f39e82d96",
+			"remote": true
+		}
+		// {
+		//   "binding": "DB",
+		//   "database_name": "lab-trading-db",
+		//   "database_id": "<bunx wrangler d1 create lab-trading-db 결과값 또는 대시보드 D1 ID>"
+		// }
+	],
+	// ADR-0009 — 글로벌 캐시 (시세 30s, 랭킹 5min)
+	"kv_namespaces": [
+		{
+			"binding": "lab_trading_cache",
+			"id": "dd3bb14541c1489d905d2c7cb2276472",
+			"remote": true
+		}
+		// {
+		//   "binding": "LAB_KV",
+		//   "id": "<bunx wrangler kv namespace create lab-trading-cache 결과값>"
+		// }
+	],
+	// ADR-0021 — 주간 SQL dump 백업
+	"r2_buckets": [
+		// {
+		//   "binding": "BACKUP",
+		//   "bucket_name": "lab-trading-backup"
+		// }
+	],
+	// Cron Triggers — 매일 06:00 UTC (15:00 KST, KOSPI 폐장 후) 증분 backfill
+	// wrangler.jsonc 의 crons 가 활성이면 Workers Scheduled handler 또는 fetch URL 자동 호출.
+	// 본 프로젝트는 라우트(/api/cron/backfill) 패턴 — Workers Cron 이 해당 URL 을 호출하도록 별도 셋업.
+	"triggers": {
+		"crons": [
+			// "0 6 * * *"  // D1 namespace 셋업 후 활성화
+		]
+	}
 }
