@@ -27,35 +27,39 @@ export type NewsSource = {
   defaultAssets: AssetClass[];
 };
 
+// URL 은 2026-05 기준 검증 — 매체가 RSS 구조 자주 바꿔 정기 점검 필요.
+// 한경: 구 rss.hankyung.com 도메인 폐기 → www.hankyung.com/feed/<category> (xml 확장자 없음).
+// 매경: file.mk.co.kr RSS 본문 빈 응답 → www.mk.co.kr/rss/<code>/ 로 이전.
+// fnnews: http://www → https://www 로 + /rss/r20/ prefix 추가.
 export const NEWS_SOURCES: NewsSource[] = [
   {
     key: "hankyung-stock",
-    label: "한국경제",
-    url: "https://rss.hankyung.com/feed/stock.xml",
+    label: "한국경제 금융",
+    url: "https://www.hankyung.com/feed/finance",
     defaultAssets: ["kr"],
   },
   {
     key: "hankyung-economy",
-    label: "한국경제 (경제)",
-    url: "https://rss.hankyung.com/feed/economy.xml",
+    label: "한국경제",
+    url: "https://www.hankyung.com/feed/economy",
     defaultAssets: ["kr"],
   },
   {
     key: "mk-stock",
     label: "매일경제",
-    url: "http://file.mk.co.kr/news/rss/rss_50200011.xml",
+    url: "https://www.mk.co.kr/rss/30000001/",
     defaultAssets: ["kr"],
   },
   {
     key: "fnnews-stock",
-    label: "파이낸셜뉴스",
-    url: "http://www.fnnews.com/rss/fn_realnews_stock.xml",
+    label: "파이낸셜뉴스 증권",
+    url: "https://www.fnnews.com/rss/r20/fn_realnews_stock.xml",
     defaultAssets: ["kr"],
   },
   {
     key: "fnnews-finance",
-    label: "파이낸셜뉴스 (금융)",
-    url: "http://www.fnnews.com/rss/fn_realnews_finance.xml",
+    label: "파이낸셜뉴스 금융",
+    url: "https://www.fnnews.com/rss/r20/fn_realnews_finance.xml",
     defaultAssets: ["kr"],
   },
   {

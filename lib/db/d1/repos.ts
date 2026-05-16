@@ -351,7 +351,9 @@ export class D1NewsRepo {
   ): Promise<number> {
     if (articles.length === 0) return 0;
     const now = Math.floor(Date.now() / 1000);
-    const ROW_CHUNK = 10;
+    // news_articles 10 컬럼 × ROW_CHUNK 10 = 100 변수 = D1 한도 hit.
+    // 9 로 줄여 90 변수 — 안전 마진.
+    const ROW_CHUNK = 9;
     const BATCH_MAX = 50;
     const stmts = [];
     for (let i = 0; i < articles.length; i += ROW_CHUNK) {

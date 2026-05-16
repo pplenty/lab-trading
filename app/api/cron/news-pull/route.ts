@@ -41,18 +41,15 @@ async function handle(req: Request) {
 
   // 2) D1 UPSERT
   let upserted = 0;
-  let d1Available = false;
-  if (await isDbAvailable()) {
+  const d1Available = await isDbAvailable();
+  let d1UpsertError: string | null = null;
+  if (d1Available) {
     try {
       const db = await getDb();
       const repo = new D1NewsRepo(db);
       upserted = await repo.upsertMany(articles);
-      d1Available = true;
     } catch (err) {
-      errors.push({
-        source_key: "tokenpost", // dummy — d1 error 도 errors 에 묶어 노출
-        error: `d1.upsert: ${err instanceof Error ? err.message : String(err)}`,
-      });
+      d1UpsertError = err instanceof Error ? err.message : String(err);
     }
   }
 
@@ -90,6 +87,7 @@ async function handle(req: Request) {
     ts: new Date().toISOString(),
     elapsedMs: Date.now() - started,
     d1Available,
+    d1UpsertError,
     upserted,
     fetched: articles.length,
     bySource: Object.fromEntries(bySource),
@@ -98,7 +96,7 @@ async function handle(req: Request) {
       us: byAsset.us.length,
       kr: byAsset.kr.length,
     },
-    errors,
+    fetchErrors: errors,
   });
 }
 
