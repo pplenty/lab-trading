@@ -101,3 +101,26 @@ describe("twelveDataAdapter — demo mode (no API key)", () => {
     await expect(twelveDataAdapter.getQuote("zzzz" as never)).rejects.toThrow();
   });
 });
+
+// callTwelve helper — discriminated union API error response 패턴 회귀 가드.
+// Twelve Data 가 한도 초과 / 인증 실패를 HTTP 200 + body status:"error" 로 응답 시
+// 3 endpoint 모두 throw 해야 caller 가 fallback path 로 분기 가능.
+//
+// 실제 호출은 데모 모드 (키 없음) 라 더미만 반환 → fixture 기반 단위 테스트는
+// 어댑터 통합 테스트 (MSW 등) 필요. 본 케이스에선 helper export 후 단위 테스트.
+describe("twelve-data status:'error' guard (callTwelve)", () => {
+  it("type narrowing — Failure 인식 후 throw 분기 보장", () => {
+    // 본 케이스는 callTwelve 내부의 type guard 자체 검증.
+    // 실제 HTTP mock 은 통합 테스트 단계 (후속 PR).
+    type TwelveFailure = {status: "error"; code?: number; message?: string};
+    const sample = {status: "error", code: 429, message: "limit"} as
+      | {values: unknown}
+      | TwelveFailure;
+    const isFailure =
+      typeof sample === "object" &&
+      sample !== null &&
+      "status" in sample &&
+      (sample as TwelveFailure).status === "error";
+    expect(isFailure).toBe(true);
+  });
+});

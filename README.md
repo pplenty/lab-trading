@@ -4,31 +4,36 @@
 
 세 자산군의 시세·랭킹을 한 곳에서 비교하고, 같은 화면에서 사용자 전략을 일봉 기준으로 백테스트하여 수익률·MDD·Sharpe 결과를 즉시 확인할 수 있다.
 
-## 현재 상태 (2026-05-15)
+## 현재 상태 (2026-05-16, Phase 2)
 
-**Production 라이브 — <https://trading.jdgrid.com>**. 3 자산군 × 시세·랭킹·종목상세·백테스트 모두 **라이브 데이터** + **D1 historical 5년치 (49,091 candles + 48,232 indicators)** 채워짐.
+**Production 라이브 — <https://trading.jdgrid.com>**. 3 자산군 **80 종목** × 시세·랭킹·종목상세·백테스트 + **6 매체 RSS 뉴스** + **종목 ↔ 관련 뉴스 매칭**. **D1 historical 107,668 candles + 106,809 indicators**.
 
-| 자산군 | 데이터 | 상태 | D1 채움 |
+| 자산군 | 종목 | 데이터 | D1 채움 |
 |---|---|---|---|
-| **crypto** | Upbit Public API (KRW) + CoinGecko 보조 (USD / mcap / rank) | **라이브** — 11 코인 | 19,506 candles (5년 8 + 상장한도 3) |
-| **us** | Twelve Data | **라이브** — 12 종목 | 15,072 candles (12종 × 1256 영업일봉) |
-| **kr** | KIS Open API | **라이브** — 12 종목 | 14,513 candles (KIS pagination fix 후 5년치) |
+| **crypto** | 26 (BTC ETH SOL ... HBAR MANA) | Upbit + CoinGecko 보조 | ~30,000 candles |
+| **us** | 30 (AAPL MSFT ... CRM PEP) | Twelve Data | ~37,000 candles (1255 영업일봉/종목) |
+| **kr** | 24 (KOSPI 20 + KOSDAQ 4) | KIS Open API | ~29,000 candles (1223 영업일봉/종목) |
 
-페이지·백테스트는 `lib/data/candles.ts` 의 `loadCandleSeries` 헬퍼로 **D1 우선 + 어댑터 fallback**. backfill 가 채운 D1 가 적중하면 외부 API 호출 0회.
+페이지·백테스트는 `loadCandleSeries` / `loadQuote` / `loadQuotesList` 헬퍼로 **D1 우선 + 어댑터 fallback**. 어댑터 부분 실패 시 누락 종목만 D1 합성 (`D1FallbackBadge` UI 노출).
 
-활성 라우트: 대시보드 + 3 자산군 × {인덱스, gainers, losers, volume, 종목상세} + 백테스트 작업장 + 저장된 전략 + 통합 검색 + 설정 + 404 + `/api/{health,backfill,cron/backfill}`.
+**뉴스 시스템** (ADR-0008): 한경 finance/economy + 매경 + 파이낸셜뉴스 stock/finance + 토큰포스트. 30분 cron 으로 RSS → 정규화 → D1 archive + KV hot cache. 종목 상세에 keyword 기반 관련 뉴스 5개 노출.
+
+활성 라우트: 대시보드 + 3 자산군 × {인덱스, gainers, losers, volume, 종목상세, 뉴스} + 백테스트 작업장 + 저장된 전략 + 통합 검색 + 설정 + 404 + `/api/{health,backfill,cron/backfill,cron/news-pull}`.
 
 **운영**:
-- **CF Workers** — `lab-trading.jason-parsing.workers.dev` + Custom Domain `trading.jdgrid.com`. wrangler secrets 9개.
-- **Cron** — GitHub Actions 매일 06:00 UTC `/api/cron/backfill` 호출 (`opennextjs/cloudflare` 가 fetch handler 만 export → 외부 cron 패턴). 워크플로 `.github/workflows/cron-backfill.yml`.
-- **KV 토큰 캐시** — `lab_trading_cache` 에 KIS OAuth 토큰 저장 (cold start `EGW00133` 1분 한도 회피).
+- **CF Workers** — `lab-trading.jason-parsing.workers.dev` + Custom Domain `trading.jdgrid.com`. wrangler secrets ~10개.
+- **Cron 2개** — GitHub Actions:
+  - 매일 06:00 UTC: `/api/cron/backfill` 증분 봉
+  - 30분마다: `/api/cron/news-pull` RSS 수집
+- **KV 토큰 캐시** — KIS OAuth (cold start `EGW00133` 1분 한도 회피) + 뉴스 hot cache.
+- **`/api/health` freshness** — candles/indicators/symbols/latestTs/staleDays 노출. uptime probe 가 단순 binding 확인 외 데이터 신선도 검증.
 
 **사용자 자산** (localStorage, ADR-0016): 즐겨찾기 ⭐ + 최근 본 종목 ⏰ + 저장된 백테스트 전략 (URL prefill 공유 가능). Settings 에서 일괄 reset.
-**종목 ↔ 백테스트 연결**: 종목 상세 페이지 안에 buy-and-hold 미니뷰 (SSR runBacktest) + ⚡ 전체 백테스트 CTA + 자매 종목 chip nav.
-**SEO** (ADR-0015 D): 종목 상세에 schema.org FinancialProduct + BreadcrumbList JSON-LD + OpenGraph + Twitter card. 홈에 WebSite + SearchAction.
+**종목 ↔ 백테스트 연결**: 종목 상세 페이지 안에 buy-and-hold 미니뷰 (SSR runBacktest) + ⚡ 전체 백테스트 CTA + 자매 종목 chip nav + 관련 뉴스 5개.
+**SEO** (ADR-0015 D): 종목 상세에 schema.org FinancialProduct + BreadcrumbList JSON-LD + OpenGraph + Twitter card. 홈에 WebSite + SearchAction. sitemap 198 URLs (80 종목 × 2 locale + static + 뉴스).
 **a11y**: AppShell drag handle 키보드 (Arrow ±8px, Shift+Arrow ±32px, Home/End), 컬러 + 부호/화살표 병기, role=combobox 검색.
 
-코드: TypeScript strict / ESLint 9 / **Vitest 97 ✓** (105 파일 / ~9,800 줄).
+코드: TypeScript strict / ESLint 9 / **Vitest 98 ✓** (120+ 파일 / ~12,000 줄).
 
 ## 빌드 / 실행
 

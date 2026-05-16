@@ -31,6 +31,37 @@ function isDemoMode(): boolean {
   return !key || key.length === 0;
 }
 
+/** Twelve Data 의 실패 응답 — HTTP 200 + body 안 status:"error" 형식. */
+type TwelveFailure = {status: "error"; code?: number; message?: string};
+
+/**
+ * Twelve Data 모든 endpoint 공용 호출 helper.
+ * 두 실패 채널 모두 throw — caller catch + fallback 트리거:
+ *   1) HTTP 비-200
+ *   2) HTTP 200 + body `{status:"error"}` (credit 한도 / 분당 8 req / 인증 실패 등)
+ *
+ * 새 endpoint 추가 시 이 helper 만 사용하면 회귀 안전 ([[Discriminated Union API Error Response]]).
+ */
+async function callTwelve<T>(
+  endpoint: string,
+  params: URLSearchParams,
+  label: string
+): Promise<T> {
+  params.set("apikey", process.env.TWELVE_DATA_API_KEY!);
+  const res = await fetch(`${BASE_URL}${endpoint}?${params}`);
+  if (!res.ok) {
+    throw new Error(`twelve-data.${label}: HTTP ${res.status}`);
+  }
+  const raw = (await res.json()) as T | TwelveFailure;
+  if (typeof raw === "object" && raw !== null && "status" in raw && raw.status === "error") {
+    const e = raw as TwelveFailure;
+    throw new Error(
+      `twelve-data.${label}: code=${e.code ?? "?"} ${e.message ?? "error"}`
+    );
+  }
+  return raw as T;
+}
+
 /** Twelve Data /quote 응답. */
 type TwelveQuote = {
   symbol: string;
@@ -218,21 +249,12 @@ export const twelveDataAdapter: DataAdapter = {
 
     if (isDemoMode()) return dummyQuote(symbol);
 
-    const url = `${BASE_URL}/quote?symbol=${entry.ticker}&apikey=${process.env.TWELVE_DATA_API_KEY}`;
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`twelve-data.getQuote ${symbol}: HTTP ${res.status}`);
-    }
-    const raw = (await res.json()) as
-      | TwelveQuote
-      | {status: string; code?: number; message?: string};
-    if ("status" in raw && raw.status === "error") {
-      const e = raw as {status: string; code?: number; message?: string};
-      throw new Error(
-        `twelve-data.getQuote ${symbol}: code=${e.code ?? "?"} ${e.message ?? "error"}`
-      );
-    }
-    return normalizeTwelveQuote(raw as TwelveQuote, symbol);
+    const raw = await callTwelve<TwelveQuote>(
+      "/quote",
+      new URLSearchParams({symbol: entry.ticker}),
+      `getQuote ${symbol}`
+    );
+    return normalizeTwelveQuote(raw, symbol);
   },
 
   async listQuotes(opts?: ListQuotesOpts): Promise<Quote[]> {
@@ -245,23 +267,12 @@ export const twelveDataAdapter: DataAdapter = {
     // 실제 모드는 batch — Twelve Data 의 `/quote?symbol=AAPL,MSFT,...` 지원.
     const entries = opts?.limit ? usRegistry.slice(0, opts.limit) : usRegistry;
     const symbols = entries.map((e) => e.ticker).join(",");
-    const url = `${BASE_URL}/quote?symbol=${symbols}&apikey=${process.env.TWELVE_DATA_API_KEY}`;
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`twelve-data.listQuotes: HTTP ${res.status}`);
-    }
-    // 단일 ticker 응답은 객체, 다중은 {AAPL: {...}, ...} 형태.
-    // credit 한도 초과 / 인증 실패 등은 HTTP 200 + {status:"error", code, message} 형태 — throw.
-    const raw = (await res.json()) as
-      | Record<string, TwelveQuote>
-      | TwelveQuote
-      | {status: string; code?: number; message?: string};
-    if ("status" in raw && raw.status === "error") {
-      const e = raw as {status: string; code?: number; message?: string};
-      throw new Error(
-        `twelve-data.listQuotes: code=${e.code ?? "?"} ${e.message ?? "error"}`
-      );
-    }
+    // 단일 ticker 는 객체, 다중은 {AAPL: {...}, ...} map — discriminated 처리.
+    const raw = await callTwelve<Record<string, TwelveQuote> | TwelveQuote>(
+      "/quote",
+      new URLSearchParams({symbol: symbols}),
+      "listQuotes"
+    );
     const out: Quote[] = [];
     if ("symbol" in raw && typeof raw.symbol === "string") {
       const single = raw as TwelveQuote;
@@ -301,29 +312,15 @@ export const twelveDataAdapter: DataAdapter = {
       };
     }
 
-    const params = new URLSearchParams({
-      symbol: entry.ticker,
-      interval: "1day",
-      outputsize: String(limit),
-      apikey: process.env.TWELVE_DATA_API_KEY!,
-    });
-    const url = `${BASE_URL}/time_series?${params}`;
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(`twelve-data.getCandles ${symbol}: HTTP ${res.status}`);
-    }
-    const raw = (await res.json()) as
-      | TwelveTimeSeries
-      | {status: string; code?: number; message?: string};
-    // credit 한도 / rate limit (분당 8 무료) / 인증 실패는 HTTP 200 + {status:"error"} — throw 필수.
-    if ("status" in raw && raw.status === "error") {
-      const e = raw as {status: string; code?: number; message?: string};
-      throw new Error(
-        `twelve-data.getCandles ${symbol}: code=${e.code ?? "?"} ${e.message ?? "error"}`
-      );
-    }
-    // 정상 응답으로 타입 좁힘 — meta/values 접근.
-    const ts = raw as TwelveTimeSeries;
+    const ts = await callTwelve<TwelveTimeSeries>(
+      "/time_series",
+      new URLSearchParams({
+        symbol: entry.ticker,
+        interval: "1day",
+        outputsize: String(limit),
+      }),
+      `getCandles ${symbol}`
+    );
     // Twelve Data 는 최신 → 과거 순. 시간순 정렬 후 반환.
     const candles = (ts.values ?? [])
       .map(normalizeTwelveCandle)
