@@ -414,13 +414,25 @@ export const kisAdapter: DataAdapter = {
   async listQuotes(opts?: ListQuotesOpts): Promise<Quote[]> {
     const entries = opts?.limit ? krRegistry.slice(0, opts.limit) : krRegistry;
     if (isDemoMode()) return entries.map((e) => dummyQuote(e.symbol));
-    // 라이브: 종목별 개별 호출 — KIS rate limit 10 req/s 라 12 종목 1초 내. 후속 PR 에 배치 endpoint 검토.
-    const results = await Promise.allSettled(
-      entries.map((e) => liveGetQuote(e.symbol))
-    );
-    return results
-      .filter((r): r is PromiseFulfilledResult<Quote> => r.status === "fulfilled")
-      .map((r) => r.value);
+    // KIS rate limit (EGW00201 "초당 거래건수 초과") — 병렬 호출 시 일부만 fulfilled.
+    // 직렬 + 100ms sleep 으로 안전 통과 (실전 ~20 req/s 한도 안에 충분, 모의 ~2 req/s 면 일부 fail).
+    // 절반 이상 실패 시 throw — loadQuotesList 의 D1 fallback 활성.
+    const results: Quote[] = [];
+    let failed = 0;
+    for (let i = 0; i < entries.length; i++) {
+      try {
+        if (i > 0) await new Promise((r) => setTimeout(r, 100));
+        results.push(await liveGetQuote(entries[i].symbol));
+      } catch {
+        failed++;
+      }
+    }
+    if (failed >= entries.length / 2) {
+      throw new Error(
+        `kis.listQuotes: ${failed}/${entries.length} failed — caller should D1 fallback`
+      );
+    }
+    return results;
   },
 
   async getCandles(symbol: Symbol, opts: GetCandlesOpts): Promise<CandleSeries> {

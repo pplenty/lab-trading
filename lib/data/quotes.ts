@@ -80,22 +80,40 @@ export async function loadQuote(
 }
 
 /**
- * adapter.listQuotes 시도 → 실패 시 registry symbols 로 D1 fallback 합성.
+ * adapter.listQuotes 시도 → 부분 결과 + 누락 종목 D1 합성 보강.
  * 인덱스/대시보드 페이지가 외부 API 한도에 영향받지 않도록.
+ *
+ * 3 시나리오:
+ *   1) adapter 가 전체 종목 라이브 반환 → 그대로
+ *   2) adapter 가 일부만 반환 (rate limit / 부분 차단) → 누락분만 D1 합성으로 채움
+ *   3) adapter throw → 전체 D1 합성
  */
 export async function loadQuotesList(opts: {
   asset: AssetClass;
   symbols: string[];
   listOpts?: ListQuotesOpts;
 }): Promise<Quote[]> {
+  let liveQuotes: Quote[] = [];
   try {
-    return await ADAPTERS[opts.asset].listQuotes(opts.listOpts);
+    liveQuotes = await ADAPTERS[opts.asset].listQuotes(opts.listOpts);
   } catch {
-    const results = await Promise.all(
+    // 전량 실패 → 전체 D1 합성
+    const all = await Promise.all(
       opts.symbols.map((s) => loadQuoteFromD1(opts.asset, s))
     );
-    return results.filter((q): q is Quote => q !== null);
+    return all.filter((q): q is Quote => q !== null);
   }
+  // 부분 결과 — 누락 종목만 D1 보강
+  const haveSymbols = new Set(liveQuotes.map((q) => q.symbol));
+  const missing = opts.symbols.filter((s) => !haveSymbols.has(s));
+  if (missing.length === 0) return liveQuotes;
+  const fallbacks = await Promise.all(
+    missing.map((s) => loadQuoteFromD1(opts.asset, s))
+  );
+  return [
+    ...liveQuotes,
+    ...fallbacks.filter((q): q is Quote => q !== null),
+  ];
 }
 
 /** quote.source 가 D1 fallback 인지 — UI 분기용. */
