@@ -312,9 +312,20 @@ export const twelveDataAdapter: DataAdapter = {
     if (!res.ok) {
       throw new Error(`twelve-data.getCandles ${symbol}: HTTP ${res.status}`);
     }
-    const raw = (await res.json()) as TwelveTimeSeries;
+    const raw = (await res.json()) as
+      | TwelveTimeSeries
+      | {status: string; code?: number; message?: string};
+    // credit 한도 / rate limit (분당 8 무료) / 인증 실패는 HTTP 200 + {status:"error"} — throw 필수.
+    if ("status" in raw && raw.status === "error") {
+      const e = raw as {status: string; code?: number; message?: string};
+      throw new Error(
+        `twelve-data.getCandles ${symbol}: code=${e.code ?? "?"} ${e.message ?? "error"}`
+      );
+    }
+    // 정상 응답으로 타입 좁힘 — meta/values 접근.
+    const ts = raw as TwelveTimeSeries;
     // Twelve Data 는 최신 → 과거 순. 시간순 정렬 후 반환.
-    const candles = (raw.values ?? [])
+    const candles = (ts.values ?? [])
       .map(normalizeTwelveCandle)
       .filter((c) => (opts.from === undefined ? true : c.t >= opts.from))
       .filter((c) => (opts.to === undefined ? true : c.t < opts.to))
@@ -322,7 +333,7 @@ export const twelveDataAdapter: DataAdapter = {
     return {
       symbol,
       class: "us",
-      currency: raw.meta?.currency ?? "USD",
+      currency: ts.meta?.currency ?? "USD",
       timeframe: "1d",
       candles,
       source: TWELVE_DATA_SOURCE,

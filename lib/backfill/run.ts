@@ -28,15 +28,20 @@ const DAY_SEC = 86400;
 
 type Asset = "crypto-upbit" | "crypto-binance" | "us" | "kr";
 
-// delayMs — chunk 간 sleep. KIS 가 초당 호출 한도 (모의 ~2/s, 실전 ~20/s) 라 충분히 띄움.
-// Upbit/Binance/Twelve Data 는 단일 종목 직렬 호출에선 한도 여유 충분.
+// delayMs — chunk 간 sleep.
+// Twelve Data 무료 8 req/min — 7500ms 보다 약간 여유 (8000ms).
+// KIS — 모의 ~2/s, 실전 ~20/s. 1100ms 안전.
+// Upbit/Binance — 단일 종목 직렬 호출에선 한도 여유.
+//
+// 단일 종목 backfill 은 chunk 가 1개라 delayMs 무관 (Twelve Data 5000봉/call 라 1825일 = 1 chunk).
+// 그러나 *여러 종목 직렬 호출 시* 호출자(외부 cron / 스크립트) 책임 — backfill 모듈은 종목 간 sleep X.
 const ADAPTER_MAP: Record<
   Asset,
   {adapter: DataAdapter; daysPerCall: number; delayMs: number}
 > = {
   "crypto-upbit": {adapter: upbitAdapter, daysPerCall: 200, delayMs: 0},
   "crypto-binance": {adapter: {} as DataAdapter, daysPerCall: 1000, delayMs: 0}, // binanceAdapter 는 별도 등록 필요
-  us: {adapter: twelveDataAdapter, daysPerCall: 5000, delayMs: 0},
+  us: {adapter: twelveDataAdapter, daysPerCall: 5000, delayMs: 8000},
   kr: {adapter: kisAdapter, daysPerCall: 100, delayMs: 1100},
 };
 

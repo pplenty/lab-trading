@@ -102,7 +102,7 @@ export async function POST(req: Request) {
         {adapter: DataAdapter; dpc: number; delayMs: number}
       > = {
         "crypto-upbit": {adapter: upbitAdapter, dpc: 200, delayMs: 0},
-        us: {adapter: twelveDataAdapter, dpc: 5000, delayMs: 0},
+        us: {adapter: twelveDataAdapter, dpc: 5000, delayMs: 8000},
         kr: {adapter: kisAdapter, dpc: 100, delayMs: 1100},
       };
       const cfg = adapterMap[asset];
