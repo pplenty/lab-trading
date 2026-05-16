@@ -1,4 +1,4 @@
-import {and, asc, desc, eq, gte, lt, like, or} from "drizzle-orm";
+import {and, asc, desc, eq, gte, lt, like, or, sql} from "drizzle-orm";
 import type {LabTradingDB} from "./client";
 import * as schema from "./schema";
 import type {Asset, Candle, IndicatorRow} from "@/lib/types";
@@ -158,12 +158,13 @@ export class D1CandleRepo implements CandleRepo {
       )
       .onConflictDoUpdate({
         target: [schema.candles.symbol, schema.candles.t],
+        // UPDATE 분기 EXCLUDED ref — schema.col 은 self-ref 라 무변경 버그 회피.
         set: {
-          o: schema.candles.o,
-          h: schema.candles.h,
-          l: schema.candles.l,
-          c: schema.candles.c,
-          v: schema.candles.v,
+          o: sql`excluded.o`,
+          h: sql`excluded.h`,
+          l: sql`excluded.l`,
+          c: sql`excluded.c`,
+          v: sql`excluded.v`,
           ingested_at: now,
         },
       });
@@ -219,6 +220,15 @@ export class D1IndicatorRepo implements IndicatorRepo {
       bb_lower: r.bb_lower ?? undefined,
       atr_14: r.atr_14 ?? undefined,
       vol_sma_20: r.vol_sma_20 ?? undefined,
+      stoch_k_14_3: r.stoch_k_14_3 ?? undefined,
+      stoch_d_14_3: r.stoch_d_14_3 ?? undefined,
+      cci_20: r.cci_20 ?? undefined,
+      williams_r_14: r.williams_r_14 ?? undefined,
+      adx_14: r.adx_14 ?? undefined,
+      di_plus_14: r.di_plus_14 ?? undefined,
+      di_minus_14: r.di_minus_14 ?? undefined,
+      obv: r.obv ?? undefined,
+      roc_12: r.roc_12 ?? undefined,
     }));
   }
 
@@ -229,9 +239,11 @@ export class D1IndicatorRepo implements IndicatorRepo {
   ): Promise<number> {
     if (rows.length === 0) return 0;
     const now = Math.floor(Date.now() / 1000);
-    // indicators row 는 21 컬럼 → 4 rows/statement. batch 로 round-trip 합침.
-    const ROW_CHUNK = 4;
-    const BATCH_MAX = 50;
+    // indicators row 는 26 + 3 메타 = 30 컬럼/row. D1 변수 한도 100 / 30 = 3.3.
+    // 3 rows/statement = 90 변수 안전 마진.
+    // BATCH_MAX 100 — 1826 candle 의 ~610 statement 를 round-trip 6-7회로 묶어 Workers 30s 한도 안전.
+    const ROW_CHUNK = 3;
+    const BATCH_MAX = 100;
     const stmts = [] as ReturnType<typeof this.buildIndicatorUpsert>[];
     for (let i = 0; i < rows.length; i += ROW_CHUNK) {
       stmts.push(
@@ -279,30 +291,50 @@ export class D1IndicatorRepo implements IndicatorRepo {
           bb_lower: r.bb_lower ?? null,
           atr_14: r.atr_14 ?? null,
           vol_sma_20: r.vol_sma_20 ?? null,
+          stoch_k_14_3: r.stoch_k_14_3 ?? null,
+          stoch_d_14_3: r.stoch_d_14_3 ?? null,
+          cci_20: r.cci_20 ?? null,
+          williams_r_14: r.williams_r_14 ?? null,
+          adx_14: r.adx_14 ?? null,
+          di_plus_14: r.di_plus_14 ?? null,
+          di_minus_14: r.di_minus_14 ?? null,
+          obv: r.obv ?? null,
+          roc_12: r.roc_12 ?? null,
           computed_at: now,
         }))
       )
       .onConflictDoUpdate({
         target: [schema.indicators.symbol, schema.indicators.t],
+        // UPSERT 의 UPDATE 분기 — INSERT 시도된 값으로 모두 덮어씀 (EXCLUDED).
+        // `schema.col` reference 는 self-ref (무변경) 라 신규 컬럼이 NULL 로 남던 버그.
         set: {
           computed_version: version,
-          sma_5: schema.indicators.sma_5,
-          sma_20: schema.indicators.sma_20,
-          sma_50: schema.indicators.sma_50,
-          sma_100: schema.indicators.sma_100,
-          sma_200: schema.indicators.sma_200,
-          ema_12: schema.indicators.ema_12,
-          ema_26: schema.indicators.ema_26,
-          ema_50: schema.indicators.ema_50,
-          rsi_14: schema.indicators.rsi_14,
-          macd: schema.indicators.macd,
-          macd_signal: schema.indicators.macd_signal,
-          macd_hist: schema.indicators.macd_hist,
-          bb_upper: schema.indicators.bb_upper,
-          bb_middle: schema.indicators.bb_middle,
-          bb_lower: schema.indicators.bb_lower,
-          atr_14: schema.indicators.atr_14,
-          vol_sma_20: schema.indicators.vol_sma_20,
+          sma_5: sql`excluded.sma_5`,
+          sma_20: sql`excluded.sma_20`,
+          sma_50: sql`excluded.sma_50`,
+          sma_100: sql`excluded.sma_100`,
+          sma_200: sql`excluded.sma_200`,
+          ema_12: sql`excluded.ema_12`,
+          ema_26: sql`excluded.ema_26`,
+          ema_50: sql`excluded.ema_50`,
+          rsi_14: sql`excluded.rsi_14`,
+          macd: sql`excluded.macd`,
+          macd_signal: sql`excluded.macd_signal`,
+          macd_hist: sql`excluded.macd_hist`,
+          bb_upper: sql`excluded.bb_upper`,
+          bb_middle: sql`excluded.bb_middle`,
+          bb_lower: sql`excluded.bb_lower`,
+          atr_14: sql`excluded.atr_14`,
+          vol_sma_20: sql`excluded.vol_sma_20`,
+          stoch_k_14_3: sql`excluded.stoch_k_14_3`,
+          stoch_d_14_3: sql`excluded.stoch_d_14_3`,
+          cci_20: sql`excluded.cci_20`,
+          williams_r_14: sql`excluded.williams_r_14`,
+          adx_14: sql`excluded.adx_14`,
+          di_plus_14: sql`excluded.di_plus_14`,
+          di_minus_14: sql`excluded.di_minus_14`,
+          obv: sql`excluded.obv`,
+          roc_12: sql`excluded.roc_12`,
           computed_at: now,
         },
       });

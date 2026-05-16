@@ -16,6 +16,7 @@ import {SymbolActions} from "@/components/panels/SymbolActions";
 import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
 import {SymbolBacktestPreview} from "@/components/panels/SymbolBacktestPreview";
 import {SymbolRelatedNews} from "@/components/panels/SymbolRelatedNews";
+import {IndicatorPanel} from "@/components/panels/IndicatorPanel";
 import {assetJsonLd} from "@/lib/seo/asset-jsonld";
 import type {Quote, CandleSeries} from "@/lib/types";
 
@@ -190,6 +191,8 @@ export default async function UsSymbolPage({params}: PageProps) {
           <CandleChart candles={series.candles} height={360} />
         </section>
       )}
+
+      <IndicatorPanel class="us" symbol={entry.symbol} />
 
       {series && series.candles.length >= 30 && (
         <SymbolBacktestPreview

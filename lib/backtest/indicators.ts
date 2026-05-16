@@ -213,3 +213,214 @@ export function atr(
 export function volumeSma(volumes: number[], period: number = 20): Series {
   return sma(volumes, period);
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// 추가 indicator 모음 (Phase 2 확장)
+// 모두 동일 인터페이스: Series (number | undefined)[] 반환, length = input length.
+
+/**
+ * Stochastic Oscillator. %K = (close - lowestLow_N) / (highestHigh_N - lowestLow_N) × 100.
+ * %D = %K 의 SMA (smoothK).
+ * 기본 period=14, smoothK=3 (slow %K) — TradingView 디폴트.
+ */
+export function stochastic(
+  high: number[],
+  low: number[],
+  close: number[],
+  period: number = 14,
+  smoothK: number = 3
+): {k: Series; d: Series} {
+  const n = close.length;
+  // rawK 는 number | null — holes 없이 초기화 (sma 가 holes 만나면 NaN → D1 NULL).
+  const rawK: number[] = new Array(n).fill(0);
+  const rawKValid: boolean[] = new Array(n).fill(false);
+  for (let i = period - 1; i < n; i++) {
+    let hh = -Infinity;
+    let ll = Infinity;
+    for (let j = i - period + 1; j <= i; j++) {
+      if (high[j] > hh) hh = high[j];
+      if (low[j] < ll) ll = low[j];
+    }
+    const range = hh - ll;
+    rawK[i] = range === 0 ? 50 : ((close[i] - ll) / range) * 100;
+    rawKValid[i] = true;
+  }
+  // %K (slow) = rawK 의 SMA, %D = %K 의 SMA. validity 마스크로 NULL 보존.
+  const kRaw = sma(rawK, smoothK);
+  const k: Series = new Array(n);
+  for (let i = 0; i < n; i++) {
+    if (rawKValid[i] && kRaw[i] !== undefined) k[i] = kRaw[i];
+  }
+  // d = k 의 SMA (k 의 validity 동일 마스크)
+  const kArr: number[] = new Array(n).fill(0);
+  for (let i = 0; i < n; i++) if (k[i] !== undefined) kArr[i] = k[i]!;
+  const dRaw = sma(kArr, smoothK);
+  const d: Series = new Array(n);
+  for (let i = 0; i < n; i++) {
+    if (k[i] !== undefined && dRaw[i] !== undefined) d[i] = dRaw[i];
+  }
+  return {k, d};
+}
+
+/**
+ * CCI (Commodity Channel Index). period=20 디폴트.
+ * CCI = (TP - SMA(TP)) / (0.015 × meanDeviation(TP, period))
+ * TP = (h + l + c) / 3.
+ */
+export function cci(
+  high: number[],
+  low: number[],
+  close: number[],
+  period: number = 20
+): Series {
+  const n = close.length;
+  const tp: number[] = new Array(n);
+  for (let i = 0; i < n; i++) tp[i] = (high[i] + low[i] + close[i]) / 3;
+  const tpSma = sma(tp, period);
+  const out: Series = new Array(n);
+  for (let i = period - 1; i < n; i++) {
+    const mean = tpSma[i];
+    if (mean === undefined) continue;
+    let mad = 0;
+    for (let j = i - period + 1; j <= i; j++) mad += Math.abs(tp[j] - mean);
+    mad /= period;
+    out[i] = mad === 0 ? 0 : (tp[i] - mean) / (0.015 * mad);
+  }
+  return out;
+}
+
+/**
+ * Williams %R. period=14. 0(과매수) ~ -100(과매도) 범위.
+ * %R = (highestHigh - close) / (highestHigh - lowestLow) × -100
+ */
+export function williamsR(
+  high: number[],
+  low: number[],
+  close: number[],
+  period: number = 14
+): Series {
+  const n = close.length;
+  const out: Series = new Array(n);
+  for (let i = period - 1; i < n; i++) {
+    let hh = -Infinity;
+    let ll = Infinity;
+    for (let j = i - period + 1; j <= i; j++) {
+      if (high[j] > hh) hh = high[j];
+      if (low[j] < ll) ll = low[j];
+    }
+    const range = hh - ll;
+    out[i] = range === 0 ? -50 : ((hh - close[i]) / range) * -100;
+  }
+  return out;
+}
+
+/**
+ * ADX (Average Directional Index) + DI+/DI-. Wilder smoothing.
+ * period=14 디폴트. 추세 강도 측정.
+ *
+ * 절차:
+ *   1) TR + DM+ + DM- 계산
+ *   2) period 만큼 Wilder smoothing
+ *   3) DI+ = 100 × smoothedDMplus / smoothedTR
+ *      DI- = 100 × smoothedDMminus / smoothedTR
+ *   4) DX = 100 × |DI+ - DI-| / (DI+ + DI-)
+ *   5) ADX = DX 의 Wilder smoothing
+ */
+export function adx(
+  high: number[],
+  low: number[],
+  close: number[],
+  period: number = 14
+): {adx: Series; plus: Series; minus: Series} {
+  const n = close.length;
+  const adxOut: Series = new Array(n);
+  const plusOut: Series = new Array(n);
+  const minusOut: Series = new Array(n);
+  if (n < period * 2) return {adx: adxOut, plus: plusOut, minus: minusOut};
+
+  const tr: number[] = new Array(n);
+  const dmPlus: number[] = new Array(n);
+  const dmMinus: number[] = new Array(n);
+  tr[0] = high[0] - low[0];
+  dmPlus[0] = 0;
+  dmMinus[0] = 0;
+  for (let i = 1; i < n; i++) {
+    const upMove = high[i] - high[i - 1];
+    const downMove = low[i - 1] - low[i];
+    dmPlus[i] = upMove > downMove && upMove > 0 ? upMove : 0;
+    dmMinus[i] = downMove > upMove && downMove > 0 ? downMove : 0;
+    const range = high[i] - low[i];
+    const hcp = Math.abs(high[i] - close[i - 1]);
+    const lcp = Math.abs(low[i] - close[i - 1]);
+    tr[i] = Math.max(range, hcp, lcp);
+  }
+
+  // 시드 — 1..period 합
+  let trSum = 0,
+    dmPlusSum = 0,
+    dmMinusSum = 0;
+  for (let i = 1; i <= period; i++) {
+    trSum += tr[i];
+    dmPlusSum += dmPlus[i];
+    dmMinusSum += dmMinus[i];
+  }
+  // Wilder smoothing 후 DI/DX/ADX
+  const dx: Series = new Array(n);
+  for (let i = period + 1; i < n; i++) {
+    trSum = trSum - trSum / period + tr[i];
+    dmPlusSum = dmPlusSum - dmPlusSum / period + dmPlus[i];
+    dmMinusSum = dmMinusSum - dmMinusSum / period + dmMinus[i];
+    const diPlus = trSum === 0 ? 0 : (100 * dmPlusSum) / trSum;
+    const diMinus = trSum === 0 ? 0 : (100 * dmMinusSum) / trSum;
+    plusOut[i] = diPlus;
+    minusOut[i] = diMinus;
+    const sum = diPlus + diMinus;
+    dx[i] = sum === 0 ? 0 : (100 * Math.abs(diPlus - diMinus)) / sum;
+  }
+  // ADX = DX 의 Wilder smoothing. 시드 = 첫 period 의 DX 평균.
+  const adxStart = period * 2;
+  if (n > adxStart) {
+    let dxSum = 0;
+    for (let i = period + 1; i <= adxStart; i++) dxSum += dx[i] ?? 0;
+    let prev = dxSum / period;
+    adxOut[adxStart] = prev;
+    for (let i = adxStart + 1; i < n; i++) {
+      prev = (prev * (period - 1) + (dx[i] ?? 0)) / period;
+      adxOut[i] = prev;
+    }
+  }
+  return {adx: adxOut, plus: plusOut, minus: minusOut};
+}
+
+/**
+ * OBV (On-Balance Volume). 누적 거래량 — 종가 상승 시 +volume, 하락 시 -volume.
+ * 절대값보다 trend 가 의미 — 가격과 divergence 분석용.
+ */
+export function obv(close: number[], volume: number[]): Series {
+  const n = close.length;
+  const out: Series = new Array(n);
+  if (n === 0) return out;
+  out[0] = 0;
+  for (let i = 1; i < n; i++) {
+    const prev = out[i - 1] ?? 0;
+    if (close[i] > close[i - 1]) out[i] = prev + volume[i];
+    else if (close[i] < close[i - 1]) out[i] = prev - volume[i];
+    else out[i] = prev;
+  }
+  return out;
+}
+
+/**
+ * ROC (Rate of Change). period=12 디폴트.
+ * ROC = (close - close_N) / close_N × 100
+ */
+export function roc(close: number[], period: number = 12): Series {
+  const n = close.length;
+  const out: Series = new Array(n);
+  for (let i = period; i < n; i++) {
+    const ref = close[i - period];
+    if (ref === 0) continue;
+    out[i] = ((close[i] - ref) / ref) * 100;
+  }
+  return out;
+}

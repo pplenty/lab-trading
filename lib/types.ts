@@ -105,6 +105,16 @@ export type IndicatorRow = {
   bb_lower?: number;
   atr_14?: number;
   vol_sma_20?: number;
+  // Phase 2 (version 2+)
+  stoch_k_14_3?: number;
+  stoch_d_14_3?: number;
+  cci_20?: number;
+  williams_r_14?: number;
+  adx_14?: number;
+  di_plus_14?: number;
+  di_minus_14?: number;
+  obv?: number;
+  roc_12?: number;
 };
 
 export type RankingKind = "gainers" | "losers" | "volume";

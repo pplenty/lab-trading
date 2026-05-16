@@ -62,7 +62,7 @@ export const candles = sqliteTable(
   })
 );
 
-/** 사전계산 지표 17종 — wide format. candles 1:1, (symbol, t) PK. ADR-0021. */
+/** 사전계산 지표 26종 — wide format. candles 1:1, (symbol, t) PK. ADR-0021. */
 export const indicators = sqliteTable(
   "indicators",
   {
@@ -87,6 +87,16 @@ export const indicators = sqliteTable(
     bb_lower: real("bb_lower"),
     atr_14: real("atr_14"),
     vol_sma_20: real("vol_sma_20"),
+    // Phase 2 추가 — version 2 부터 채워짐.
+    stoch_k_14_3: real("stoch_k_14_3"),
+    stoch_d_14_3: real("stoch_d_14_3"),
+    cci_20: real("cci_20"),
+    williams_r_14: real("williams_r_14"),
+    adx_14: real("adx_14"),
+    di_plus_14: real("di_plus_14"),
+    di_minus_14: real("di_minus_14"),
+    obv: real("obv"),
+    roc_12: real("roc_12"),
     computed_at: integer("computed_at").notNull(),
   },
   (t) => ({
