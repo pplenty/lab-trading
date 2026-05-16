@@ -8,6 +8,13 @@
       "when": 1778856932336,
       "tag": "0000_fair_captain_britain",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1778915203913,
+      "tag": "0001_lethal_shape",
+      "breakpoints": true
     }
   ]
 }

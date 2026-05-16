@@ -1,0 +1,47 @@
+name: News RSS pull (30min)
+
+# 매 30분 한경/매경/파이낸셜뉴스/토큰포스트 RSS 수집 → D1 UPSERT + KV hot cache 갱신.
+# (CF Workers Cron 미사용 — opennextjs/cloudflare 가 fetch handler 만 export 함)
+#
+# 매체 부하: 30분 주기 × 6 endpoint = ~12회/시간 — 합리적.
+# 본 워크플로 자체 실행 비용: ~15초/회 × 48회/일 ≈ 12분/일.
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  news:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger /api/cron/news-pull
+        env:
+          BACKFILL_TOKEN: ${{ secrets.BACKFILL_TOKEN }}
+          SITE: https://trading.jdgrid.com
+        run: |
+          set -euo pipefail
+          if [ -z "${BACKFILL_TOKEN:-}" ]; then
+            echo "::error::BACKFILL_TOKEN secret is missing"
+            exit 1
+          fi
+          body=$(mktemp)
+          code=$(curl -sS -o "$body" -w "%{http_code}" \
+                      -X POST "$SITE/api/cron/news-pull" \
+                      -H "Authorization: Bearer $BACKFILL_TOKEN" \
+                      --max-time 240) || code=000
+          echo "HTTP $code"
+          cat "$body"
+          echo
+          if [ "$code" != "200" ]; then
+            echo "::error::news-pull failed with HTTP $code"
+            exit 1
+          fi
+          # errors > 0 도 partial-success 면 ok — warning 만.
+          if grep -qE '"errors":\[[^]]+\]' "$body" && ! grep -q '"errors":\[\]' "$body"; then
+            echo "::warning::일부 매체 errors 있음 — body 참조"
+          fi

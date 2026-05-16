@@ -34,7 +34,7 @@ const GROUPS: Group[] = [
       {href: "/crypto/gainers", labelKey: "gainers"},
       {href: "/crypto/losers", labelKey: "losers"},
       {href: "/crypto/volume", labelKey: "volume"},
-      {href: "/crypto/news", labelKey: "news", stub: true},
+      {href: "/crypto/news", labelKey: "news", stub: false},
     ],
   },
   {
@@ -45,7 +45,7 @@ const GROUPS: Group[] = [
       {href: "/us/gainers", labelKey: "gainers"},
       {href: "/us/losers", labelKey: "losers"},
       {href: "/us/volume", labelKey: "volume"},
-      {href: "/us/news", labelKey: "news", stub: true},
+      {href: "/us/news", labelKey: "news", stub: false},
     ],
   },
   {
@@ -58,7 +58,7 @@ const GROUPS: Group[] = [
       {href: "/kr/volume", labelKey: "volume"},
       {href: "/kr/kospi", labelKey: "kospi", stub: true},
       {href: "/kr/kosdaq", labelKey: "kosdaq", stub: true},
-      {href: "/kr/news", labelKey: "news", stub: true},
+      {href: "/kr/news", labelKey: "news", stub: false},
     ],
   },
   {

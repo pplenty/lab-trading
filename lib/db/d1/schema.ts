@@ -117,3 +117,28 @@ export const backfill_log = sqliteTable(
     startedIdx: index("backfill_started_idx").on(t.started_at),
   })
 );
+
+/**
+ * 뉴스 article — RSS 어댑터가 fetch 한 뒤 정규화해 누적 (ADR-0008).
+ * PK = url_hash (URL 의 sha256 앞 16자 등). source + url 조합 대신 url 단독 — 같은 article 이 매체 cross-post 시 분리.
+ * asset_classes: "kr" / "us" / "crypto" / 또는 csv ("kr,crypto") — 매체 디폴트 + 키워드 분석.
+ */
+export const news_articles = sqliteTable(
+  "news_articles",
+  {
+    url_hash: text("url_hash").primaryKey(),
+    url: text("url").notNull(),
+    source: text("source").notNull(),       // 사람 친화 — "한국경제" / "매일경제"
+    source_key: text("source_key").notNull(), // slug — "hankyung-stock" / "mk-stock"
+    title: text("title").notNull(),
+    summary: text("summary"),
+    published_at: integer("published_at").notNull(), // unix sec
+    fetched_at: integer("fetched_at").notNull(),
+    asset_classes: text("asset_classes").notNull(),  // csv: "kr", "us,crypto"
+    keywords: text("keywords"),                       // csv (제목 분석 추출, 선택)
+  },
+  (t) => ({
+    publishedIdx: index("news_published_idx").on(t.published_at),
+    sourceIdx: index("news_source_idx").on(t.source_key),
+  })
+);

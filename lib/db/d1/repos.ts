@@ -323,3 +323,103 @@ export class D1IndicatorRepo implements IndicatorRepo {
     return rows.length > 0 ? rows[0].t : null;
   }
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// NewsRepo (ADR-0008)
+
+export type NewsArticleRow = typeof schema.news_articles.$inferSelect;
+
+export class D1NewsRepo {
+  constructor(private db: LabTradingDB) {}
+
+  /**
+   * 매체 fetch 결과 일괄 UPSERT.
+   * url_hash 기준 중복 — 같은 article 재fetch 시 published_at/title 갱신 (매체가 본문 수정한 경우 추적).
+   */
+  async upsertMany(
+    articles: Array<{
+      url: string;
+      url_hash: string;
+      title: string;
+      summary: string | null;
+      published_at: number;
+      source: string;
+      source_key: string;
+      asset_classes: string[]; // csv 로 직렬화
+      keywords?: string[] | null;
+    }>
+  ): Promise<number> {
+    if (articles.length === 0) return 0;
+    const now = Math.floor(Date.now() / 1000);
+    const ROW_CHUNK = 10;
+    const BATCH_MAX = 50;
+    const stmts = [];
+    for (let i = 0; i < articles.length; i += ROW_CHUNK) {
+      const slice = articles.slice(i, i + ROW_CHUNK);
+      stmts.push(
+        this.db
+          .insert(schema.news_articles)
+          .values(
+            slice.map((a) => ({
+              url_hash: a.url_hash,
+              url: a.url,
+              source: a.source,
+              source_key: a.source_key,
+              title: a.title,
+              summary: a.summary,
+              published_at: a.published_at,
+              fetched_at: now,
+              asset_classes: a.asset_classes.join(","),
+              keywords: a.keywords?.join(",") ?? null,
+            }))
+          )
+          .onConflictDoUpdate({
+            target: schema.news_articles.url_hash,
+            set: {
+              title: schema.news_articles.title,
+              summary: schema.news_articles.summary,
+              published_at: schema.news_articles.published_at,
+              fetched_at: now,
+              asset_classes: schema.news_articles.asset_classes,
+            },
+          })
+      );
+    }
+    for (let i = 0; i < stmts.length; i += BATCH_MAX) {
+      const slice = stmts.slice(i, i + BATCH_MAX);
+      if (slice.length === 1) await slice[0];
+      else await this.db.batch(slice as [typeof slice[0], ...typeof slice]);
+    }
+    return articles.length;
+  }
+
+  /**
+   * 특정 자산군 최근 N article. asset_classes csv 안에 cls 포함된 row 만.
+   * SQLite LIKE 라 정확한 토큰 매칭이 아닌 prefix match — `${cls},` / `,${cls}` / `${cls}` 단일 / `,${cls},`.
+   * 자산군 식별자가 prefix overlap 없는 단어라 충돌 X (`crypto` ⊄ `us`).
+   */
+  async listByAsset(asset: string, limit: number = 30): Promise<NewsArticleRow[]> {
+    const pattern = `%${asset}%`;
+    return await this.db
+      .select()
+      .from(schema.news_articles)
+      .where(like(schema.news_articles.asset_classes, pattern))
+      .orderBy(desc(schema.news_articles.published_at))
+      .limit(limit);
+  }
+
+  async listLatest(limit: number = 50): Promise<NewsArticleRow[]> {
+    return await this.db
+      .select()
+      .from(schema.news_articles)
+      .orderBy(desc(schema.news_articles.published_at))
+      .limit(limit);
+  }
+
+  async count(): Promise<number> {
+    const rows = await this.db
+      .select({n: schema.news_articles.url_hash})
+      .from(schema.news_articles);
+    return rows.length;
+  }
+}
