@@ -241,10 +241,10 @@ export class D1IndicatorRepo implements IndicatorRepo {
     const now = Math.floor(Date.now() / 1000);
     // indicators row 는 26 + 3 메타 = 30 컬럼/row. D1 변수 한도 100 / 30 = 3.3.
     // 3 rows/statement = 90 변수 안전 마진.
-    // BATCH_MAX 200 — 1826 candle 의 ~610 statement 를 round-trip 3-4회로 묶어
-    // Workers 30s wall time hit 회피 (큰 KR 종목 timeout 우회).
+    // BATCH_MAX 300 — 1826 candle 의 ~610 statement 를 round-trip 2-3회로 묶어
+    // Workers 30s wall time hit 회피 (남은 US 큰 5년치 종목 timeout 까지 cover).
     const ROW_CHUNK = 3;
-    const BATCH_MAX = 200;
+    const BATCH_MAX = 300;
     const stmts = [] as ReturnType<typeof this.buildIndicatorUpsert>[];
     for (let i = 0; i < rows.length; i += ROW_CHUNK) {
       stmts.push(
