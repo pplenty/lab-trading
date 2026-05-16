@@ -1,6 +1,7 @@
 import type {AssetClass} from "@/lib/types";
 import {getDb, isDbAvailable} from "@/lib/db/d1/client";
 import {D1NewsRepo, type NewsArticleRow} from "@/lib/db/d1/repos";
+import {keywordsForSymbol} from "@/lib/symbols/news-keywords";
 
 // 뉴스 read 진입점 — KV hot cache 우선 → D1 fallback (ADR-0008).
 //
@@ -79,6 +80,28 @@ export async function loadNewsByClass(
   }
 
   return {articles: [], source: "empty"};
+}
+
+/**
+ * 특정 종목 관련 뉴스 — D1 only (KV cache 자산군 단위라 종목 매칭은 매번 D1 LIKE).
+ * 빈 keyword 또는 D1 미가용 시 빈 배열. SSR 에서 종목 상세 페이지가 호출.
+ */
+export async function loadNewsBySymbol(
+  asset: AssetClass,
+  symbol: string,
+  limit: number = 5
+): Promise<NewsArticleView[]> {
+  const keywords = keywordsForSymbol(asset, symbol);
+  if (keywords.length === 0) return [];
+  if (!(await isDbAvailable())) return [];
+  try {
+    const db = await getDb();
+    const repo = new D1NewsRepo(db);
+    const rows = await repo.listBySymbol({asset, keywords, limit});
+    return rows.map(toView);
+  } catch {
+    return [];
+  }
 }
 
 /** cron route 가 호출 — D1 UPSERT 후 KV hot cache 갱신. */

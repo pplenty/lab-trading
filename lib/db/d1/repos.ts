@@ -418,6 +418,38 @@ export class D1NewsRepo {
       .limit(limit);
   }
 
+  /**
+   * 종목 keyword 기반 검색 — title OR summary LIKE 매칭 (OR 합집합).
+   * asset_classes 도 같이 필터해 다른 자산군 노이즈 제거.
+   */
+  async listBySymbol(opts: {
+    asset: string;
+    keywords: string[];
+    limit?: number;
+  }): Promise<NewsArticleRow[]> {
+    if (opts.keywords.length === 0) return [];
+    const assetPattern = `%${opts.asset}%`;
+    // 각 키워드 × (title OR summary) = N*2 OR — 최대 50개 keyword 정도까지 합리적.
+    const matchers = opts.keywords.flatMap((k) => {
+      const p = `%${k}%`;
+      return [
+        like(schema.news_articles.title, p),
+        like(schema.news_articles.summary, p),
+      ];
+    });
+    return await this.db
+      .select()
+      .from(schema.news_articles)
+      .where(
+        and(
+          like(schema.news_articles.asset_classes, assetPattern),
+          or(...matchers)
+        )
+      )
+      .orderBy(desc(schema.news_articles.published_at))
+      .limit(opts.limit ?? 10);
+  }
+
   async count(): Promise<number> {
     const rows = await this.db
       .select({n: schema.news_articles.url_hash})

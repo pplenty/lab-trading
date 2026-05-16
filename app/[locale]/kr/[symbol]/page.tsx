@@ -15,6 +15,7 @@ import {RecentTracker} from "@/components/RecentTracker";
 import {SymbolActions} from "@/components/panels/SymbolActions";
 import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
 import {SymbolBacktestPreview} from "@/components/panels/SymbolBacktestPreview";
+import {SymbolRelatedNews} from "@/components/panels/SymbolRelatedNews";
 import {assetJsonLd} from "@/lib/seo/asset-jsonld";
 import type {Quote, CandleSeries} from "@/lib/types";
 
@@ -199,6 +200,8 @@ export default async function KrSymbolPage({params}: PageProps) {
           currency="KRW"
         />
       )}
+
+      <SymbolRelatedNews class="kr" symbol={entry.symbol} locale="ko" />
 
       <RelatedSymbolChips
         class="kr"
