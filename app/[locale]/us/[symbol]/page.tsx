@@ -51,11 +51,20 @@ export async function generateMetadata({
       siteName: "trading",
       locale,
       type: "website",
+      images: [
+        {
+          url: absoluteUrl(`/api/og/us/${entry.symbol}`),
+          width: 1200,
+          height: 630,
+          alt: `${name} (${entry.ticker}) 시세`,
+        },
+      ],
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title: `${name} (${entry.ticker})`,
       description,
+      images: [absoluteUrl(`/api/og/us/${entry.symbol}`)],
     },
     alternates: {
       canonical: url,

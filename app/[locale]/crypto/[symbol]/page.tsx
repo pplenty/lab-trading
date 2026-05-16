@@ -56,11 +56,20 @@ export async function generateMetadata({
       siteName: "trading",
       locale,
       type: "website",
+      images: [
+        {
+          url: absoluteUrl(`/api/og/crypto/${entry.symbol}`),
+          width: 1200,
+          height: 630,
+          alt: `${name} (${entry.symbol.toUpperCase()}) 시세`,
+        },
+      ],
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title: `${name} (${entry.symbol.toUpperCase()})`,
       description,
+      images: [absoluteUrl(`/api/og/crypto/${entry.symbol}`)],
     },
     alternates: {
       canonical: url,
