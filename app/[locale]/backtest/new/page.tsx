@@ -1,6 +1,7 @@
 import {getTranslations} from "next-intl/server";
 import {notFound} from "next/navigation";
 import {loadCandleSeries} from "@/lib/data/candles";
+import {loadIndicatorsForCandles} from "@/lib/data/indicators";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {
   getCryptoBySymbol,
@@ -117,6 +118,8 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
 
   const candles: Candle[] = series?.candles ?? [];
   const symbol = normalized;
+  // D1 사전계산 indicators — strategy 가 자체 계산 대신 D1 값 우선 사용 (ADR-0021).
+  const indicators = await loadIndicatorsForCandles(symbol, candles);
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
@@ -153,6 +156,7 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
           class={assetClass}
           currency={currency}
           candles={candles}
+          indicators={indicators}
           initialStrategyId={initialStrategyId}
           initialParams={
             Object.keys(initialParams).length > 0 ? initialParams : undefined

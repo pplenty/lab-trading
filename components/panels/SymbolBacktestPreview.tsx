@@ -1,6 +1,7 @@
 import {Link} from "@/i18n/navigation";
 import {runBacktest} from "@/lib/backtest/run";
 import {LineChart, type LineSeries} from "@/components/charts/LineChart";
+import {loadIndicatorsForCandles} from "@/lib/data/indicators";
 import type {AssetClass, Candle} from "@/lib/types";
 
 // 종목 상세 페이지 미리보기 — 같은 화면 안에서 buy-and-hold 결과 즉시 노출.
@@ -25,7 +26,7 @@ function fmtPct(v: number, digits = 2) {
   return `${sign}${v.toFixed(digits)}%`;
 }
 
-export function SymbolBacktestPreview({
+export async function SymbolBacktestPreview({
   class: cls,
   symbol,
   candles,
@@ -36,12 +37,15 @@ export function SymbolBacktestPreview({
   }
 
   const initialCapital = INITIAL_CAPITAL_BY_CURRENCY[currency] ?? 10_000;
+  // 미니뷰는 buy-and-hold 이라 indicators 필요 X 지만, 일관성 + 미래 확장 대비 전달.
+  const indicators = await loadIndicatorsForCandles(symbol, candles);
   let result;
   try {
     result = runBacktest({
       symbol,
       class: cls,
       candles,
+      indicators,
       strategyId: "buy-and-hold",
       params: {},
       initialCapital,

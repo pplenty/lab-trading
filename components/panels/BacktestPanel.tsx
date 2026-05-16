@@ -3,7 +3,7 @@
 import {useMemo, useState} from "react";
 import {runBacktest} from "@/lib/backtest/run";
 import {strategies, getStrategy} from "@/lib/backtest/strategies/registry";
-import type {Candle, AssetClass} from "@/lib/types";
+import type {Candle, AssetClass, IndicatorRow} from "@/lib/types";
 import {BacktestResultCard} from "./BacktestResultCard";
 import {SaveStrategyButton} from "./SaveStrategyButton";
 import {CopyResultUrlButton} from "./CopyResultUrlButton";
@@ -21,6 +21,8 @@ type Props = {
   class: AssetClass;
   currency: string;
   candles: Candle[];
+  /** D1 사전계산 indicators — strategy 가 자체 계산 대신 우선 사용 (ADR-0021). */
+  indicators?: IndicatorRow[];
   /** prefill (저장된 전략 로드 시). */
   initialStrategyId?: string;
   initialParams?: Record<string, number>;
@@ -33,6 +35,7 @@ export function BacktestPanel({
   class: cls,
   currency,
   candles,
+  indicators,
   initialStrategyId,
   initialParams,
   symbolLabel,
@@ -69,6 +72,7 @@ export function BacktestPanel({
         symbol,
         class: cls,
         candles,
+        indicators,
         strategyId,
         params,
         initialCapital: INITIAL_CAPITAL,
@@ -80,7 +84,7 @@ export function BacktestPanel({
       console.error("runBacktest failed:", err);
       return null;
     }
-  }, [strategy, candles, symbol, cls, strategyId, params]);
+  }, [strategy, candles, indicators, symbol, cls, strategyId, params]);
 
   const currencyFmt = useMemo(
     () =>
