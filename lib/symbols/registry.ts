@@ -35,6 +35,22 @@ export const cryptoRegistry: CryptoRegistryEntry[] = [
   {symbol: "dot", name: "Polkadot", nameKo: "폴카닷", cgId: "polkadot", binancePair: "DOTUSDT", upbitMarket: "KRW-DOT"},
   // Litecoin — Upbit 는 2018 KRW 페어 종료 (BTC 페어만 운영). Upbit 어댑터에서 자동 제외.
   {symbol: "ltc", name: "Litecoin", nameKo: "라이트코인", cgId: "litecoin", binancePair: "LTCUSDT", upbitMarket: ""},
+  // Phase 2 확장 — Upbit KRW 페어 가용 + CoinGecko 시총 top 30 안.
+  {symbol: "bch", name: "Bitcoin Cash", nameKo: "비트코인캐시", cgId: "bitcoin-cash", binancePair: "BCHUSDT", upbitMarket: "KRW-BCH"},
+  {symbol: "etc", name: "Ethereum Classic", nameKo: "이더리움클래식", cgId: "ethereum-classic", binancePair: "ETCUSDT", upbitMarket: "KRW-ETC"},
+  {symbol: "atom", name: "Cosmos", nameKo: "코스모스", cgId: "cosmos", binancePair: "ATOMUSDT", upbitMarket: "KRW-ATOM"},
+  {symbol: "near", name: "NEAR Protocol", nameKo: "니어프로토콜", cgId: "near", binancePair: "NEARUSDT", upbitMarket: "KRW-NEAR"},
+  {symbol: "apt", name: "Aptos", nameKo: "앱토스", cgId: "aptos", binancePair: "APTUSDT", upbitMarket: "KRW-APT"},
+  {symbol: "arb", name: "Arbitrum", nameKo: "아비트럼", cgId: "arbitrum", binancePair: "ARBUSDT", upbitMarket: "KRW-ARB"},
+  {symbol: "op", name: "Optimism", nameKo: "옵티미즘", cgId: "optimism", binancePair: "OPUSDT", upbitMarket: "KRW-OP"},
+  {symbol: "sand", name: "The Sandbox", nameKo: "샌드박스", cgId: "the-sandbox", binancePair: "SANDUSDT", upbitMarket: "KRW-SAND"},
+  {symbol: "fil", name: "Filecoin", nameKo: "파일코인", cgId: "filecoin", binancePair: "FILUSDT", upbitMarket: "KRW-FIL"},
+  {symbol: "algo", name: "Algorand", nameKo: "알고랜드", cgId: "algorand", binancePair: "ALGOUSDT", upbitMarket: "KRW-ALGO"},
+  {symbol: "aave", name: "Aave", nameKo: "에이브", cgId: "aave", binancePair: "AAVEUSDT", upbitMarket: "KRW-AAVE"},
+  {symbol: "uni", name: "Uniswap", nameKo: "유니스왑", cgId: "uniswap", binancePair: "UNIUSDT", upbitMarket: "KRW-UNI"},
+  {symbol: "vet", name: "VeChain", nameKo: "비체인", cgId: "vechain", binancePair: "VETUSDT", upbitMarket: "KRW-VET"},
+  {symbol: "hbar", name: "Hedera", nameKo: "헤데라", cgId: "hedera-hashgraph", binancePair: "HBARUSDT", upbitMarket: "KRW-HBAR"},
+  {symbol: "mana", name: "Decentraland", nameKo: "디센트럴랜드", cgId: "decentraland", binancePair: "MANAUSDT", upbitMarket: "KRW-MANA"},
 ];
 
 const bySymbol = new Map<string, CryptoRegistryEntry>(
@@ -93,6 +109,25 @@ export const usRegistry: UsRegistryEntry[] = [
   {symbol: "lly", ticker: "LLY", name: "Eli Lilly and Company", nameKo: "일라이 릴리", market: "NYSE", basePrice: 740},
   {symbol: "xom", ticker: "XOM", name: "Exxon Mobil Corporation", nameKo: "엑손모빌", market: "NYSE", basePrice: 115},
   {symbol: "brkb", ticker: "BRK.B", name: "Berkshire Hathaway Inc. Class B", nameKo: "버크셔 해서웨이 B", market: "NYSE", basePrice: 455},
+  // Phase 2 확장 — S&P 500 시총 top 30 + 섹터 다양성.
+  {symbol: "wmt", ticker: "WMT", name: "Walmart Inc.", nameKo: "월마트", market: "NYSE", basePrice: 90},
+  {symbol: "unh", ticker: "UNH", name: "UnitedHealth Group Inc.", nameKo: "유나이티드헬스", market: "NYSE", basePrice: 530},
+  {symbol: "orcl", ticker: "ORCL", name: "Oracle Corporation", nameKo: "오라클", market: "NYSE", basePrice: 170},
+  {symbol: "hd", ticker: "HD", name: "The Home Depot, Inc.", nameKo: "홈디포", market: "NYSE", basePrice: 410},
+  {symbol: "ma", ticker: "MA", name: "Mastercard Incorporated", nameKo: "마스터카드", market: "NYSE", basePrice: 510},
+  {symbol: "pg", ticker: "PG", name: "Procter & Gamble Company", nameKo: "P&G", market: "NYSE", basePrice: 170},
+  {symbol: "cost", ticker: "COST", name: "Costco Wholesale Corporation", nameKo: "코스트코", market: "NASDAQ", basePrice: 880},
+  {symbol: "avgo", ticker: "AVGO", name: "Broadcom Inc.", nameKo: "브로드컴", market: "NASDAQ", basePrice: 1700},
+  {symbol: "abbv", ticker: "ABBV", name: "AbbVie Inc.", nameKo: "애브비", market: "NYSE", basePrice: 195},
+  {symbol: "cvx", ticker: "CVX", name: "Chevron Corporation", nameKo: "쉐브론", market: "NYSE", basePrice: 160},
+  {symbol: "ko", ticker: "KO", name: "The Coca-Cola Company", nameKo: "코카콜라", market: "NYSE", basePrice: 70},
+  {symbol: "pfe", ticker: "PFE", name: "Pfizer Inc.", nameKo: "화이자", market: "NYSE", basePrice: 28},
+  {symbol: "bac", ticker: "BAC", name: "Bank of America Corporation", nameKo: "뱅크오브아메리카", market: "NYSE", basePrice: 42},
+  {symbol: "nflx", ticker: "NFLX", name: "Netflix, Inc.", nameKo: "넷플릭스", market: "NASDAQ", basePrice: 700},
+  {symbol: "adbe", ticker: "ADBE", name: "Adobe Inc.", nameKo: "어도비", market: "NASDAQ", basePrice: 540},
+  {symbol: "crm", ticker: "CRM", name: "Salesforce, Inc.", nameKo: "세일즈포스", market: "NYSE", basePrice: 280},
+  {symbol: "mrk", ticker: "MRK", name: "Merck & Co., Inc.", nameKo: "머크", market: "NYSE", basePrice: 105},
+  {symbol: "pep", ticker: "PEP", name: "PepsiCo, Inc.", nameKo: "펩시코", market: "NASDAQ", basePrice: 165},
 ];
 
 const usBySymbol = new Map<string, UsRegistryEntry>(
@@ -139,6 +174,19 @@ export const krRegistry: KrRegistryEntry[] = [
   {symbol: "068270", ticker: "068270", name: "Celltrion", nameKo: "셀트리온", market: "KOSPI", basePrice: 190000},
   {symbol: "247540", ticker: "247540", name: "EcoPro BM", nameKo: "에코프로비엠", market: "KOSDAQ", basePrice: 140000},
   {symbol: "086520", ticker: "086520", name: "EcoPro", nameKo: "에코프로", market: "KOSDAQ", basePrice: 70000},
+  // Phase 2 확장 — KOSPI/KOSDAQ 시총 top 30 + 섹터 다양성.
+  {symbol: "105560", ticker: "105560", name: "KB Financial Group", nameKo: "KB금융", market: "KOSPI", basePrice: 85000},
+  {symbol: "055550", ticker: "055550", name: "Shinhan Financial Group", nameKo: "신한지주", market: "KOSPI", basePrice: 55000},
+  {symbol: "033780", ticker: "033780", name: "KT&G", nameKo: "KT&G", market: "KOSPI", basePrice: 100000},
+  {symbol: "042700", ticker: "042700", name: "Hanmi Semiconductor", nameKo: "한미반도체", market: "KOSPI", basePrice: 110000},
+  {symbol: "011200", ticker: "011200", name: "HMM", nameKo: "HMM", market: "KOSPI", basePrice: 20000},
+  {symbol: "012450", ticker: "012450", name: "Hanwha Aerospace", nameKo: "한화에어로스페이스", market: "KOSPI", basePrice: 290000},
+  {symbol: "034020", ticker: "034020", name: "Doosan Enerbility", nameKo: "두산에너빌리티", market: "KOSPI", basePrice: 22000},
+  {symbol: "006400", ticker: "006400", name: "Samsung SDI", nameKo: "삼성SDI", market: "KOSPI", basePrice: 350000},
+  {symbol: "323410", ticker: "323410", name: "KakaoBank", nameKo: "카카오뱅크", market: "KOSPI", basePrice: 25000},
+  {symbol: "259960", ticker: "259960", name: "Krafton", nameKo: "크래프톤", market: "KOSPI", basePrice: 290000},
+  {symbol: "196170", ticker: "196170", name: "Alteogen", nameKo: "알테오젠", market: "KOSDAQ", basePrice: 280000},
+  {symbol: "028300", ticker: "028300", name: "HLB", nameKo: "HLB", market: "KOSDAQ", basePrice: 65000},
 ];
 
 const krBySymbol = new Map<string, KrRegistryEntry>(

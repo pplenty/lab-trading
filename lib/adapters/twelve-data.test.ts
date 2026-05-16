@@ -52,11 +52,12 @@ describe("normalizeTwelveCandle", () => {
 describe("twelveDataAdapter — demo mode (no API key)", () => {
   // 테스트 환경엔 TWELVE_DATA_API_KEY 미설정 → demo mode.
 
-  it("listAssets returns 12 US tickers", async () => {
+  it("listAssets returns 30 US tickers (registry 확장 후)", async () => {
     const assets = await twelveDataAdapter.listAssets();
-    expect(assets.length).toBe(12);
+    expect(assets.length).toBe(30);
     expect(assets[0].class).toBe("us");
     expect(assets.find((a) => a.symbol === "aapl")?.name).toMatch(/Apple/);
+    expect(assets.find((a) => a.symbol === "wmt")?.nameKo).toBe("월마트");
   });
 
   it("getQuote returns deterministic price for same symbol", async () => {

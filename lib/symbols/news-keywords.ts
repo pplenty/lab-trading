@@ -42,6 +42,19 @@ const KR_ALIASES: Record<string, string[]> = {
   "207940": ["삼성바이오로직스", "삼성바이오"],
   "247540": ["에코프로비엠", "에코프로BM"],
   "373220": ["LG에너지솔루션", "LG에너지", "LGES"],
+  // Phase 2 확장
+  "105560": ["KB금융", "KB Financial"],
+  "055550": ["신한지주", "신한금융", "Shinhan Financial"],
+  "033780": ["KT&G"],
+  "042700": ["한미반도체"],
+  "011200": ["HMM", "현대상선"],
+  "012450": ["한화에어로스페이스", "Hanwha Aerospace"],
+  "034020": ["두산에너빌리티", "Doosan Enerbility"],
+  "006400": ["삼성SDI", "Samsung SDI"],
+  "323410": ["카카오뱅크", "KakaoBank"],
+  "259960": ["크래프톤", "Krafton"],
+  "196170": ["알테오젠", "Alteogen"],
+  "028300": ["HLB"],
 };
 
 const US_ALIASES: Record<string, string[]> = {
@@ -57,6 +70,25 @@ const US_ALIASES: Record<string, string[]> = {
   lly: ["일라이 릴리", "Eli Lilly", "LLY"],
   xom: ["엑손모빌", "ExxonMobil", "Exxon", "XOM"],
   brkb: ["버크셔", "Berkshire Hathaway", "BRK.B"],
+  // Phase 2 확장
+  wmt: ["월마트", "Walmart", "WMT"],
+  unh: ["유나이티드헬스", "UnitedHealth", "UNH"],
+  orcl: ["오라클", "Oracle", "ORCL"],
+  hd: ["홈디포", "Home Depot"], // "HD" 단독은 ambiguous — alias 만
+  ma: ["마스터카드", "Mastercard"], // "MA" 단독 제외
+  pg: ["프록터", "P&G", "Procter"],  // "PG" 단독 제외
+  cost: ["코스트코", "Costco", "COST"],
+  avgo: ["브로드컴", "Broadcom", "AVGO"],
+  abbv: ["애브비", "AbbVie", "ABBV"],
+  cvx: ["쉐브론", "셰브론", "Chevron", "CVX"],
+  ko: ["코카콜라", "Coca-Cola"], // "KO" 단독 제외 (한국 약어)
+  pfe: ["화이자", "Pfizer", "PFE"],
+  bac: ["뱅크오브아메리카", "Bank of America", "BofA", "BAC"],
+  nflx: ["넷플릭스", "Netflix", "NFLX"],
+  adbe: ["어도비", "Adobe", "ADBE"],
+  crm: ["세일즈포스", "Salesforce", "CRM"],
+  mrk: ["머크", "Merck"], // "MRK" 짧음 + 자체 ambiguous
+  pep: ["펩시코", "PepsiCo", "Pepsi", "PEP"],
 };
 
 const CRYPTO_ALIASES: Record<string, string[]> = {
@@ -71,6 +103,22 @@ const CRYPTO_ALIASES: Record<string, string[]> = {
   link: ["체인링크", "Chainlink", "LINK"],
   matic: ["폴리곤", "Polygon", "MATIC", "POL"],
   dot: ["폴카닷", "Polkadot", "DOT"],
+  // Phase 2 확장
+  bch: ["비트코인캐시", "Bitcoin Cash", "BCH"],
+  etc: ["이더리움클래식", "Ethereum Classic", "ETC"],
+  atom: ["코스모스", "Cosmos", "ATOM"],
+  near: ["니어프로토콜", "NEAR Protocol", "NEAR"],
+  apt: ["앱토스", "Aptos", "APT"],
+  arb: ["아비트럼", "Arbitrum", "ARB"],
+  op: ["옵티미즘", "Optimism"], // "OP" 단독은 짧음/ambiguous
+  sand: ["샌드박스", "The Sandbox", "SAND"],
+  fil: ["파일코인", "Filecoin", "FIL"],
+  algo: ["알고랜드", "Algorand", "ALGO"],
+  aave: ["에이브", "Aave", "AAVE"],
+  uni: ["유니스왑", "Uniswap"], // "UNI" 짧음 + 일반어
+  vet: ["비체인", "VeChain", "VET"],
+  hbar: ["헤데라", "Hedera", "HBAR"],
+  mana: ["디센트럴랜드", "Decentraland", "MANA"],
 };
 
 /** 자산군 + symbol → keyword[]. 매칭 가능한 keyword 가 없으면 빈 배열. */

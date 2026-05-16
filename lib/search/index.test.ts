@@ -7,7 +7,8 @@ describe("searchIndex", () => {
     expect(classes.has("crypto")).toBe(true);
     expect(classes.has("us")).toBe(true);
     expect(classes.has("kr")).toBe(true);
-    expect(searchIndex.length).toBe(12 + 12 + 12);
+    // crypto 27 (확장 + LTC 검색 인덱스 포함) / us 30 / kr 24
+    expect(searchIndex.length).toBe(27 + 30 + 24);
   });
 });
 

@@ -2,12 +2,13 @@ import {describe, expect, it} from "vitest";
 import {kisAdapter, normalizeKisCandle, normalizeKisQuote} from "./kis";
 
 describe("kisAdapter — demo mode (no API key)", () => {
-  it("listAssets returns 12 KR tickers", async () => {
+  it("listAssets returns 24 KR tickers (registry 확장 후)", async () => {
     const assets = await kisAdapter.listAssets();
-    expect(assets.length).toBe(12);
+    expect(assets.length).toBe(24);
     expect(assets[0].class).toBe("kr");
     expect(assets[0].currency).toBe("KRW");
     expect(assets.find((a) => a.symbol === "005930")?.nameKo).toBe("삼성전자");
+    expect(assets.find((a) => a.symbol === "105560")?.nameKo).toBe("KB금융");
   });
 
   it("getQuote returns deterministic KRW price with quantized integer", async () => {
