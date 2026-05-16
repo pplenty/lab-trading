@@ -1,4 +1,6 @@
 import {getTranslations} from "next-intl/server";
+
+export const revalidate = 300;
 import {loadQuotesList} from "@/lib/data/quotes";
 import {usRegistry} from "@/lib/symbols/registry";
 import {QuoteTable} from "@/components/panels/QuoteTable";

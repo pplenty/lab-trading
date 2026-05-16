@@ -1,0 +1,40 @@
+name: KV warmup (quotes)
+
+# 매 5분 listQuotes 호출 → KV 캐시 갱신. 대시보드/자산군 인덱스 첫 진입 SSR 11s → ~1s 단축.
+# 5분 cron × 24h = 288회/일. BACKFILL_TOKEN 공용.
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  warmup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Trigger /api/cron/warmup
+        env:
+          BACKFILL_TOKEN: ${{ secrets.BACKFILL_TOKEN }}
+          SITE: https://trading.jdgrid.com
+        run: |
+          set -euo pipefail
+          if [ -z "${BACKFILL_TOKEN:-}" ]; then
+            echo "::error::BACKFILL_TOKEN secret is missing"
+            exit 1
+          fi
+          body=$(mktemp)
+          code=$(curl -sS -o "$body" -w "%{http_code}" \
+                      -X POST "$SITE/api/cron/warmup" \
+                      -H "Authorization: Bearer $BACKFILL_TOKEN" \
+                      --max-time 120) || code=000
+          echo "HTTP $code"
+          cat "$body"
+          echo
+          if [ "$code" != "200" ]; then
+            echo "::error::warmup failed with HTTP $code"
+            exit 1
+          fi

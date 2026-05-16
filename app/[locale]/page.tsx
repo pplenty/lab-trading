@@ -1,5 +1,9 @@
 import {getTranslations} from "next-intl/server";
 import {loadQuotesList} from "@/lib/data/quotes";
+
+// 5분 ISR — Next.js 가 HTML 자체 캐시. 같은 worker 인스턴스 fast path.
+// quotes 갱신 주기 (cron 5분) 와 동기화.
+export const revalidate = 300;
 import {
   cryptoRegistry,
   krRegistry,

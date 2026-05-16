@@ -1,3 +1,4 @@
+import type {KVNamespace} from "@cloudflare/workers-types";
 import {getDb, isDbAvailable} from "@/lib/db/d1/client";
 import {D1CandleRepo} from "@/lib/db/d1/repos";
 import type {AssetClass, ListQuotesOpts, Quote, RankingKind} from "@/lib/types";
@@ -79,41 +80,90 @@ export async function loadQuote(
   }
 }
 
+// 5분 TTL — GitHub Actions cron 가 매 5분 warm-up 호출하므로 첫 사용자도 항상 KV hit.
+const KV_QUOTES_TTL_SEC = 300;
+
+async function getKvCache(): Promise<KVNamespace | null> {
+  try {
+    const {getCloudflareContext} = await import("@opennextjs/cloudflare");
+    let env: unknown;
+    try {
+      env = getCloudflareContext().env;
+    } catch {
+      env = (await getCloudflareContext({async: true})).env;
+    }
+    const e = env as {lab_trading_cache?: KVNamespace};
+    return e.lab_trading_cache ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * adapter.listQuotes 시도 → 부분 결과 + 누락 종목 D1 합성 보강.
- * 인덱스/대시보드 페이지가 외부 API 한도에 영향받지 않도록.
+ * KV cache (60s TTL) 최상위 — 대시보드 / 자산군 인덱스가 외부 API 호출 누적 회피.
  *
- * 3 시나리오:
- *   1) adapter 가 전체 종목 라이브 반환 → 그대로
- *   2) adapter 가 일부만 반환 (rate limit / 부분 차단) → 누락분만 D1 합성으로 채움
- *   3) adapter throw → 전체 D1 합성
+ * 4 시나리오:
+ *   0) KV cache hit → 즉시 반환 (수ms)
+ *   1) adapter 가 전체 종목 라이브 반환 → KV 저장 후 반환
+ *   2) adapter 가 일부만 반환 (rate limit / 부분 차단) → 누락분만 D1 합성으로 채움 → KV 저장
+ *   3) adapter throw → 전체 D1 합성 (KV 저장 X — adapter 회복 빠르게 재시도)
  */
 export async function loadQuotesList(opts: {
   asset: AssetClass;
   symbols: string[];
   listOpts?: ListQuotesOpts;
 }): Promise<Quote[]> {
+  const kv = await getKvCache();
+  const kvKey = `quotes:${opts.asset}`;
+  // 0) KV cache 시도
+  if (kv) {
+    try {
+      const cached = await kv.get(kvKey, "json");
+      if (cached && Array.isArray(cached)) {
+        return cached as Quote[];
+      }
+    } catch {
+      // KV miss / parse error
+    }
+  }
+
   let liveQuotes: Quote[] = [];
   try {
     liveQuotes = await ADAPTERS[opts.asset].listQuotes(opts.listOpts);
   } catch {
-    // 전량 실패 → 전체 D1 합성
+    // 전량 실패 → 전체 D1 합성 (KV 저장 X — adapter 회복 시 즉시 라이브 복귀)
     const all = await Promise.all(
       opts.symbols.map((s) => loadQuoteFromD1(opts.asset, s))
     );
     return all.filter((q): q is Quote => q !== null);
   }
+
   // 부분 결과 — 누락 종목만 D1 보강
   const haveSymbols = new Set(liveQuotes.map((q) => q.symbol));
   const missing = opts.symbols.filter((s) => !haveSymbols.has(s));
-  if (missing.length === 0) return liveQuotes;
-  const fallbacks = await Promise.all(
-    missing.map((s) => loadQuoteFromD1(opts.asset, s))
-  );
-  return [
-    ...liveQuotes,
-    ...fallbacks.filter((q): q is Quote => q !== null),
-  ];
+  let result = liveQuotes;
+  if (missing.length > 0) {
+    const fallbacks = await Promise.all(
+      missing.map((s) => loadQuoteFromD1(opts.asset, s))
+    );
+    result = [
+      ...liveQuotes,
+      ...fallbacks.filter((q): q is Quote => q !== null),
+    ];
+  }
+
+  // KV 저장 (best-effort) — 응답에 영향 X
+  if (kv && result.length > 0) {
+    try {
+      await kv.put(kvKey, JSON.stringify(result), {
+        expirationTtl: KV_QUOTES_TTL_SEC,
+      });
+    } catch {
+      // KV write 실패 무시 — 다음 호출이 재시도
+    }
+  }
+  return result;
 }
 
 /** quote.source 가 D1 fallback 인지 — UI 분기용. */
