@@ -2,7 +2,9 @@
   "meta": {
     "siteName": "trading",
     "siteTitle": "trading — 코인 · 해외주식 · 국내주식 + 일봉 백테스트",
-    "siteDescription": "세 자산군의 시세·랭킹을 한 곳에서 비교하고, 같은 화면에서 사용자 전략을 일봉 기준으로 백테스트한다. 수익률·MDD·Sharpe 결과 즉시 확인."
+    "siteDescription": "세 자산군의 시세·랭킹을 한 곳에서 비교하고, 같은 화면에서 사용자 전략을 일봉 기준으로 백테스트한다. 수익률·MDD·Sharpe 결과 즉시 확인.",
+    "d1FallbackBadge": "캐시 (어제 종가)",
+    "d1FallbackNote": "외부 API 일시 차단 — 어제 종가 + 24h 변동을 D1 historical cache 에서 합성합니다. 라이브 데이터는 잠시 후 자동 복귀."
   },
   "a11y": {
     "skipToContent": "본문으로 건너뛰기"

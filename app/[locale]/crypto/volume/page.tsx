@@ -19,6 +19,7 @@ export default async function CryptoVolumePage({params}: Props) {
       locale={locale}
       nameMap={nameMap}
       sourceLabel="Upbit"
+      symbols={cryptoRegistry.filter((e) => e.upbitMarket).map((e) => e.symbol)}
     />
   );
 }

@@ -19,6 +19,7 @@ export default async function UsVolumePage({params}: Props) {
       locale={locale}
       nameMap={nameMap}
       sourceLabel="Twelve Data"
+      symbols={usRegistry.map((e) => e.symbol)}
     />
   );
 }

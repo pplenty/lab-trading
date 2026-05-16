@@ -19,6 +19,7 @@ export default async function KrVolumePage({params}: Props) {
       locale={locale}
       nameMap={nameMap}
       sourceLabel="KIS (demo)"
+      symbols={krRegistry.map((e) => e.symbol)}
     />
   );
 }

@@ -4,13 +4,14 @@ import {notFound} from "next/navigation";
 import dynamic from "next/dynamic";
 import {Link} from "@/i18n/navigation";
 import {absoluteUrl} from "@/lib/site";
-import {upbitAdapter} from "@/lib/adapters/upbit";
 import {coingeckoAdapter} from "@/lib/adapters/coingecko";
 import {loadCandleSeries} from "@/lib/data/candles";
+import {loadQuote} from "@/lib/data/quotes";
 import {cryptoRegistry, getCryptoBySymbol} from "@/lib/symbols/registry";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {FinancialDelta} from "@/components/FinancialDelta";
 import {FavoriteButton} from "@/components/FavoriteButton";
+import {D1FallbackBadge} from "@/components/D1FallbackBadge";
 import {RecentTracker} from "@/components/RecentTracker";
 import {SymbolActions} from "@/components/panels/SymbolActions";
 import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
@@ -92,7 +93,7 @@ export default async function CryptoSymbolPage({params}: PageProps) {
 
   try {
     [quote, series] = await Promise.all([
-      upbitAdapter.getQuote(entry.symbol),
+      loadQuote("crypto", entry.symbol),
       loadCandleSeries({asset: "crypto", symbol: entry.symbol, limit: 200}),
     ]);
   } catch (err) {
@@ -168,6 +169,8 @@ export default async function CryptoSymbolPage({params}: PageProps) {
       </header>
 
       <SymbolActions class="crypto" symbol={entry.symbol} />
+
+      <D1FallbackBadge quote={quote} variant="banner" />
 
       {fetchError && (
         <div className="mb-6 rounded-lg border border-line bg-surface p-4 text-sm text-fg-muted">

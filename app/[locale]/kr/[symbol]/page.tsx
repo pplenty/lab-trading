@@ -4,12 +4,13 @@ import {notFound} from "next/navigation";
 import dynamic from "next/dynamic";
 import {Link} from "@/i18n/navigation";
 import {absoluteUrl} from "@/lib/site";
-import {kisAdapter} from "@/lib/adapters/kis";
 import {loadCandleSeries} from "@/lib/data/candles";
+import {loadQuote} from "@/lib/data/quotes";
 import {krRegistry, getKrBySymbol} from "@/lib/symbols/registry";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {FinancialDelta} from "@/components/FinancialDelta";
 import {FavoriteButton} from "@/components/FavoriteButton";
+import {D1FallbackBadge} from "@/components/D1FallbackBadge";
 import {RecentTracker} from "@/components/RecentTracker";
 import {SymbolActions} from "@/components/panels/SymbolActions";
 import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
@@ -84,7 +85,7 @@ export default async function KrSymbolPage({params}: PageProps) {
 
   try {
     [quote, series] = await Promise.all([
-      kisAdapter.getQuote(entry.symbol),
+      loadQuote("kr", entry.symbol),
       loadCandleSeries({asset: "kr", symbol: entry.symbol, limit: 200}),
     ]);
   } catch (err) {
@@ -158,6 +159,8 @@ export default async function KrSymbolPage({params}: PageProps) {
       </header>
 
       <SymbolActions class="kr" symbol={entry.symbol} />
+
+      <D1FallbackBadge quote={quote} variant="banner" />
 
       {isDemo && (
         <div className="mb-4 rounded-md border border-line bg-surface/40 px-3 py-2 text-[11px] text-fg-muted">

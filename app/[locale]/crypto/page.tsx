@@ -1,5 +1,5 @@
 import {getTranslations} from "next-intl/server";
-import {upbitAdapter} from "@/lib/adapters/upbit";
+import {loadQuotesList} from "@/lib/data/quotes";
 import {cryptoRegistry} from "@/lib/symbols/registry";
 import {QuoteTable} from "@/components/panels/QuoteTable";
 import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
@@ -22,7 +22,11 @@ export default async function CryptoIndexPage({params}: Props) {
   let fetchError: string | null = null;
 
   try {
-    quotes = await upbitAdapter.listQuotes({limit: 50});
+    quotes = await loadQuotesList({
+      asset: "crypto",
+      symbols: cryptoRegistry.filter((e) => e.upbitMarket).map((e) => e.symbol),
+      listOpts: {limit: 50},
+    });
     // 시가총액 순위는 Upbit 에서 제공 X — 거래대금 기준 정렬로 폴백.
     quotes.sort((a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0));
   } catch (err) {

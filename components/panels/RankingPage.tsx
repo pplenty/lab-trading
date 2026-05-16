@@ -3,9 +3,10 @@ import type {AssetClass, Quote, RankingKind} from "@/lib/types";
 import type {DataAdapter} from "@/lib/adapters/types";
 import {QuoteTable} from "./QuoteTable";
 import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
+import {loadRankingsFromD1} from "@/lib/data/quotes";
 
 // 자산군 × 랭킹 종류 공용 페이지 컴포넌트.
-// 각 자산군의 어댑터 (rankings 구현) 를 위임 받아 표만 렌더.
+// 각 자산군의 어댑터 (rankings 구현) 위임 + 실패 시 D1 candles 기반 fallback.
 
 type Props = {
   class: AssetClass;
@@ -16,6 +17,8 @@ type Props = {
   nameMap?: Record<string, {name: string; nameKo?: string}>;
   /** 어댑터 식별자 라벨 (footer 데이터 출처 표기용). */
   sourceLabel: string;
+  /** registry 의 모든 symbol — adapter.rankings 실패 시 D1 fallback 용. */
+  symbols: string[];
 };
 
 const KIND_LABEL: Record<RankingKind, {ko: string; en: string}> = {
@@ -31,6 +34,7 @@ export async function RankingPage({
   locale,
   nameMap,
   sourceLabel,
+  symbols,
 }: Props) {
   const tDisc = await getTranslations("disclaimer");
   const t = await getTranslations("home");
@@ -44,7 +48,18 @@ export async function RankingPage({
     }
     quotes = await adapter.rankings(kind, {limit: 50});
   } catch (err) {
-    fetchError = err instanceof Error ? err.message : String(err);
+    // adapter.rankings 실패 시 D1 fallback — backfill 가 채운 봉으로 합성.
+    const fallback = await loadRankingsFromD1({
+      asset: cls,
+      symbols,
+      kind,
+      limit: 50,
+    });
+    if (fallback.length > 0) {
+      quotes = fallback;
+    } else {
+      fetchError = err instanceof Error ? err.message : String(err);
+    }
   }
 
   const label = locale === "ko" ? KIND_LABEL[kind].ko : KIND_LABEL[kind].en;

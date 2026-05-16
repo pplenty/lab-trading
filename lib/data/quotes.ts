@@ -1,6 +1,6 @@
 import {getDb, isDbAvailable} from "@/lib/db/d1/client";
 import {D1CandleRepo} from "@/lib/db/d1/repos";
-import type {AssetClass, ListQuotesOpts, Quote} from "@/lib/types";
+import type {AssetClass, ListQuotesOpts, Quote, RankingKind} from "@/lib/types";
 import {upbitAdapter} from "@/lib/adapters/upbit";
 import {twelveDataAdapter} from "@/lib/adapters/twelve-data";
 import {kisAdapter} from "@/lib/adapters/kis";
@@ -101,4 +101,37 @@ export async function loadQuotesList(opts: {
 /** quote.source 가 D1 fallback 인지 — UI 분기용. */
 export function isQuoteFromD1(quote: Quote | null | undefined): boolean {
   return quote?.source === "d1-fallback";
+}
+
+/**
+ * 자산군 × 랭킹 종류 D1 합성. adapter.rankings 실패 시 fallback.
+ * gainers/losers 는 changePct24h, volume 은 volume24h 기준 정렬.
+ */
+export async function loadRankingsFromD1(opts: {
+  asset: AssetClass;
+  symbols: string[];
+  kind: RankingKind;
+  limit?: number;
+}): Promise<Quote[]> {
+  const all = await Promise.all(
+    opts.symbols.map((s) => loadQuoteFromD1(opts.asset, s))
+  );
+  const quotes = all.filter((q): q is Quote => q !== null);
+  const sorted = (() => {
+    switch (opts.kind) {
+      case "gainers":
+        return [...quotes].sort(
+          (a, b) => (b.changePct24h ?? 0) - (a.changePct24h ?? 0)
+        );
+      case "losers":
+        return [...quotes].sort(
+          (a, b) => (a.changePct24h ?? 0) - (b.changePct24h ?? 0)
+        );
+      case "volume":
+        return [...quotes].sort(
+          (a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0)
+        );
+    }
+  })();
+  return sorted.slice(0, opts.limit ?? 50);
 }
