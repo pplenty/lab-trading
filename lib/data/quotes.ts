@@ -100,31 +100,38 @@ async function getKvCache(): Promise<KVNamespace | null> {
 }
 
 /**
- * adapter.listQuotes 시도 → 부분 결과 + 누락 종목 D1 합성 보강.
- * KV cache (60s TTL) 최상위 — 대시보드 / 자산군 인덱스가 외부 API 호출 누적 회피.
+ * 인덱스 / 대시보드 quote 리스트 — **D1 우선** (디폴트, ~100ms).
+ * 라이브 가격이 필요한 호출은 `preferLive: true` 명시. 그 경우 KV cache + adapter +
+ * partial fallback 3 layer 동작.
  *
- * 4 시나리오:
- *   0) KV cache hit → 즉시 반환 (수ms)
- *   1) adapter 가 전체 종목 라이브 반환 → KV 저장 후 반환
- *   2) adapter 가 일부만 반환 (rate limit / 부분 차단) → 누락분만 D1 합성으로 채움 → KV 저장
- *   3) adapter throw → 전체 D1 합성 (KV 저장 X — adapter 회복 빠르게 재시도)
+ * D1 우선 이유: KIS 직렬 24 종목 + Twelve Data rate-limit fallback 가 SSR 11s+. 인덱스의
+ * 가격 표시는 "어제 종가 + 24h 변동" 으로 충분 — 라이브성 양보로 속도 100배. 종목 상세는
+ * loadQuote (단일 종목 라이브 빠름) 유지.
  */
 export async function loadQuotesList(opts: {
   asset: AssetClass;
   symbols: string[];
   listOpts?: ListQuotesOpts;
+  /** 라이브 시도 + KV cache + partial fallback. 기본 false (D1 우선). */
+  preferLive?: boolean;
 }): Promise<Quote[]> {
+  if (!opts.preferLive) {
+    // D1 우선 — 모든 종목 D1 last candle 합성
+    const rows = await Promise.all(
+      opts.symbols.map((s) => loadQuoteFromD1(opts.asset, s))
+    );
+    return rows.filter((q): q is Quote => q !== null);
+  }
+
+  // preferLive: 라이브 시도 + 부분 fallback + KV cache (기존 로직)
   const kv = await getKvCache();
   const kvKey = `quotes:${opts.asset}`;
-  // 0) KV cache 시도
   if (kv) {
     try {
       const cached = await kv.get(kvKey, "json");
-      if (cached && Array.isArray(cached)) {
-        return cached as Quote[];
-      }
+      if (cached && Array.isArray(cached)) return cached as Quote[];
     } catch {
-      // KV miss / parse error
+      // KV miss
     }
   }
 
@@ -132,14 +139,12 @@ export async function loadQuotesList(opts: {
   try {
     liveQuotes = await ADAPTERS[opts.asset].listQuotes(opts.listOpts);
   } catch {
-    // 전량 실패 → 전체 D1 합성 (KV 저장 X — adapter 회복 시 즉시 라이브 복귀)
     const all = await Promise.all(
       opts.symbols.map((s) => loadQuoteFromD1(opts.asset, s))
     );
     return all.filter((q): q is Quote => q !== null);
   }
 
-  // 부분 결과 — 누락 종목만 D1 보강
   const haveSymbols = new Set(liveQuotes.map((q) => q.symbol));
   const missing = opts.symbols.filter((s) => !haveSymbols.has(s));
   let result = liveQuotes;
@@ -153,14 +158,13 @@ export async function loadQuotesList(opts: {
     ];
   }
 
-  // KV 저장 (best-effort) — 응답에 영향 X
   if (kv && result.length > 0) {
     try {
       await kv.put(kvKey, JSON.stringify(result), {
         expirationTtl: KV_QUOTES_TTL_SEC,
       });
     } catch {
-      // KV write 실패 무시 — 다음 호출이 재시도
+      // best-effort
     }
   }
   return result;
