@@ -86,6 +86,7 @@ export function QuoteTable({class: cls, quotes, nameMap, locale}: Props) {
                   <td className="px-4 py-2">
                     <Link
                       href={`/${cls}/${q.symbol}`}
+                      prefetch={false}
                       className="font-medium text-fg hover:text-accent"
                     >
                       {name}

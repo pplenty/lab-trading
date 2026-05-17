@@ -25,6 +25,7 @@ export function RelatedSymbolChips({class: cls, currentSymbol, siblings}: Props)
           <Link
             key={s.symbol}
             href={`/${cls}/${s.symbol}`}
+            prefetch={false}
             className="inline-flex items-center gap-1 rounded-full border border-line bg-surface/40 px-2.5 py-1 text-[11px] text-fg-muted transition-colors hover:border-fg hover:text-fg"
           >
             <span className="font-medium text-fg">{s.label}</span>

@@ -137,6 +137,7 @@ function MoverList({
             <li key={q.symbol}>
               <Link
                 href={`/${cls}/${q.symbol}`}
+                prefetch={false}
                 className="flex items-center justify-between gap-2 rounded-md px-2 py-1 text-xs transition-colors hover:bg-surface"
               >
                 <span className="truncate font-medium text-fg">
