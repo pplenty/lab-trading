@@ -29,6 +29,9 @@ const CandleChart = dynamic(() =>
 // 첫 자산 점등 — `/ko/crypto/btc` 등. Upbit (KRW) 디폴트 어댑터.
 // Phase 1.5 에 데이터 소스 라우터 (CoinGecko/Binance/Upbit 우선순위 + fallback) 도입.
 
+// 60초 ISR — 라이브성 균형 + cold start 회피
+export const revalidate = 60;
+
 export async function generateMetadata({
   params,
 }: {

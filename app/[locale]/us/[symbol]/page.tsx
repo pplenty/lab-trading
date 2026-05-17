@@ -24,6 +24,9 @@ const CandleChart = dynamic(() =>
   import("@/components/charts/CandleChart").then((m) => m.CandleChart)
 );
 
+// 60초 ISR — 라이브성 균형 + cold start 회피
+export const revalidate = 60;
+
 export async function generateMetadata({
   params,
 }: {

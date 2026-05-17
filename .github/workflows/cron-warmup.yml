@@ -38,3 +38,21 @@ jobs:
             echo "::error::warmup failed with HTTP $code"
             exit 1
           fi
+
+      - name: Prefetch ISR pages (5 main + 9 popular symbol pages)
+        env:
+          SITE: https://trading.jdgrid.com
+        run: |
+          # ISR `revalidate = 300` (대시보드/인덱스 4) + `revalidate = 60` (종목 상세) 캐시 갱신.
+          # 사용자가 가장 많이 진입하는 페이지만 prefetch — 다른 종목은 첫 진입 사용자가 SSR 트리거.
+          pages=(
+            "/ko"
+            "/ko/crypto" "/ko/us" "/ko/kr"
+            "/ko/crypto/btc" "/ko/crypto/eth" "/ko/crypto/sol"
+            "/ko/us/aapl" "/ko/us/nvda" "/ko/us/tsla"
+            "/ko/kr/005930" "/ko/kr/000660" "/ko/kr/373220"
+          )
+          for p in "${pages[@]}"; do
+            t=$(curl -s -o /dev/null -w "%{time_total}" --max-time 30 "$SITE$p" || echo "TIMEOUT")
+            echo "  ${t}s  $p"
+          done
