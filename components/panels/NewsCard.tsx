@@ -24,8 +24,7 @@ function relativeTime(ts: number, now: number): string {
 }
 
 export function NewsCard({article, locale}: Props) {
-  const now = Math.floor(Date.now() / 1000);
-  const rel = relativeTime(article.publishedAt, now);
+  const rel = relativeTime(article.publishedAt, article.loadedAt ?? article.publishedAt);
   const abs = new Date(article.publishedAt * 1000).toLocaleString(
     locale === "en" ? "en-US" : "ko-KR",
     {

@@ -15,16 +15,32 @@ type Props = {
   symbol: string;
 };
 
-export async function IndicatorPanel({class: cls, symbol}: Props) {
+type IndicatorPanelData = {
+  rsi: number[];
+  macd: number[];
+  stochK: number[];
+  last: {
+    rsi_14?: number;
+    macd?: number;
+    macd_signal?: number;
+    stoch_k_14_3?: number;
+    stoch_d_14_3?: number;
+  };
+};
+
+async function loadIndicatorPanelData(
+  symbol: string
+): Promise<IndicatorPanelData | null> {
   if (!(await isDbAvailable())) return null;
   try {
     const db = await getDb();
     const repo = new D1IndicatorRepo(db);
-    const now = Math.floor(Date.now() / 1000);
+    const latestT = await repo.latestT(symbol, INDICATORS_VERSION);
+    if (latestT === null) return null;
     const rows = await repo.range({
       symbol,
-      from: now - 120 * 86400, // 최근 ~4개월 — 80 영업일 정도
-      to: now + 86400,
+      from: latestT - 120 * 86400, // 최근 ~4개월 — 80 영업일 정도
+      to: latestT + 1,
       version: INDICATORS_VERSION,
     });
     if (rows.length === 0) return null;
@@ -41,75 +57,84 @@ export async function IndicatorPanel({class: cls, symbol}: Props) {
     // 충분한 데이터 없으면 섹션 hide
     if (rsi.length < 5 && macd.length < 5 && stochK.length < 5) return null;
 
-    const rsiStatus = (v?: number) => {
-      if (v === undefined) return null;
-      if (v >= 70) return {label: "과매수", tone: "down"} as const;
-      if (v <= 30) return {label: "과매도", tone: "up"} as const;
-      return {label: "중립", tone: "neutral"} as const;
-    };
-    const stochStatus = (v?: number) => {
-      if (v === undefined) return null;
-      if (v >= 80) return {label: "과매수", tone: "down"} as const;
-      if (v <= 20) return {label: "과매도", tone: "up"} as const;
-      return {label: "중립", tone: "neutral"} as const;
-    };
-    const macdStatus = (m?: number, s?: number) => {
-      if (m === undefined || s === undefined) return null;
-      return m > s
-        ? {label: "▲ bull", tone: "up" as const}
-        : {label: "▼ bear", tone: "down" as const};
-    };
-
-    const _ = cls; // currently unused in render
-    void _;
-
-    return (
-      <section className="mt-6 mb-6">
-        <header className="mb-3 flex items-baseline justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-fg-muted">
-            모멘텀 지표
-          </h2>
-          <span className="text-[10px] text-fg-subtle">D1 사전계산 v{INDICATORS_VERSION}</span>
-        </header>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <IndicatorCard
-            label="RSI (14)"
-            primary={last?.rsi_14}
-            primaryFmt={(v) => v.toFixed(1)}
-            status={rsiStatus(last?.rsi_14)}
-            data={rsi}
-            footnote="30 과매도 · 70 과매수"
-          />
-          <IndicatorCard
-            label="MACD (12, 26, 9)"
-            primary={last?.macd}
-            primaryFmt={(v) => v.toFixed(2)}
-            status={macdStatus(last?.macd, last?.macd_signal)}
-            data={macd}
-            footnote={
-              last?.macd_signal !== undefined
-                ? `signal ${last.macd_signal.toFixed(2)}`
-                : undefined
-            }
-          />
-          <IndicatorCard
-            label="Stochastic %K (14, 3)"
-            primary={last?.stoch_k_14_3}
-            primaryFmt={(v) => v.toFixed(1)}
-            status={stochStatus(last?.stoch_k_14_3)}
-            data={stochK}
-            footnote={
-              last?.stoch_d_14_3 !== undefined
-                ? `%D ${last.stoch_d_14_3.toFixed(1)}`
-                : undefined
-            }
-          />
-        </div>
-      </section>
-    );
+    return {rsi, macd, stochK, last};
   } catch {
     return null;
   }
+}
+
+export async function IndicatorPanel({symbol}: Props) {
+  const data = await loadIndicatorPanelData(symbol);
+  if (!data) return null;
+  const {rsi, macd, stochK, last} = data;
+
+  return (
+    <section className="mt-6 mb-6">
+      <header className="mb-3 flex items-baseline justify-between">
+        <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-fg-muted">
+          모멘텀 지표
+        </h2>
+        <span className="text-[10px] text-fg-subtle">
+          D1 사전계산 v{INDICATORS_VERSION}
+        </span>
+      </header>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <IndicatorCard
+          label="RSI (14)"
+          primary={last.rsi_14}
+          primaryFmt={(v) => v.toFixed(1)}
+          status={rsiStatus(last.rsi_14)}
+          data={rsi}
+          footnote="30 과매도 · 70 과매수"
+        />
+        <IndicatorCard
+          label="MACD (12, 26, 9)"
+          primary={last.macd}
+          primaryFmt={(v) => v.toFixed(2)}
+          status={macdStatus(last.macd, last.macd_signal)}
+          data={macd}
+          footnote={
+            last.macd_signal !== undefined
+              ? `signal ${last.macd_signal.toFixed(2)}`
+              : undefined
+          }
+        />
+        <IndicatorCard
+          label="Stochastic %K (14, 3)"
+          primary={last.stoch_k_14_3}
+          primaryFmt={(v) => v.toFixed(1)}
+          status={stochStatus(last.stoch_k_14_3)}
+          data={stochK}
+          footnote={
+            last.stoch_d_14_3 !== undefined
+              ? `%D ${last.stoch_d_14_3.toFixed(1)}`
+              : undefined
+          }
+        />
+      </div>
+    </section>
+  );
+}
+
+function rsiStatus(v?: number) {
+  if (v === undefined) return null;
+  if (v >= 70) return {label: "과매수", tone: "down"} as const;
+  if (v <= 30) return {label: "과매도", tone: "up"} as const;
+  return {label: "중립", tone: "neutral"} as const;
+}
+
+function stochStatus(v?: number) {
+  if (v === undefined) return null;
+  if (v >= 80) return {label: "과매수", tone: "down"} as const;
+  if (v <= 20) return {label: "과매도", tone: "up"} as const;
+  return {label: "중립", tone: "neutral"} as const;
+}
+
+function macdStatus(m?: number, s?: number) {
+  if (m === undefined || s === undefined) return null;
+  return m > s
+    ? {label: "▲ bull", tone: "up" as const}
+    : {label: "▼ bear", tone: "down" as const};
 }
 
 type CardProps = {

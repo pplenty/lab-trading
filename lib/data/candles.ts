@@ -1,4 +1,4 @@
-import type {AssetClass, Candle, CandleSeries} from "@/lib/types";
+import type {AssetClass, CandleSeries} from "@/lib/types";
 import {getDb, isDbAvailable} from "@/lib/db/d1/client";
 import {D1CandleRepo} from "@/lib/db/d1/repos";
 import {upbitAdapter} from "@/lib/adapters/upbit";

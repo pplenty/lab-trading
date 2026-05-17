@@ -7,6 +7,8 @@ import {ShortcutsTrigger} from "@/components/ShortcutsTrigger";
 import {UserDataReset} from "@/components/panels/UserDataReset";
 
 // 설정 페이지 — 모든 사이트 환경설정을 한 곳에 모음 (yutils 동일 정책).
+export const dynamic = "force-static";
+
 export default async function SettingsPage() {
   const t = await getTranslations("settings");
   const tTheme = await getTranslations("theme");

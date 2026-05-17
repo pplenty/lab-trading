@@ -1,7 +1,7 @@
 import type {Metadata} from "next";
 import {getTranslations} from "next-intl/server";
 import {notFound} from "next/navigation";
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 import {Link} from "@/i18n/navigation";
 import {absoluteUrl} from "@/lib/site";
 import {coingeckoAdapter} from "@/lib/adapters/coingecko";
@@ -22,7 +22,7 @@ import {assetJsonLd} from "@/lib/seo/asset-jsonld";
 import type {Quote, CandleSeries} from "@/lib/types";
 
 // 동적 차트는 ssr:false — lightweight-charts 가 window 의존이라 RSC 직 렌더 X.
-const CandleChart = dynamic(() =>
+const CandleChart = nextDynamic(() =>
   import("@/components/charts/CandleChart").then((m) => m.CandleChart)
 );
 
@@ -30,6 +30,7 @@ const CandleChart = dynamic(() =>
 // Phase 1.5 에 데이터 소스 라우터 (CoinGecko/Binance/Upbit 우선순위 + fallback) 도입.
 
 // 60초 ISR — 라이브성 균형 + cold start 회피
+export const dynamic = "force-static";
 export const revalidate = 60;
 
 export async function generateMetadata({

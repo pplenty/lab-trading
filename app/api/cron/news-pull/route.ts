@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {fetchAllSources, type NormalizedArticle} from "@/lib/adapters/rss";
+import {fetchAllSources} from "@/lib/adapters/rss";
 import {getDb, isDbAvailable} from "@/lib/db/d1/client";
 import {D1NewsRepo} from "@/lib/db/d1/repos";
 import {refreshNewsKv, type NewsArticleView} from "@/lib/data/news";

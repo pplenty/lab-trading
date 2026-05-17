@@ -1,6 +1,5 @@
 "use client";
 
-import {useState} from "react";
 import {Bookmark, Trash2} from "lucide-react";
 import {useLocale} from "next-intl";
 import {Link} from "@/i18n/navigation";
@@ -26,13 +25,6 @@ function buildBacktestHref(s: SavedStrategy): string {
 export function SavedStrategiesPanel() {
   const {items, remove} = useSavedStrategies();
   const locale = useLocale();
-  const [hydrated, setHydrated] = useState(false);
-
-  // useSyncExternalStore 가 hydration mismatch 회피하지만, 초기 렌더는 빈 배열.
-  // 빈 상태 메시지 잠깐 깜빡임 회피용 mount 플래그.
-  if (typeof window !== "undefined" && !hydrated) {
-    setTimeout(() => setHydrated(true), 0);
-  }
 
   if (items.length === 0) {
     return (
@@ -44,7 +36,7 @@ export function SavedStrategiesPanel() {
         />
         <p className="text-sm font-medium text-fg">아직 저장된 전략이 없습니다</p>
         <p className="mt-2 text-xs text-fg-muted">
-          백테스트 작업장에서 전략 + 파라미터를 조정하고 "전략 저장" 버튼을 눌러보세요.
+          백테스트 작업장에서 전략 + 파라미터를 조정하고 &quot;전략 저장&quot; 버튼을 눌러보세요.
         </p>
         <Link
           href="/backtest/new"

@@ -1,6 +1,8 @@
 import {getTranslations} from "next-intl/server";
 import {SavedStrategiesPanel} from "@/components/panels/SavedStrategiesPanel";
 
+export const dynamic = "force-static";
+
 export default async function BacktestSavedPage() {
   const t = await getTranslations("home");
   const tDisc = await getTranslations("disclaimer");

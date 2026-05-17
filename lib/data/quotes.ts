@@ -1,4 +1,3 @@
-import type {KVNamespace} from "@cloudflare/workers-types";
 import {getDb, isDbAvailable} from "@/lib/db/d1/client";
 import {D1CandleRepo} from "@/lib/db/d1/repos";
 import type {AssetClass, ListQuotesOpts, Quote, RankingKind} from "@/lib/types";
@@ -6,6 +5,7 @@ import {upbitAdapter} from "@/lib/adapters/upbit";
 import {twelveDataAdapter} from "@/lib/adapters/twelve-data";
 import {kisAdapter} from "@/lib/adapters/kis";
 import type {DataAdapter} from "@/lib/adapters/types";
+import type {Candle} from "@/lib/types";
 
 // adapter 실시간 quote 가 외부 API 한도·차단으로 실패할 때 D1 의 최근 candle 로
 // quote 를 합성하는 fallback. backfill 가 채운 D1 가 있으면 어제 종가 + 24h delta 까지 노출 가능.
@@ -28,6 +28,32 @@ const CURRENCY: Record<AssetClass, string> = {
 
 const DAY_SEC = 86400;
 
+function quoteFromD1Rows(
+  asset: AssetClass,
+  symbol: string,
+  rows: Candle[]
+): Quote | null {
+  if (rows.length === 0) return null;
+  const sorted = rows.length >= 2 ? [...rows].sort((a, b) => a.t - b.t) : rows;
+  const last = sorted[sorted.length - 1];
+  const prev = sorted.length >= 2 ? sorted[sorted.length - 2] : null;
+  const changeAbs = prev ? last.c - prev.c : 0;
+  const changePct = prev && prev.c !== 0 ? (changeAbs / prev.c) * 100 : 0;
+  return {
+    symbol,
+    class: asset,
+    price: last.c,
+    currency: CURRENCY[asset],
+    changeAbs24h: changeAbs,
+    changePct24h: changePct,
+    volume24h: last.v,
+    high24h: last.h,
+    low24h: last.l,
+    updatedAt: new Date(last.t * 1000).toISOString(),
+    source: "d1-fallback",
+  };
+}
+
 /** D1 의 최근 2 봉으로 Quote 합성. 데이터 없거나 D1 binding 미설정이면 null. */
 export async function loadQuoteFromD1(
   asset: AssetClass,
@@ -43,26 +69,34 @@ export async function loadQuoteFromD1(
       from: now - 30 * DAY_SEC, // 휴장 여유 + 신규 종목 대비
       to: now + DAY_SEC,
     });
-    if (rows.length === 0) return null;
-    const last = rows[rows.length - 1];
-    const prev = rows.length >= 2 ? rows[rows.length - 2] : null;
-    const changeAbs = prev ? last.c - prev.c : 0;
-    const changePct = prev && prev.c !== 0 ? (changeAbs / prev.c) * 100 : 0;
-    return {
-      symbol,
-      class: asset,
-      price: last.c,
-      currency: CURRENCY[asset],
-      changeAbs24h: changeAbs,
-      changePct24h: changePct,
-      volume24h: last.v,
-      high24h: last.h,
-      low24h: last.l,
-      updatedAt: new Date(last.t * 1000).toISOString(),
-      source: "d1-fallback",
-    };
+    return quoteFromD1Rows(asset, symbol, rows);
   } catch {
     return null;
+  }
+}
+
+/** 여러 종목의 최근 2 봉을 한 번에 읽어 Quote 합성. 리스트/홈 SSR fast path. */
+export async function loadQuotesFromD1(
+  asset: AssetClass,
+  symbols: string[]
+): Promise<Quote[]> {
+  if (symbols.length === 0) return [];
+  if (!(await isDbAvailable())) return [];
+  try {
+    const db = await getDb();
+    const repo = new D1CandleRepo(db);
+    const now = Math.floor(Date.now() / 1000);
+    const bySymbol = await repo.recentBySymbols({
+      symbols,
+      from: now - 30 * DAY_SEC,
+      to: now + DAY_SEC,
+      perSymbol: 2,
+    });
+    return symbols
+      .map((symbol) => quoteFromD1Rows(asset, symbol, bySymbol.get(symbol) ?? []))
+      .filter((q): q is Quote => q !== null);
+  } catch {
+    return [];
   }
 }
 
@@ -80,94 +114,21 @@ export async function loadQuote(
   }
 }
 
-// 5분 TTL — GitHub Actions cron 가 매 5분 warm-up 호출하므로 첫 사용자도 항상 KV hit.
-const KV_QUOTES_TTL_SEC = 300;
-
-async function getKvCache(): Promise<KVNamespace | null> {
-  try {
-    const {getCloudflareContext} = await import("@opennextjs/cloudflare");
-    let env: unknown;
-    try {
-      env = getCloudflareContext().env;
-    } catch {
-      env = (await getCloudflareContext({async: true})).env;
-    }
-    const e = env as {lab_trading_cache?: KVNamespace};
-    return e.lab_trading_cache ?? null;
-  } catch {
-    return null;
-  }
-}
-
 /**
- * 인덱스 / 대시보드 quote 리스트 — **D1 우선** (디폴트, ~100ms).
- * 라이브 가격이 필요한 호출은 `preferLive: true` 명시. 그 경우 KV cache + adapter +
- * partial fallback 3 layer 동작.
+ * 인덱스 / 대시보드 quote 리스트 — **D1 우선** (~100ms).
  *
  * D1 우선 이유: KIS 직렬 24 종목 + Twelve Data rate-limit fallback 가 SSR 11s+. 인덱스의
- * 가격 표시는 "어제 종가 + 24h 변동" 으로 충분 — 라이브성 양보로 속도 100배. 종목 상세는
- * loadQuote (단일 종목 라이브 빠름) 유지.
+ * 가격 표시는 "어제 종가 + 24h 변동" 으로 충분. 종목 상세는 loadQuote (단일 종목 라이브) 유지.
+ *
+ * (KV cache + preferLive 분기는 dead code 였음 — 호출자 없어서 2026-05-18 제거.)
  */
 export async function loadQuotesList(opts: {
   asset: AssetClass;
   symbols: string[];
   listOpts?: ListQuotesOpts;
-  /** 라이브 시도 + KV cache + partial fallback. 기본 false (D1 우선). */
-  preferLive?: boolean;
 }): Promise<Quote[]> {
-  if (!opts.preferLive) {
-    // D1 우선 — 모든 종목 D1 last candle 합성
-    const rows = await Promise.all(
-      opts.symbols.map((s) => loadQuoteFromD1(opts.asset, s))
-    );
-    return rows.filter((q): q is Quote => q !== null);
-  }
-
-  // preferLive: 라이브 시도 + 부분 fallback + KV cache (기존 로직)
-  const kv = await getKvCache();
-  const kvKey = `quotes:${opts.asset}`;
-  if (kv) {
-    try {
-      const cached = await kv.get(kvKey, "json");
-      if (cached && Array.isArray(cached)) return cached as Quote[];
-    } catch {
-      // KV miss
-    }
-  }
-
-  let liveQuotes: Quote[] = [];
-  try {
-    liveQuotes = await ADAPTERS[opts.asset].listQuotes(opts.listOpts);
-  } catch {
-    const all = await Promise.all(
-      opts.symbols.map((s) => loadQuoteFromD1(opts.asset, s))
-    );
-    return all.filter((q): q is Quote => q !== null);
-  }
-
-  const haveSymbols = new Set(liveQuotes.map((q) => q.symbol));
-  const missing = opts.symbols.filter((s) => !haveSymbols.has(s));
-  let result = liveQuotes;
-  if (missing.length > 0) {
-    const fallbacks = await Promise.all(
-      missing.map((s) => loadQuoteFromD1(opts.asset, s))
-    );
-    result = [
-      ...liveQuotes,
-      ...fallbacks.filter((q): q is Quote => q !== null),
-    ];
-  }
-
-  if (kv && result.length > 0) {
-    try {
-      await kv.put(kvKey, JSON.stringify(result), {
-        expirationTtl: KV_QUOTES_TTL_SEC,
-      });
-    } catch {
-      // best-effort
-    }
-  }
-  return result;
+  void opts.listOpts; // 시그너처 호환 — 호출자 일부가 limit 전달, 현재 D1 전체 read 후 호출자가 slice.
+  return await loadQuotesFromD1(opts.asset, opts.symbols);
 }
 
 /** quote.source 가 D1 fallback 인지 — UI 분기용. */
@@ -185,10 +146,7 @@ export async function loadRankingsFromD1(opts: {
   kind: RankingKind;
   limit?: number;
 }): Promise<Quote[]> {
-  const all = await Promise.all(
-    opts.symbols.map((s) => loadQuoteFromD1(opts.asset, s))
-  );
-  const quotes = all.filter((q): q is Quote => q !== null);
+  const quotes = await loadQuotesFromD1(opts.asset, opts.symbols);
   const sorted = (() => {
     switch (opts.kind) {
       case "gainers":

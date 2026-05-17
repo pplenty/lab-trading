@@ -100,7 +100,7 @@ describe("smaCross", () => {
 
   it("constant price → no signal (no crossover)", () => {
     const state = smaCross.init({fast: 3, slow: 5});
-    let pos: 0 | 1 = 0;
+    const pos: 0 | 1 = 0;
     for (let i = 0; i < 20; i++) {
       const sig = smaCross.onBar(mkCandle(i, 100), undefined, state, pos);
       // 가격이 같으면 fast == slow == 100, sign 0 → 첫 비교는 hold, 이후도 hold

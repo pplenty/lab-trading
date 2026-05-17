@@ -1,7 +1,7 @@
 import type {Metadata} from "next";
 import {getTranslations} from "next-intl/server";
 import {notFound} from "next/navigation";
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 import {Link} from "@/i18n/navigation";
 import {absoluteUrl} from "@/lib/site";
 import {loadQuote} from "@/lib/data/quotes";
@@ -20,11 +20,12 @@ import {IndicatorPanel} from "@/components/panels/IndicatorPanel";
 import {assetJsonLd} from "@/lib/seo/asset-jsonld";
 import type {Quote, CandleSeries} from "@/lib/types";
 
-const CandleChart = dynamic(() =>
+const CandleChart = nextDynamic(() =>
   import("@/components/charts/CandleChart").then((m) => m.CandleChart)
 );
 
 // 60초 ISR — 라이브성 균형 + cold start 회피
+export const dynamic = "force-static";
 export const revalidate = 60;
 
 export async function generateMetadata({

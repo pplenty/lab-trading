@@ -8,7 +8,6 @@ import type {
   Quote,
   RankingKind,
   Symbol,
-  Timeframe,
 } from "@/lib/types";
 import type {DataAdapter} from "./types";
 import {

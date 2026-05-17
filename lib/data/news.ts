@@ -19,16 +19,29 @@ export type NewsArticleView = {
   summary: string | null;
   source: string;
   publishedAt: number; // unix sec
+  loadedAt?: number; // unix sec, relative-time 기준
 };
 
-function toView(r: NewsArticleRow): NewsArticleView {
+function nowSec(): number {
+  return Math.floor(Date.now() / 1000);
+}
+
+function toView(r: NewsArticleRow, loadedAt: number): NewsArticleView {
   return {
     url: r.url,
     title: r.title,
     summary: r.summary,
     source: r.source,
     publishedAt: r.published_at,
+    loadedAt,
   };
+}
+
+function withLoadedAt(
+  articles: NewsArticleView[],
+  loadedAt: number
+): NewsArticleView[] {
+  return articles.map((a) => ({...a, loadedAt}));
 }
 
 async function getKv(): Promise<KVNamespace | null> {
@@ -51,6 +64,7 @@ export async function loadNewsByClass(
   asset: AssetClass,
   limit: number = PAGE_LIMIT
 ): Promise<{articles: NewsArticleView[]; source: "kv" | "d1" | "empty"}> {
+  const loadedAt = nowSec();
   // 1) KV hot cache
   const kv = await getKv();
   if (kv) {
@@ -58,7 +72,7 @@ export async function loadNewsByClass(
       const raw = await kv.get(`news:${asset}`, "json");
       if (raw && Array.isArray(raw)) {
         return {
-          articles: (raw as NewsArticleView[]).slice(0, limit),
+          articles: withLoadedAt((raw as NewsArticleView[]).slice(0, limit), loadedAt),
           source: "kv",
         };
       }
@@ -73,7 +87,7 @@ export async function loadNewsByClass(
       const db = await getDb();
       const repo = new D1NewsRepo(db);
       const rows = await repo.listByAsset(asset, limit);
-      return {articles: rows.map(toView), source: "d1"};
+      return {articles: rows.map((r) => toView(r, loadedAt)), source: "d1"};
     } catch {
       // D1 query 실패 — 빈 배열
     }
@@ -94,11 +108,12 @@ export async function loadNewsBySymbol(
   const keywords = keywordsForSymbol(asset, symbol);
   if (keywords.length === 0) return [];
   if (!(await isDbAvailable())) return [];
+  const loadedAt = nowSec();
   try {
     const db = await getDb();
     const repo = new D1NewsRepo(db);
     const rows = await repo.listBySymbol({asset, keywords, limit});
-    return rows.map(toView);
+    return rows.map((r) => toView(r, loadedAt));
   } catch {
     return [];
   }

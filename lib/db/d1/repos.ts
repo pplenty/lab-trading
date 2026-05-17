@@ -1,4 +1,4 @@
-import {and, asc, desc, eq, gte, lt, like, or, sql} from "drizzle-orm";
+import {and, asc, desc, eq, gte, inArray, lt, like, or, sql} from "drizzle-orm";
 import type {LabTradingDB} from "./client";
 import * as schema from "./schema";
 import type {Asset, Candle, IndicatorRow} from "@/lib/types";
@@ -117,6 +117,61 @@ export class D1CandleRepo implements CandleRepo {
       )
       .orderBy(asc(schema.candles.t));
     return rows;
+  }
+
+  async recentBySymbols(opts: {
+    symbols: string[];
+    from: number;
+    to: number;
+    perSymbol?: number;
+  }): Promise<Map<string, Candle[]>> {
+    const result = new Map<string, Candle[]>();
+    const symbols = Array.from(new Set(opts.symbols));
+    if (symbols.length === 0) return result;
+
+    const perSymbol = opts.perSymbol ?? 2;
+    const SYMBOL_CHUNK = 80; // D1 variable limit headroom: symbols + from/to <= 100.
+    for (let i = 0; i < symbols.length; i += SYMBOL_CHUNK) {
+      const chunk = symbols.slice(i, i + SYMBOL_CHUNK);
+      const rows = await this.db
+        .select({
+          symbol: schema.candles.symbol,
+          t: schema.candles.t,
+          o: schema.candles.o,
+          h: schema.candles.h,
+          l: schema.candles.l,
+          c: schema.candles.c,
+          v: schema.candles.v,
+        })
+        .from(schema.candles)
+        .where(
+          and(
+            inArray(schema.candles.symbol, chunk),
+            gte(schema.candles.t, opts.from),
+            lt(schema.candles.t, opts.to)
+          )
+        )
+        .orderBy(asc(schema.candles.symbol), desc(schema.candles.t));
+
+      for (const row of rows) {
+        const group = result.get(row.symbol) ?? [];
+        if (group.length >= perSymbol) continue;
+        group.push({
+          t: row.t,
+          o: row.o,
+          h: row.h,
+          l: row.l,
+          c: row.c,
+          v: row.v,
+        });
+        result.set(row.symbol, group);
+      }
+    }
+
+    for (const rows of result.values()) {
+      rows.sort((a, b) => a.t - b.t);
+    }
+    return result;
   }
 
   async upsertMany(symbol: string, candles: Candle[]): Promise<number> {

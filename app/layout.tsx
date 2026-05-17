@@ -1,6 +1,5 @@
 import "./globals.css";
 import {Geist, Geist_Mono} from "next/font/google";
-import {getLocale} from "next-intl/server";
 import {
   themes,
   STORAGE_KEY,
@@ -30,15 +29,14 @@ const themeInitScript = `(function(){try{var s=localStorage.getItem(${JSON.strin
 // SSR HTML 에 즉시 박혀 body parse 시점에 실행 (paint 전).
 const themeInitHtml = `<script>${themeInitScript}</script>`;
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const locale = await getLocale();
   return (
     <html
-      lang={locale}
+      lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
