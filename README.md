@@ -4,36 +4,50 @@
 
 세 자산군의 시세·랭킹을 한 곳에서 비교하고, 같은 화면에서 사용자 전략을 일봉 기준으로 백테스트하여 수익률·MDD·Sharpe 결과를 즉시 확인할 수 있다.
 
-## 현재 상태 (2026-05-16, Phase 2)
+## 현재 상태 (2026-05-19, Phase 2 마감)
 
-**Production 라이브 — <https://trading.jdgrid.com>**. 3 자산군 **80 종목** × 시세·랭킹·종목상세·백테스트 + **6 매체 RSS 뉴스** + **종목 ↔ 관련 뉴스 매칭**. **D1 historical 107,668 candles + 106,809 indicators**.
+**Production 라이브 — <https://trading.jdgrid.com>**. 3 자산군 **80 종목** × 시세·랭킹·종목상세·백테스트 + **6 매체 RSS 뉴스 + 종목 매칭** + **26 indicator 사전계산 + 모멘텀/가격레벨 위젯** + **OG 동적 이미지**.
 
-| 자산군 | 종목 | 데이터 | D1 채움 |
-|---|---|---|---|
-| **crypto** | 26 (BTC ETH SOL ... HBAR MANA) | Upbit + CoinGecko 보조 | ~30,000 candles |
-| **us** | 30 (AAPL MSFT ... CRM PEP) | Twelve Data | ~37,000 candles (1255 영업일봉/종목) |
-| **kr** | 24 (KOSPI 20 + KOSDAQ 4) | KIS Open API | ~29,000 candles (1223 영업일봉/종목) |
+**D1 historical: 107,677 candles + 107,677 indicators (26 컬럼 v2, 2021-05-17 ~)**.
 
-페이지·백테스트는 `loadCandleSeries` / `loadQuote` / `loadQuotesList` 헬퍼로 **D1 우선 + 어댑터 fallback**. 어댑터 부분 실패 시 누락 종목만 D1 합성 (`D1FallbackBadge` UI 노출).
+| 자산군 | 종목 | 데이터 |
+|---|---|---|
+| **crypto** | 26 | Upbit + CoinGecko 보조 |
+| **us** | 30 | Twelve Data |
+| **kr** | 24 (KOSPI 20 + KOSDAQ 4) | KIS Open API |
 
-**뉴스 시스템** (ADR-0008): 한경 finance/economy + 매경 + 파이낸셜뉴스 stock/finance + 토큰포스트. 30분 cron 으로 RSS → 정규화 → D1 archive + KV hot cache. 종목 상세에 keyword 기반 관련 뉴스 5개 노출.
+**indicators 26**: SMA 5/20/50/100/200 · EMA 12/26/50 · RSI 14 · MACD 3 · BB 3 · ATR 14 · VolSMA 20 · Stochastic K/D · CCI 20 · Williams %R · ADX/DI+/DI- · OBV · ROC 12.
 
-활성 라우트: 대시보드 + 3 자산군 × {인덱스, gainers, losers, volume, 종목상세, 뉴스} + 백테스트 작업장 + 저장된 전략 + 통합 검색 + 설정 + 404 + `/api/{health,backfill,cron/backfill,cron/news-pull}`.
+페이지·백테스트가 D1 헬퍼 (`loadCandleSeries` / `loadQuote` / `loadQuotesList` / `loadIndicatorsForCandles`) 로 D1 우선. **인덱스/대시보드는 D1 우선** (어제 종가 + 24h 변동, SSR ~100ms). 종목 상세는 라이브 + D1 fallback (`D1FallbackBadge` 라벨).
+
+**뉴스 시스템** (ADR-0008): 한경 finance/economy + 매경 + 파이낸셜뉴스 증권/금융 + 토큰포스트. 30분 cron → D1 archive + KV hot cache. 종목 상세에 keyword OR LIKE 매칭 관련 뉴스 5개.
+
+**종목 상세 위젯**:
+- **PriceLevelsPanel** — 52주 고저 + 현재가 위치 % 막대 + SMA 20/50/200 거리
+- **IndicatorPanel** — RSI/MACD/Stochastic 3 카드 + sparkline + 과매수/과매도 라벨
+- **SymbolBacktestPreview** — buy-and-hold 결과 미니뷰 + ⚡ 전체 백테스트 CTA
+- **SymbolRelatedNews** — keyword 매칭 관련 뉴스 5개
+- **RelatedSymbolChips** — 같은 자산군의 다른 종목 nav
+
+활성 라우트: 대시보드 + 3 자산군 × {인덱스, gainers, losers, volume, 종목상세, 뉴스} + 백테스트 {작업장, 저장된 전략} + 통합 검색 + 설정 + 404 + `/api/{health,backfill,cron/{backfill,news-pull},recompute-indicators,og/[asset]/[symbol]}`.
 
 **운영**:
-- **CF Workers** — `lab-trading.jason-parsing.workers.dev` + Custom Domain `trading.jdgrid.com`. wrangler secrets ~10개.
-- **Cron 2개** — GitHub Actions:
-  - 매일 06:00 UTC: `/api/cron/backfill` 증분 봉
-  - 30분마다: `/api/cron/news-pull` RSS 수집
-- **KV 토큰 캐시** — KIS OAuth (cold start `EGW00133` 1분 한도 회피) + 뉴스 hot cache.
-- **`/api/health` freshness** — candles/indicators/symbols/latestTs/staleDays 노출. uptime probe 가 단순 binding 확인 외 데이터 신선도 검증.
+- **CF Workers** — `lab-trading.jason-parsing.workers.dev` + Custom Domain `trading.jdgrid.com`.
+- **Cron 3개** (GitHub Actions):
+  - `cron-backfill.yml` 매일 06:00 UTC: `/api/cron/backfill` 증분 봉
+  - `cron-news.yml` 30분마다: `/api/cron/news-pull` RSS 수집
+  - `cron-warmup.yml` 5분마다: ISR 페이지 prefetch 13장 (대시보드 + 3 인덱스 + top 9 종목)
+- **3-layer 캐시**: Next ISR 300/60s + KV (news/OAuth) + cron page prefetch. 대시보드 SSR 11s → 1-2s.
+- **KV** — KIS OAuth 토큰 캐시 + 뉴스 hot cache.
+- **`/api/health` freshness** — candles/indicators/symbols/latestTs/staleDays 노출.
+- **OG image** — `/api/og/<asset>/<symbol>` 1200×630 SVG (Slack/Discord 호환, PNG 변환은 follow-up).
 
 **사용자 자산** (localStorage, ADR-0016): 즐겨찾기 ⭐ + 최근 본 종목 ⏰ + 저장된 백테스트 전략 (URL prefill 공유 가능). Settings 에서 일괄 reset.
 **종목 ↔ 백테스트 연결**: 종목 상세 페이지 안에 buy-and-hold 미니뷰 (SSR runBacktest) + ⚡ 전체 백테스트 CTA + 자매 종목 chip nav + 관련 뉴스 5개.
 **SEO** (ADR-0015 D): 종목 상세에 schema.org FinancialProduct + BreadcrumbList JSON-LD + OpenGraph + Twitter card. 홈에 WebSite + SearchAction. sitemap 198 URLs (80 종목 × 2 locale + static + 뉴스).
 **a11y**: AppShell drag handle 키보드 (Arrow ±8px, Shift+Arrow ±32px, Home/End), 컬러 + 부호/화살표 병기, role=combobox 검색.
 
-코드: TypeScript strict / ESLint 9 / **Vitest 98 ✓** (120+ 파일 / ~12,000 줄).
+코드: TypeScript strict / ESLint 9 / **Vitest 98 ✓** (130+ 파일 / ~13,000 줄).
 
 ## 빌드 / 실행
 

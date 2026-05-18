@@ -36,27 +36,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 파생상품 가격 모델링 (옵션 그릭스·선물 만기 등)
 - 한국 법상 "투자자문업"에 해당하는 추천·자문 콘텐츠
 
-## 현재 상태 (2026-05-16, Phase 2)
+## 현재 상태 (2026-05-19, Phase 2 마감)
 
-- **Production 라이브 (`trading.jdgrid.com`).** 3 자산군 × 시세·랭킹·종목상세·백테스트 + 대시보드 / 통합 검색 / 즐겨찾기·최근 / 저장된 전략 / URL 공유 / 종목 미니뷰 + **6 매체 RSS 뉴스 (D1 archive + KV hot cache)** + **종목 ↔ 관련 뉴스 매칭**.
+- **Production 라이브 (`trading.jdgrid.com`).** 80 종목 × 시세·랭킹·종목상세·백테스트 + 대시보드 / 통합 검색 / 즐겨찾기·최근 / 저장된 전략 / URL 공유 + **26 indicator 사전계산** + **6 매체 RSS 뉴스 + 종목 ↔ 관련 뉴스** + **OG 동적 SVG image**.
 - 자산군별 상태 (모두 라이브, **80 종목**):
-  - **crypto**: Upbit Public API + CoinGecko 보조 — **26 종목** (BTC ETH SOL XRP DOGE ADA TRX AVAX LINK MATIC DOT BCH ETC ATOM NEAR APT ARB OP SAND FIL ALGO AAVE UNI VET HBAR MANA · LTC 는 Upbit KRW 페어 X 라 검색 인덱스만 등록).
-  - **us**: Twelve Data — **30 종목** (AAPL MSFT NVDA GOOGL AMZN META TSLA JPM V LLY XOM BRK.B + WMT UNH ORCL HD MA PG COST AVGO ABBV CVX KO PFE BAC NFLX ADBE CRM MRK PEP).
+  - **crypto**: Upbit Public API + CoinGecko 보조 — **26 종목**.
+  - **us**: Twelve Data — **30 종목**.
   - **kr**: KIS Open API — **24 종목** (KOSPI 20 + KOSDAQ 4).
-- **D1 (`lab-trading-db`) — 80종목 × 107,668 candles + 106,809 indicators (2021-05-17 ~ 2026-05-16)**. 페이지·백테스트가 `loadCandleSeries` / `loadQuote` / `loadQuotesList` 헬퍼로 D1 우선 + 어댑터 fallback. 어댑터 부분 실패 시 누락 종목만 D1 합성 (`d1-fallback` source 라벨 + `D1FallbackBadge` UI 노출).
-- **뉴스 (`news_articles` 테이블)**: 한국경제 금융/경제 + 매일경제 + 파이낸셜뉴스 증권/금융 + 토큰포스트 6 endpoint. 30분 cron 으로 fetch + D1 UPSERT + KV `news:{class}` hot cache. 종목 상세 페이지에 keyword 기반 관련 뉴스 5개 노출.
-- 활성 라우트: 대시보드(/), 3 자산군 × {/, /gainers, /losers, /volume, /[symbol], **/news**}, /backtest/new, /backtest/saved, /search, /settings + 404 catch-all + `/api/{health,backfill,cron/backfill,cron/news-pull}`. stub: /kr/kospi, /kr/kosdaq.
-- 사용자 자산 (localStorage, ADR-0016): 즐겨찾기 ⭐ + 최근 본 ⏰ + 저장된 전략 + 결과 URL 공유 (`/backtest/new?asset=...&symbol=...&strategy=...&<param>=...` prefill).
+- **D1 (`lab-trading-db`) — 80종목 × 107,677 candles + 107,677 indicators (2021-05-17 ~)**.
+  - **indicators 26 컬럼 v2**: SMA 5/20/50/100/200, EMA 12/26/50, RSI 14, MACD 3, BB 3, ATR 14, VolSMA 20 (Phase 1) + Stochastic K/D, CCI 20, Williams %R 14, ADX/DI+/DI- 14, OBV, ROC 12 (Phase 2).
+  - 페이지·백테스트가 `loadCandleSeries` / `loadQuote` / `loadQuotesList` / `loadIndicatorsForCandles` 헬퍼로 D1 사용. **인덱스/대시보드는 D1 우선** (어제 종가 + 24h 변동) — SSR 100ms. 종목 상세는 라이브 + D1 fallback. 어댑터 부분 실패 시 누락 종목만 D1 합성 + `D1FallbackBadge` UI 라벨.
+- **뉴스 (`news_articles` 테이블)**: 한경 finance/economy + 매경 + 파이낸셜뉴스 증권/금융 + 토큰포스트 6 endpoint. 30분 cron + D1 UPSERT + KV `news:{class}` hot cache. 종목 상세에 keyword OR LIKE 매칭 관련 뉴스 5개.
+- 종목 상세 추가 위젯: **PriceLevelsPanel** (52주 고저 + 현재가 위치 % + SMA 20/50/200 거리), **IndicatorPanel** (RSI/MACD/Stochastic 3 카드 + sparkline + 과매수/과매도 라벨).
+- 활성 라우트: 대시보드(/), 3 자산군 × {/, /gainers, /losers, /volume, /[symbol], /news}, /backtest/{new,saved}, /search, /settings + 404 catch-all + `/api/{health,backfill,cron/backfill,cron/news-pull,recompute-indicators,og/[asset]/[symbol]}`. stub: /kr/kospi, /kr/kosdaq.
+- 사용자 자산 (localStorage, ADR-0016): 즐겨찾기 ⭐ + 최근 본 ⏰ + 저장된 전략 + 결과 URL 공유 prefill.
 - **운영**:
   - **Workers 배포** — `lab-trading.jason-parsing.workers.dev` + Custom Domain `trading.jdgrid.com`. Secrets ~10개.
-  - **D1/KV/R2 namespace** — 모두 박힘. KV 가 KIS OAuth 토큰 캐시 (cold start `EGW00133` 1분 한도 회피) + 뉴스 hot cache.
-  - **Cron 2개** — GitHub Actions:
+  - **D1/KV/R2 namespace** — KV 가 KIS OAuth 토큰 캐시 + 뉴스 hot cache.
+  - **Cron 3개** — GitHub Actions:
     - `cron-backfill.yml` 매일 06:00 UTC: `/api/cron/backfill` 증분 봉
     - `cron-news.yml` 30분마다: `/api/cron/news-pull` RSS 수집
-  - **`/api/health` D1 freshness** — candles/indicators/symbols/latestTs/staleDays 노출. uptime probe 가 단순 binding 확인 외 데이터 신선도 검증.
-  - **`callTwelve` helper 통합** — Twelve Data 모든 endpoint 가 단일 helper 경유 (status:"error" guard / 분당 8 req 한도 처리). 신 endpoint 추가 시 회귀 안전.
-- 코드: **120+ 파일, ~12,000 줄, Vitest 98 ✓, sitemap 198 URLs (80종목 × 2 locale + 뉴스/static)**.
-- 다음 진입: Google Search Console 등록 + sitemap 제출 / 백테스트가 D1 사전계산 indicators 활용 (SMA200/RSI 등) / OG 동적 이미지 / Performance Lighthouse 측정.
+    - `cron-warmup.yml` 5분마다: ISR 페이지 prefetch 13장 (대시보드 + 3 인덱스 + top 9 종목)
+  - **3-layer 캐시**: Next ISR 300/60s + KV (news/OAuth) + cron page prefetch. 대시보드 SSR 11s → 1-2s.
+  - **`/api/health` freshness**: candles/indicators/symbols/latestTs/staleDays 노출.
+  - **`callTwelve` helper 통합** — Twelve Data 모든 endpoint 가 단일 helper 경유 (status:"error" guard).
+  - **OG image** — `/api/og/<asset>/<symbol>` SVG 1200×630 (CF Edge cache 1h). PNG 변환은 follow-up (resvg-wasm Next 빌드 호환 후).
+- 코드: **130+ 파일, ~13,000 줄, Vitest 98 ✓, sitemap 198 URLs**.
+- 다음 진입: incremental backfill 의 indicator lookback fix (#91) / Google Search Console / OG PNG / Lighthouse 측정.
 
 ## 결정 추적 (ADR)
 
@@ -505,3 +511,6 @@ wrangler.jsonc
 | 2026-05-15 | 운영·a11y·SEO polish — /api/health 라우트 (CF Workers uptime probe, 키 노출 X) + Settings 사용자 자산 일괄 reset 버튼 (favorites/recents/saved) + AppShell drag handle 키보드 a11y (Arrow ±8/32px, Home/End) + 종목 상세 JSON-LD (FinancialProduct + BreadcrumbList) + OpenGraph/Twitter card 메타 + 홈 WebSite + SearchAction schema (ADR-0015 D 정합) | app/api/health, components/panels/UserDataReset, components/AppShell, lib/seo/{asset,site}-jsonld, app/[locale]/{,crypto,us,kr}/[symbol]/page | 3 polish 커밋 + 운영 모니터링 진입점 + 검색 엔진 rich snippet 인식 기반 + 키보드 사용자 사이드바 resize. 107 파일 / ~9300 줄 |
 | 2026-05-15 | **Production 배포 + 5년치 D1 backfill 라이브 점등 + KIS pagination fix** — Twelve Data/KIS 키 박음 → 5 어댑터 모두 live (Upbit/Binance/CoinGecko/Twelve/KIS). 35종목 × 49,091 candles + 48,232 indicators D1 채움 (2021-05-17 ~). `runtime="edge"` 제거 (opennextjs/cloudflare 라우팅 충돌 해소). D1 batch API 도입 — BTC 5년치 7m44s → 18s (25x). KIS `EGW00201` 회피 chunk 간 1100ms sleep + `EGW00133` 회피 KV 토큰 캐시 + error body 노출. backfill route 단일 종목 모드 (`?symbol=`) + partial-success chunk loop. 페이지 5곳 `loadCandleSeries` 헬퍼로 D1 우선 + 어댑터 fallback 전환. `trading.jdgrid.com` Custom Domain 연결. GitHub Actions `.github/workflows/cron-backfill.yml` 매일 06:00 UTC 증분 cron. | lib/data/candles.ts (신규), lib/db/d1/{client,repos}.ts, lib/backfill/run.ts, lib/adapters/kis.ts, app/api/{backfill,cron/backfill,health}/route.ts, app/[locale]/{,crypto,us,kr}/[symbol]/page.tsx + backtest/new, wrangler.jsonc, .github/workflows/cron-backfill.yml, docs/RUN_PLAYBOOK.md | 2 commits (9b8b3f7, a86a4fc) — Phase 1 마감. Vitest 97 ✓ / 105 파일 / ~9,800 줄. 도메인 지식 누적: Patterns 3 (D1 Batch API, KV-Backed OAuth Token Cache, Partial-Success Backfill) + Bugs 1 (runtime=edge in opennextjs/cloudflare) |
 | 2026-05-16 | **Phase 2 — 회복성 + 뉴스 시스템 + 종목 80 확장** | 사용자 자율 진행 권한 누적 작업 5건: (1) D1 quote fallback 전 자산군 확장 (crypto/kr 페이지 + 랭킹 + D1FallbackBadge UI + health freshness + sitemap 35종목 추가). (2) 뉴스 라이브 점등 — 6 매체 RSS (한경 finance/economy + 매경 + 파이낸셜 stock/finance + 토큰포스트) D1 archive + KV hot cache + 30분 cron + 자산군 keyword cross-tag. (3) 종목 ↔ 관련 뉴스 매칭 — keyword OR LIKE + 종목 상세 섹션 + alias 80종목. (4) registry 35 → 80 (crypto +15 / us +18 / kr +12) — 107,668 candles + 106,809 indicators 채움. (5) Twelve Data 회복성 — getCandles status:"error" 분기 누락 회귀 fix + 분당 8 req 한도 8s sleep + callTwelve helper 통합 (discriminated union 패턴 일반화). | lib/{data/quotes,data/news,adapters/{rss,twelve-data},symbols/{registry,news-keywords},db/d1/{schema,repos}}, app/[locale]/{,crypto,us,kr}/news, app/[locale]/{,crypto,us,kr}/[symbol]/page, app/api/{health,cron/news-pull}, components/{D1FallbackBadge,panels/{NewsCard,NewsList,SymbolRelatedNews}}, .github/workflows/cron-news.yml, drizzle/0001 | 120+ 파일 / ~12,000 줄 / Vitest 98 ✓ / 198 sitemap URLs. 도메인 지식 추가: Patterns 2 (Quote D1 Fallback, Discriminated Union API Error Response) + Bug 회귀 1 (Twelve Data getCandles 누락 → endpoint 통합 helper) |
+| 2026-05-17 | **Phase 2 마감 — 26 indicator + 백테스트 D1 + OG SVG + 성능 3-layer** | 자율 진행 7건: (1) indicator 9 추가 (Stoch K/D, CCI, Williams %R, ADX/DI+/DI-, OBV, ROC) — 17 → 26 컬럼 v2. (2) Drizzle UPSERT self-ref bug fix (sql`excluded.col`). (3) recompute-indicators route + 80 종목 일괄 95.9% 채움 (BATCH_MAX 100 → 200 → 300). (4) IndicatorPanel + PriceLevelsPanel (RSI/MACD/Stochastic + 52주 고저 + SMA 거리). (5) 백테스트가 D1 indicators 사용 (loadIndicatorsForCandles). (6) OG `/api/og/<asset>/<symbol>` SVG 1200×630. (7) callTwelve helper 통합. | lib/{backtest/indicators,backfill/indicators-batch,db/d1/{schema,repos},data/indicators,adapters/twelve-data,og/svg}, app/api/{recompute-indicators,og/[asset]/[symbol]}, components/panels/{IndicatorPanel,PriceLevelsPanel}, drizzle/0002 | Vitest 98 ✓. 도메인 지식: Bugs 2 (UPSERT self-ref / new Array holes) + Patterns 1 (SQL UPSERT EXCLUDED Reference) |
+| 2026-05-18 | **성능 + 정리 — 3-layer cache + prefetch=false + dead KV 제거** | 사용자 보고 "11s 느림" 진단 → 수정: (1) ISR `revalidate = 300/60` 대시보드/인덱스/종목상세. (2) loadQuotesList D1 우선 트레이드오프 (라이브 X). (3) cron-warmup.yml 5분 페이지 prefetch 13장. (4) Link prefetch={false} (RelatedSymbolChips/QuoteTable/AssetClassCard top movers) — RSC 요청 폭증 회피. (5) dead KV warmup 코드 + /api/cron/warmup 제거 — D1 우선 전환 후 무용. 코드 점검에서 발견된 dead code 정리. | app/[locale]/{,crypto,us,kr}/page.tsx + [symbol]/page.tsx, components/panels/{AssetClassCard,QuoteTable,RelatedSymbolChips}, lib/data/quotes.ts, .github/workflows/cron-warmup.yml | SSR /ko 11s → 1-2s (5-10x). 130+ 파일 / ~13,000 줄. |
+| 2026-05-19 | 종목 상세 PriceLevelsPanel + 문서 동기화 | 52주 고저 + 현재가 위치 % 막대 + SMA 20/50/200 거리. incremental cron 의 SMA200 lookback 부족 (최신 봉 NULL) → 14 봉 fallback 검색. CLAUDE.md / README Phase 2 마감 동기화. | components/panels/PriceLevelsPanel (신규), app/[locale]/{crypto,us,kr}/[symbol]/page.tsx, CLAUDE.md, README.md | follow-up #91: incremental backfill 의 indicator lookback fix (D1 과거 봉 합쳐 재계산). |
