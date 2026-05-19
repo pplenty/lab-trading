@@ -120,12 +120,30 @@ export async function backfillSymbol(opts: {
   const candles = Array.from(dedupedMap.values()).sort((a, b) => a.t - b.t);
 
   const candlesInserted = await candleRepo.upsertMany(opts.symbol, candles);
-  const indicators = computeIndicators(candles);
-  const indicatorsInserted = await indicatorRepo.upsertMany(
-    opts.symbol,
-    INDICATORS_VERSION,
-    indicators
-  );
+
+  // indicators 계산 — 새 봉의 lookback (SMA200 등) 충족 위해 D1 의 과거 250 봉 합침.
+  // incremental cron 이 1봉만 fetch 해도 SMA200 lookback period 확보. 5년치 일괄 backfill 시
+  // candles 자체가 충분히 길어 lookback 거의 영향 X (D1 lookback 검색이 빈 결과).
+  // 신규 봉의 indicator 만 UPSERT (과거 봉은 변경 X — recompute-indicators route 가 별도 처리).
+  let indicatorsInserted = 0;
+  if (candles.length > 0) {
+    const newSetT = new Set(candles.map((c) => c.t));
+    const earliestNew = candles[0].t;
+    const lookbackCandles = await candleRepo.range({
+      symbol: opts.symbol,
+      from: earliestNew - 250 * DAY_SEC * 1.7, // 영업일 250 ≈ 1년 ~ 1.7년 달력일
+      to: earliestNew, // exclusive — 새 봉 직전
+    });
+    const merged = [...lookbackCandles, ...candles];
+    const indicators = computeIndicators(merged);
+    // 새 봉의 indicator 만 추출 (과거 봉은 기존 D1 값 유지)
+    const newIndicators = indicators.filter((r) => newSetT.has(r.t));
+    indicatorsInserted = await indicatorRepo.upsertMany(
+      opts.symbol,
+      INDICATORS_VERSION,
+      newIndicators
+    );
+  }
 
   return {
     symbol: opts.symbol,
