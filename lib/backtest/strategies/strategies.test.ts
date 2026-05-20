@@ -5,6 +5,7 @@ import {smaCross} from "./sma-cross";
 import {rsiReversion} from "./rsi-reversion";
 import {donchianBreakout} from "./donchian-breakout";
 import {macdCross} from "./macd-cross";
+import {bollingerReversion} from "./bollinger-reversion";
 
 const mkCandle = (i: number, c: number): Candle => ({
   t: i * 86400,
@@ -241,5 +242,60 @@ describe("macdCross", () => {
         0
       )
     ).toBe("buy");
+  });
+});
+
+describe("bollingerReversion", () => {
+  it("requiredIndicators returns bb fields for default (20, 2)", () => {
+    expect(
+      bollingerReversion.requiredIndicators({period: 20, stdDev: 2})
+    ).toEqual(["bb_upper", "bb_middle", "bb_lower"]);
+    expect(
+      bollingerReversion.requiredIndicators({period: 10, stdDev: 2})
+    ).toEqual([]);
+  });
+
+  it("buys when close drops below lower band (using indicators)", () => {
+    const state = bollingerReversion.init({period: 20, stdDev: 2});
+    const sig = bollingerReversion.onBar(
+      mkCandle(0, 90),
+      {
+        t: 0,
+        computed_version: 2,
+        bb_upper: 110,
+        bb_middle: 100,
+        bb_lower: 95,
+      },
+      state,
+      0
+    );
+    expect(sig).toBe("buy");
+  });
+
+  it("sells when close exceeds upper band", () => {
+    const state = bollingerReversion.init({period: 20, stdDev: 2});
+    const sig = bollingerReversion.onBar(
+      mkCandle(0, 115),
+      {
+        t: 0,
+        computed_version: 2,
+        bb_upper: 110,
+        bb_middle: 100,
+        bb_lower: 90,
+      },
+      state,
+      1
+    );
+    expect(sig).toBe("sell");
+  });
+
+  it("validates params (period 5..100, stdDev 1..4)", () => {
+    expect(bollingerReversion.validateParams?.({period: 20, stdDev: 2})).toBeNull();
+    expect(
+      bollingerReversion.validateParams?.({period: 3, stdDev: 2})
+    ).toMatch(/out of range/);
+    expect(
+      bollingerReversion.validateParams?.({period: 20, stdDev: 5})
+    ).toMatch(/out of range/);
   });
 });
