@@ -4,6 +4,7 @@ import {buyAndHold} from "./buy-and-hold";
 import {smaCross} from "./sma-cross";
 import {rsiReversion} from "./rsi-reversion";
 import {donchianBreakout} from "./donchian-breakout";
+import {macdCross} from "./macd-cross";
 
 const mkCandle = (i: number, c: number): Candle => ({
   t: i * 86400,
@@ -201,5 +202,44 @@ describe("donchianBreakout", () => {
     expect(
       donchianBreakout.validateParams?.({highWindow: 20, lowWindow: 10})
     ).toBeNull();
+  });
+});
+
+describe("macdCross", () => {
+  it("validates params (fast < slow)", () => {
+    expect(macdCross.validateParams?.({fast: 12, slow: 26, signal: 9})).toBeNull();
+    expect(macdCross.validateParams?.({fast: 26, slow: 12, signal: 9})).toMatch(
+      /less than slow/
+    );
+  });
+
+  it("requiredIndicators returns macd/macd_signal only for default (12,26,9)", () => {
+    expect(macdCross.requiredIndicators({fast: 12, slow: 26, signal: 9})).toEqual([
+      "macd",
+      "macd_signal",
+    ]);
+    expect(macdCross.requiredIndicators({fast: 10, slow: 30, signal: 9})).toEqual([]);
+  });
+
+  it("buys on MACD > signal crossover (using indicators)", () => {
+    const state = macdCross.init({fast: 12, slow: 26, signal: 9});
+    // prevSign = 0 (init), 첫 봉 hold
+    expect(
+      macdCross.onBar(
+        mkCandle(0, 100),
+        {t: 0, computed_version: 2, macd: -1, macd_signal: 1},
+        state,
+        0
+      )
+    ).toBe("hold");
+    // 두 번째 봉: macd > signal → buy (sign 1 vs prev -1)
+    expect(
+      macdCross.onBar(
+        mkCandle(1, 105),
+        {t: 86400, computed_version: 2, macd: 2, macd_signal: 1},
+        state,
+        0
+      )
+    ).toBe("buy");
   });
 });

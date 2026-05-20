@@ -8,17 +8,20 @@ import type {Candle} from "@/lib/types";
 // dynamic import 로 38 KB 페이로드를 차트 가시 화면에서만 로드.
 // CSS 변수 (--color-up / --color-down / --color-fg / --color-line / --bg) 를 차트 옵션에 매핑.
 // 테마 / 모드 / 컬러 시맨틱 변경 시 차트도 갱신 — MutationObserver 로 :root dataset 변화 감지.
+// showVolume 옵션 시 하단 ~20% 영역에 거래량 histogram (up/down 봉 컬러 매핑).
 
 type Props = {
   candles: Candle[];
   height?: number;
+  /** 거래량 histogram 표시 (price chart 하단 ~20%). */
+  showVolume?: boolean;
 };
 
 function readCssVar(el: HTMLElement, name: string): string {
   return getComputedStyle(el).getPropertyValue(name).trim();
 }
 
-export function CandleChart({candles, height = 360}: Props) {
+export function CandleChart({candles, height = 360, showVolume = false}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -28,6 +31,7 @@ export function CandleChart({candles, height = 360}: Props) {
     let cancelled = false;
     let chart: IChartApi | null = null;
     let series: ISeriesApi<"Candlestick"> | null = null;
+    let volSeries: ISeriesApi<"Histogram"> | null = null;
 
     const palette = () => {
       const root = document.documentElement;
@@ -58,6 +62,16 @@ export function CandleChart({candles, height = 360}: Props) {
         wickUpColor: p.up,
         wickDownColor: p.down,
       });
+      // volume histogram 색은 setData 시점에 박힘 — 테마 변경 시 재설정 (전체 candles 다시).
+      if (volSeries) {
+        volSeries.setData(
+          candles.map((c) => ({
+            time: c.t as never,
+            value: c.v,
+            color: c.c >= c.o ? p.up : p.down,
+          }))
+        );
+      }
     };
 
     (async () => {
@@ -97,6 +111,25 @@ export function CandleChart({candles, height = 360}: Props) {
           close: c.c,
         }))
       );
+
+      // 거래량 histogram — 별도 priceScaleId 로 하단 영역 분리.
+      if (showVolume) {
+        volSeries = chart.addSeries(lw.HistogramSeries, {
+          priceScaleId: "volume",
+          priceFormat: {type: "volume"},
+        });
+        chart.priceScale("volume").applyOptions({
+          scaleMargins: {top: 0.78, bottom: 0}, // 하단 22%
+        });
+        volSeries.setData(
+          candles.map((c) => ({
+            time: c.t as never,
+            value: c.v,
+            color: c.c >= c.o ? p.up : p.down,
+          }))
+        );
+      }
+
       chart.timeScale().fitContent();
     })();
 
@@ -121,7 +154,7 @@ export function CandleChart({candles, height = 360}: Props) {
       observer.disconnect();
       chart?.remove();
     };
-  }, [candles, height]);
+  }, [candles, height, showVolume]);
 
   return <div ref={containerRef} className="w-full" style={{height}} />;
 }

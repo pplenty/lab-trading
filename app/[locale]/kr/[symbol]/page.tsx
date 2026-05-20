@@ -203,7 +203,7 @@ export default async function KrSymbolPage({params}: PageProps) {
 
       {series && series.candles.length > 0 && (
         <section className="mb-6 rounded-lg border border-line bg-surface/30 p-3">
-          <CandleChart candles={series.candles} height={360} />
+          <CandleChart candles={series.candles} height={420} showVolume />
         </section>
       )}
 
