@@ -48,8 +48,56 @@ export function BacktestResultCard({result, initialCapital, currency}: Props) {
       : initialCapital;
   const buyHoldReturnPct = (buyHoldFinal / initialCapital - 1) * 100;
 
+  // 전략 vs Buy&Hold 우위 — 사용자가 가장 알고 싶어하는 비교.
+  const outperformPct = m.totalReturnPct - buyHoldReturnPct;
+  const outperformAbs = finalEquity - buyHoldFinal;
+  const outperformTone: "up" | "down" | "neutral" =
+    outperformPct > 0.01 ? "up" : outperformPct < -0.01 ? "down" : "neutral";
+  const verdict =
+    outperformTone === "up"
+      ? "전략이 단순 보유 대비 우위"
+      : outperformTone === "down"
+      ? "단순 보유가 전략 대비 우위"
+      : "전략 ≈ 단순 보유";
+
   return (
     <div className="flex flex-col gap-6">
+      {/* 전략 vs Buy&Hold 한 줄 결론 — 사용자 1초 판단 */}
+      <section
+        className={
+          "rounded-lg border p-4 " +
+          (outperformTone === "up"
+            ? "border-[var(--color-up)]/40 bg-[var(--color-up)]/5"
+            : outperformTone === "down"
+            ? "border-[var(--color-down)]/40 bg-[var(--color-down)]/5"
+            : "border-line bg-surface/30")
+        }
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div className="text-sm font-semibold text-fg">{verdict}</div>
+          <div className="flex items-baseline gap-3 text-xs">
+            <span className="text-fg-subtle">초과 수익</span>
+            <span
+              className={
+                "text-lg font-semibold tabular-nums " +
+                (outperformTone === "up"
+                  ? "text-[var(--color-up)]"
+                  : outperformTone === "down"
+                  ? "text-[var(--color-down)]"
+                  : "text-fg-muted")
+              }
+            >
+              {outperformPct > 0 ? "+" : ""}
+              {outperformPct.toFixed(2)}%
+            </span>
+            <span className="text-xs text-fg-subtle tabular-nums">
+              ({outperformAbs >= 0 ? "+" : ""}
+              {compactFmt.format(outperformAbs)})
+            </span>
+          </div>
+        </div>
+      </section>
+
       <section className="grid gap-3 sm:grid-cols-4">
         <Stat
           label="Total Return"
