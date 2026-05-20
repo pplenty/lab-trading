@@ -4,16 +4,16 @@ import {
   usRegistry,
 } from "@/lib/symbols/registry";
 import type {AssetClass} from "@/lib/types";
+import {isPureChoSet, jamoChoString} from "./hangul";
 
-// 정적 검색 인덱스 (ADR-0022) — 1차 출시는 등록된 36 종목만.
-// Phase 1.5 에 자산군별 top 500 + D1 LIKE fallback 으로 확장.
+// 정적 검색 인덱스 (ADR-0022).
 //
 // 매칭 규칙:
-//   1) symbol prefix (대소문자 무시)
-//   2) ticker prefix (대소문자 무시) — KR 은 6자리 코드 그대로
-//   3) name 또는 nameKo 의 substring 또는 token prefix
-//   4) 한글 부분 매칭 (예: "삼성" → 삼성전자, "비트" → 비트코인)
-// 정렬: 매칭 우선순위 (symbol prefix > ticker > name prefix > substring)
+//   1) symbol / ticker 정확/prefix (대소문자 무시)
+//   2) name / nameKo prefix / substring
+//   3) **한글 초성 매칭** — query 가 순수 초성 (예: "ㅂㅌㅋ") 이면 종목명의 초성 시퀀스
+//      에 대해 prefix/substring 매칭 ("ㅂㅌㅋ" → 비트코인 ㅂㅌㅋㅇ prefix).
+// 정렬: 매칭 우선순위 (정확 > prefix > 초성 prefix > substring > 초성 substring)
 
 export type SearchEntry = {
   class: AssetClass;
@@ -52,11 +52,25 @@ export const searchIndex: SearchEntry[] = [
   })),
 ];
 
+// 초성 검색용 미리 계산된 cho 시퀀스 (nameKo 만 — 한국식 검색 의도).
+// entry index 와 1:1.
+const choIndex: string[] = searchIndex.map((e) =>
+  e.nameKo ? jamoChoString(e.nameKo) : ""
+);
+
 type Scored = {entry: SearchEntry; score: number};
 
-function scoreEntry(entry: SearchEntry, q: string): number {
+function scoreEntry(entry: SearchEntry, choSeq: string, q: string, qIsCho: boolean): number {
   if (!q) return 0;
   const lq = q.toLowerCase();
+
+  // 초성 query — 일반 매칭 skip + 초성만 검사 (false positive 회피).
+  if (qIsCho) {
+    if (!choSeq) return 0;
+    if (choSeq.startsWith(q)) return 550; // 초성 prefix
+    if (choSeq.includes(q)) return 250; // 초성 substring
+    return 0;
+  }
 
   // 1) 정확 일치 → 가장 높음
   if (entry.symbol === lq || entry.ticker.toLowerCase() === lq) return 1000;
@@ -87,10 +101,12 @@ function scoreEntry(entry: SearchEntry, q: string): number {
 export function searchAssets(query: string, limit: number = 8): SearchEntry[] {
   const q = query.trim();
   if (!q) return [];
+  const qIsCho = isPureChoSet(q);
 
   const scored: Scored[] = [];
-  for (const entry of searchIndex) {
-    const s = scoreEntry(entry, q);
+  for (let i = 0; i < searchIndex.length; i++) {
+    const entry = searchIndex[i];
+    const s = scoreEntry(entry, choIndex[i], q, qIsCho);
     if (s > 0) scored.push({entry, score: s});
   }
   scored.sort((a, b) => b.score - a.score);

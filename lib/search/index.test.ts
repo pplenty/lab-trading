@@ -61,4 +61,27 @@ describe("searchAssets", () => {
     const r = searchAssets("a", 3);
     expect(r.length).toBeLessThanOrEqual(3);
   });
+
+  it("한글 초성 매칭 — ㅂㅌㅋ → 비트코인 prefix", () => {
+    const r = searchAssets("ㅂㅌㅋ");
+    expect(r[0]?.symbol).toBe("btc");
+    expect(r[0]?.nameKo).toBe("비트코인");
+  });
+
+  it("한글 초성 — ㅅㅅㅈㅈ → 삼성전자", () => {
+    const r = searchAssets("ㅅㅅㅈㅈ");
+    expect(r.some((e) => e.symbol === "005930")).toBe(true);
+  });
+
+  it("한글 초성 — ㅇㄷㄹㅇ → 이더리움 prefix", () => {
+    const r = searchAssets("ㅇㄷㄹㅇ");
+    expect(r[0]?.symbol).toBe("eth");
+  });
+
+  it("순수 초성 query 가 substring 매칭으로 false positive 안 만듦", () => {
+    // ㅋ 단독 = 1자 초성, prefix 매칭은 광범위 — substring 점수 250 으로
+    // 잡히지만 정확한 prefix 가 더 위. 결과 자체엔 들어옴 — 빈 배열 아님.
+    const r = searchAssets("ㅋ");
+    expect(r.length).toBeGreaterThan(0);
+  });
 });
