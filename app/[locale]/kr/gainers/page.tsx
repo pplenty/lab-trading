@@ -1,4 +1,6 @@
 import {kisAdapter} from "@/lib/adapters/kis";
+
+export const revalidate = 300;
 import {krRegistry} from "@/lib/symbols/registry";
 import {RankingPage} from "@/components/panels/RankingPage";
 

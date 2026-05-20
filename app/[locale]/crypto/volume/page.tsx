@@ -1,4 +1,6 @@
 import {upbitAdapter} from "@/lib/adapters/upbit";
+
+export const revalidate = 300;
 import {cryptoRegistry} from "@/lib/symbols/registry";
 import {RankingPage} from "@/components/panels/RankingPage";
 

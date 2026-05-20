@@ -39,25 +39,20 @@ export async function RankingPage({
   const tDisc = await getTranslations("disclaimer");
   const t = await getTranslations("home");
 
-  let quotes: Quote[] = [];
+  // D1 우선 — adapter.rankings 의 직렬 호출 (KIS 24 종목 × 100ms sleep) 회피.
+  // 인덱스/대시보드 페이지와 동일 트레이드오프: 어제 종가 + 24h 변동.
+  // D1 미가용 (신규 종목 / D1 binding X) 시 adapter fallback.
+  let quotes: Quote[] = await loadRankingsFromD1({
+    asset: cls,
+    symbols,
+    kind,
+    limit: 50,
+  });
   let fetchError: string | null = null;
-
-  try {
-    if (!adapter.rankings) {
-      throw new Error(`adapter ${adapter.id} does not implement rankings`);
-    }
-    quotes = await adapter.rankings(kind, {limit: 50});
-  } catch (err) {
-    // adapter.rankings 실패 시 D1 fallback — backfill 가 채운 봉으로 합성.
-    const fallback = await loadRankingsFromD1({
-      asset: cls,
-      symbols,
-      kind,
-      limit: 50,
-    });
-    if (fallback.length > 0) {
-      quotes = fallback;
-    } else {
+  if (quotes.length === 0 && adapter.rankings) {
+    try {
+      quotes = await adapter.rankings(kind, {limit: 50});
+    } catch (err) {
       fetchError = err instanceof Error ? err.message : String(err);
     }
   }

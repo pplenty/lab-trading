@@ -1,4 +1,6 @@
 import {twelveDataAdapter} from "@/lib/adapters/twelve-data";
+
+export const revalidate = 300;
 import {usRegistry} from "@/lib/symbols/registry";
 import {RankingPage} from "@/components/panels/RankingPage";
 
