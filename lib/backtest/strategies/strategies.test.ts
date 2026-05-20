@@ -3,6 +3,7 @@ import type {Candle} from "@/lib/types";
 import {buyAndHold} from "./buy-and-hold";
 import {smaCross} from "./sma-cross";
 import {rsiReversion} from "./rsi-reversion";
+import {donchianBreakout} from "./donchian-breakout";
 
 const mkCandle = (i: number, c: number): Candle => ({
   t: i * 86400,
@@ -165,5 +166,40 @@ describe("rsiReversion", () => {
       0
     );
     expect(sig).toBe("buy");
+  });
+});
+
+describe("donchianBreakout", () => {
+  it("buys when close breaks above N-day high (position=0)", () => {
+    const state = donchianBreakout.init({highWindow: 5, lowWindow: 5});
+    // 5 봉 high 가 100, 6번째 종가 110 → buy
+    for (let i = 0; i < 5; i++) {
+      expect(donchianBreakout.onBar(mkCandle(i, 100), undefined, state, 0)).toBe(
+        "hold"
+      );
+    }
+    expect(donchianBreakout.onBar(mkCandle(5, 110), undefined, state, 0)).toBe(
+      "buy"
+    );
+  });
+
+  it("sells when close breaks below M-day low (position=1)", () => {
+    const state = donchianBreakout.init({highWindow: 5, lowWindow: 5});
+    // 5 봉 low 100, 6번째 종가 90 → 보유 중이면 sell
+    for (let i = 0; i < 5; i++) {
+      donchianBreakout.onBar(mkCandle(i, 100), undefined, state, 1);
+    }
+    expect(donchianBreakout.onBar(mkCandle(5, 90), undefined, state, 1)).toBe(
+      "sell"
+    );
+  });
+
+  it("rejects invalid params", () => {
+    expect(donchianBreakout.validateParams?.({highWindow: 3, lowWindow: 10})).toMatch(
+      /≥ 5/
+    );
+    expect(
+      donchianBreakout.validateParams?.({highWindow: 20, lowWindow: 10})
+    ).toBeNull();
   });
 });
