@@ -30,9 +30,9 @@ const CandleChart = nextDynamic(() =>
   import("@/components/charts/CandleChart").then((m) => m.CandleChart)
 );
 
-// 60초 ISR — 라이브성 균형 + cold start 회피.
-// searchParams (?range=...) 사용으로 dynamic SSR. ISR cache 는 URL + searchParams 별.
-export const revalidate = 60;
+// 300초 ISR — cron-warmup 5분 cron 과 정합 (cron 마다 1회 SSR + 사용자 진입 시 hot cache).
+// 일봉 컨텍스트라 5분 stale OK. live quote 신선도는 KV 60s + ISR 300s 의 외부 KV 가 보장.
+export const revalidate = 300;
 
 export async function generateMetadata({
   params,

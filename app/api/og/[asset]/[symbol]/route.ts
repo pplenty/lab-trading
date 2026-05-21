@@ -24,7 +24,9 @@ export async function GET(
   return new NextResponse(svg, {
     headers: {
       "content-type": "image/svg+xml; charset=utf-8",
-      "cache-control": "public, max-age=300, s-maxage=3600",
+      // CDN edge 1d / 브라우저 5min — 일봉 컨텍스트라 OG 이미지 24h stale OK.
+      // 80 종목 × 1920 generations/day → 80 generations/day (95% ↓).
+      "cache-control": "public, max-age=300, s-maxage=86400",
     },
   });
 }
