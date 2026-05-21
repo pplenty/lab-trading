@@ -19,6 +19,7 @@ import {SymbolBacktestPreview} from "@/components/panels/SymbolBacktestPreview";
 import {SymbolRelatedNews} from "@/components/panels/SymbolRelatedNews";
 import {IndicatorPanel} from "@/components/panels/IndicatorPanel";
 import {VolatilityPanel} from "@/components/panels/VolatilityPanel";
+import {VolumePanel} from "@/components/panels/VolumePanel";
 import {PriceLevelsPanel} from "@/components/panels/PriceLevelsPanel";
 import {ReturnsPanel} from "@/components/panels/ReturnsPanel";
 import {assetJsonLd} from "@/lib/seo/asset-jsonld";
@@ -253,6 +254,8 @@ export default async function CryptoSymbolPage({params}: PageProps) {
       <IndicatorPanel class="crypto" symbol={entry.symbol} />
 
       <VolatilityPanel class="crypto" symbol={entry.symbol} />
+
+      <VolumePanel class="crypto" symbol={entry.symbol} />
 
       {series && series.candles.length >= 30 && (
         <SymbolBacktestPreview
