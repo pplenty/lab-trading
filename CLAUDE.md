@@ -474,37 +474,74 @@ wrangler.jsonc
 - yutils의 `lib/themes.ts` (12 라이트 프리셋 + system/light/dark axis)를 그대로 차용.
 - 추가: `--color-up`, `--color-down` — 상승/하락 컬러. ADR-0012에서 한국식/글로벌식 디폴트 결정.
 
-## 하네스: lab-trading (zero-agent 출발)
+## 하네스: lab-trading (M 규모, 2026-05-22 트리거 도달)
 
-**목표:** 결정 일괄 확정 완료(2026-05-14), 셸 부트 진입 직전. 1차 출시(코인 + 해외주식 + 백테스트 MVP)까지 main agent 직접 조율로 충분. 자산군 3개 모두 점등 + 백테스트 본격 확장 시점에 도메인 에이전트(어댑터·차트·백테스트 검증) 도입 여부 재평가.
+**목표:** Phase 2 마감 완료 (2026-05-19) + 6 preset · 4 mini chart · ReturnsPanel · 한글 초성 · 영문 두벌식 검색 (2026-05-20~21) — 80 종목 × 107,677 candles + 5 어댑터 (Upbit/Binance/CoinGecko/Twelve/KIS) + 26 indicator + 뉴스 시스템 + 3 cron + production 라이브 (`trading.jdgrid.com`). CLAUDE.md 의 "어댑터 5+ / 자산군 3 점등 시 에이전트 도입 재평가" trigger 도달 → **M 규모 하네스 신규 구축 (4 agents + 3 skills + 기존 adr-new)**. 어댑터·백테스트·차트·SEO 도메인을 표준화하여 회귀 매트릭스를 격리 컨텍스트로 처리.
 
-**현재 트리거 매핑:**
+**트리거 매핑:**
 
-*결정 기록 / 문서:*
-- "ADR", "결정 기록" → `adr-new` 스킬 (글로벌의 adr-new가 아직 없으면 프로젝트에 자체 추가)
+*결정 기록:*
+- "ADR", "결정 기록", "decision record", "디시전 레코드" → `adr-new` 스킬
 
-*탐색 · 단순 작업:*
-- 데이터 어댑터 1개 추가, 페이지 1개 점등 — main 직접
-- 컴포넌트 추출·리네이밍 — main 직접
+*어댑터 추가·재작업:*
+- "새 어댑터 추가", "<provider> 통합", "CCXT / Polygon / Tiingo 추가" → `new-adapter` 스킬 (5-Phase: ADR → contract → test → D1 fallback → backfill → health)
+- "어댑터 회복성", "rate-limit 처리", "status:'error' 분기" → `data-adapter-engineer` 에이전트 직접
+
+*백테스트 정합성:*
+- "백테스트 정합성 점검", "Sharpe / MDD / CAGR 검증", "indicator 정확성" → `backtest-verify` 스킬 (Quick / Standard / Comprehensive 3 모드)
+- "룩어헤드 의심", "새 strategy preset" → `backtest-validator` 에이전트 직접
+
+*차트 / UX 회귀:*
+- "차트 깨짐", "다크에서 안 보임", "한국식 컬러 안 됨", "색맹 검증", "mini chart 회귀" → `chart-reviewer` 에이전트 (Quick / Theme-matrix / Comprehensive 3 모드)
+- 컬러 토큰 변경, 새 panel / mini chart 추가 후 호출
+
+*SEO / 메타:*
+- "메타 검토", "SEO 점검", "JSON-LD 검증", "OG 이미지" → `seo-optimizer` 에이전트
+- 새 종목 추가, 새 페이지 라우트 추가 후 호출
+
+*D1 / 스토리지:*
+- "D1 점검", "schema audit", "마이그레이션 안전성", "backfill 정합", "Drizzle UPSERT 검증" → `d1-audit` 스킬
 
 *기록:*
 - 세션 종료 후 작업 기록 → 글로벌 `session-log` 스킬 (Obsidian 볼트: `~/claude-brain/claude-brain/LabTrading/`)
-- "이전에 어떻게 했지?" → 글로벌 `vault-search`
+- "이전에 어떻게 했지?", "예전 결정 / 패턴 찾아" → 글로벌 `vault-search` 스킬
 
-**스킬 인벤토리 (예정):**
-- `.claude/skills/adr-new/` — ADR 신규 작성 (yutils에서 복제)
+*직접 처리:*
+- 단순 작업·탐색·1회성 편집 — main agent 가 직접
 
-**향후 후보 (지금은 만들지 않음):**
-- `new-adapter` 스킬 — 데이터 어댑터 추가 표준화 (어댑터 5개+ 도달 후)
-- `backtest-verify` 스킬 — 백테스트 결과 정합성 검증 (참조 벤치마크 대비)
-- `data-adapter-builder` 에이전트 — 새 데이터 소스 통합 (8+ 어댑터 시점)
-- `chart-reviewer` 에이전트 — 차트 컴포넌트 모바일/색맹/다크 회귀
+**에이전트 인벤토리 (4):**
+
+| 에이전트 | 역할 | 주 스킬 |
+|---------|------|--------|
+| `data-adapter-engineer` | 5+ 어댑터 + 회복성 (rate-limit / KV 토큰 / status:'error' / partial-success) | new-adapter |
+| `backtest-validator` | 백테스트 정합성 (룩어헤드 / 26 indicator 수학 / Sharpe·MDD·CAGR / 수수료·슬리피지) | backtest-verify |
+| `chart-reviewer` | 차트 / mini chart / 색맹 / 다크 / 한국식·글로벌식 컬러 시맨틱 회귀 | new-adapter (UI 회귀) |
+| `seo-optimizer` | 자산 페이지 메타·OG·sitemap·JSON-LD·hreflang (198 sitemap URLs production) | new-adapter |
+
+**스킬 인벤토리 (4):**
+
+- `.claude/skills/adr-new/` — ADR 신규 작성 (yutils 패턴 차용, 기존)
+- `.claude/skills/new-adapter/` — 5-Phase 어댑터 추가 (ADR → contract → test → D1 fallback → backfill → health)
+- `.claude/skills/backtest-verify/` — 백테스트 정합성 종합 검증 (Quick / Standard / Comprehensive)
+- `.claude/skills/d1-audit/` — D1 schema / 마이그레이션 / backfill 정합 + SQL dialect 회피 grep
+
+**향후 추가 후보 (지금은 만들지 않음):**
+
+- `indicator-mathematician` 에이전트 — 새 indicator 추가 시 표준 reference 정합 검증 (현재 backtest-validator 가 겸함, indicator 5+ 추가 시 분리)
+- `d1-schema-guardian` 에이전트 — 마이그레이션 비용·로깅·롤백 안전성 (Postgres 마이그레이션 검토 시점에 격상)
+- `cron-audit` 스킬 — 3 cron (backfill / news / warmup) 정합 점검 (cron 5+ 도달 시)
+- `og-image-batch` 스킬 — 80+ 종목 OG 이미지 사전 생성 (resvg-wasm 통합 후)
+- `orchestrator` 에이전트 — 다중 Phase 종합 작업이 반복될 때 (현재 main 직접 조율로 충분)
 
 **의도적으로 만들지 않는 것:**
-- QA / 보안 리뷰 / DX 리뷰 — 글로벌 스킬(`qa`, `cso`, `devex-review`)이 이미 존재. 프로젝트 중복 불필요.
+
+- QA / 보안 리뷰 / DX 리뷰 — 글로벌 스킬(`qa`, `cso`, `devex-review`)이 이미 존재. 프로젝트 중복 불필요
+- i18n 도구 — 1차 출시 ko 단독, en 잠금 (ADR-0004). en 활성화 시점에 yutils 의 `i18n-sync` / `i18n-translator` 차용
 
 **Obsidian 매핑:**
-- 글로벌 `~/.claude/claude-brain.json`에 `cwd: /Users/yusik/IdeaProjects/lab-trading → vault folder: LabTrading` 추가 필요. 첫 세션 로그 작성 시점에 등록.
+
+- 글로벌 `~/.claude/claude-brain.json`: `/Users/yusik/IdeaProjects/lab-trading → LabTrading` ✓ (이미 등록, 2026-05-13)
+- 도메인 지식: `~/claude-brain/claude-brain/LabTrading/{Sessions, Bugs, Patterns, Decisions, Refactoring, Reviews, UX}/` (Phase 0 킥오프 시 폴더 set 선제 구성, 2026-05-13)
 
 **변경 이력:**
 | 날짜 | 변경 내용 | 대상 | 사유 |
@@ -525,3 +562,4 @@ wrangler.jsonc
 | 2026-05-20 | **incremental indicator lookback fix + outperformance verdict + Donchian Breakout + 검색 초성 매칭** | (1) backfillSymbol 가 D1 과거 250 봉 합쳐 computeIndicators → 새 봉의 sma_200 NULL 회피. (2) BacktestResultCard 에 "전략이 단순 보유 대비 우위 / 열위 / ≈" + 초과 수익 %/금액 박스. (3) Donchian Breakout 전략 (4번째 preset, Turtle Trading). (4) 검색 한글 초성 매칭 ("ㅂㅌㅋ" → 비트코인) — lib/search/hangul.ts. | lib/{backfill/run,search/{index,hangul},backtest/strategies/donchian-breakout}, components/panels/BacktestResultCard, lib/backtest/strategies/{registry,strategies.test} | Vitest 98 → 105. 도메인 지식 누적: Patterns 3 (3-Layer SSR Cache · Incremental Backfill Lookback Merge · Link prefetch=false) + Bugs 1 (Incremental indicator lookback 부족) |
 | 2026-05-21 | **MACD Crossover + Bollinger Reversion + 거래량 차트 + RankingPage D1 우선 + KOSPI/KOSDAQ stub** | (1) MACD Crossover 전략 (5번째) — D1 macd/macd_signal 활용. (2) Bollinger Bands Mean Reversion (6번째) — D1 bb_upper/lower 활용. (3) CandleChart showVolume prop — HistogramSeries 하단 22% + up/down 색 매핑. (4) RankingPage 가 loadRankingsFromD1 우선 — KIS 직렬 호출 회피, /kr/volume 10.6s → 1.0s. (5) 9 ranking 페이지 revalidate=300 ISR. (6) /kr/kospi · /kr/kosdaq stub 페이지 ("준비 중" 안내) — 404 → 200. | lib/backtest/strategies/{macd-cross,bollinger-reversion,registry}, components/charts/CandleChart, components/panels/RankingPage, app/[locale]/kr/{kospi,kosdaq}/page, app/[locale]/{crypto,us,kr}/[symbol]/page | 6 preset 마감. Vitest 105 → 112 ✓. 140+ 파일 / ~13,500 줄. |
 | 2026-05-21 (2) | **종목 상세 위젯 강화 — MACD/RSI/Stoch/ADX mini chart + ReturnsPanel + 영문 두벌식 검색** | (1) MacdMiniChart (MACD line + signal 점선 + hist bar + 0 ref). (2) OscillatorMiniChart (RSI/Stoch 공용, zone tint + secondary). (3) AdxMiniChart (ADX 점선 + DI+/DI- 실선, 25 ref + weak zone). (4) IndicatorPanel 4번째 카드 ADX 추가 (3→4 카드). (5) ReturnsPanel — 1주/1개월/3개월/1년/5년 종가 수익률. (6) 검색 영문 두벌식 매핑 — "qlxmzhdls" → 비트코인. lib/search/keyboard.ts. | components/charts/{Macd,Oscillator,Adx}MiniChart, components/panels/{IndicatorPanel,ReturnsPanel}, lib/search/keyboard, app/[locale]/{crypto,us,kr}/[symbol]/page | 종목 상세 위젯 5 → 6. Vitest 112 → 115. 150+ 파일 / ~14,500 줄. 4 mini chart 시각 언어 통일: zone tint + reference line + bull/bear 색 분기. |
+| 2026-05-22 | **M 규모 하네스 신규 구축** — 4 에이전트 (data-adapter-engineer / backtest-validator / chart-reviewer / seo-optimizer) + 3 스킬 (new-adapter / backtest-verify / d1-audit) + 기존 adr-new | .claude/agents/, .claude/skills/, CLAUDE.md "## 하네스: lab-trading" 섹션 갱신 | Phase 2 마감 + 6 preset · 4 mini chart · 검색 강화 도달 (5 어댑터 / 80 종목 / 26 indicator / production 라이브) — CLAUDE.md 의 "어댑터 5+ / 자산군 3 점등 시 도입 재평가" trigger 충족. yutils 자매 패턴 (4A+3S+adr-new) 차용 + 트레이딩 도메인 특화 (회복성·indicator 수학·차트 색맹·D1 schema) |

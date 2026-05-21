@@ -115,20 +115,20 @@ export default async function CryptoSymbolPage({params, searchParams}: PageProps
   let cgQuote: Quote | null = null;
   let fetchError: string | null = null;
 
+  // 3 fetch 병렬 — Upbit quote / D1 candles / CoinGecko 보조.
+  // CoinGecko 는 rate limit / 실패 시 cgQuote=null 로 swallow (메인 데이터 무관).
   try {
-    [quote, series] = await Promise.all([
+    const [qRes, sRes, cgRes] = await Promise.allSettled([
       loadQuote("crypto", entry.symbol),
       loadCandleSeries({asset: "crypto", symbol: entry.symbol, limit: bars}),
+      coingeckoAdapter.getQuote(entry.symbol),
     ]);
+    if (qRes.status === "fulfilled") quote = qRes.value;
+    else fetchError = qRes.reason instanceof Error ? qRes.reason.message : String(qRes.reason);
+    if (sRes.status === "fulfilled") series = sRes.value;
+    if (cgRes.status === "fulfilled") cgQuote = cgRes.value;
   } catch (err) {
     fetchError = err instanceof Error ? err.message : String(err);
-  }
-
-  // CoinGecko 글로벌 보조 — USD 가격 / 시가총액 / rank. rate limit 으로 실패해도 메인 데이터에 영향 X.
-  try {
-    cgQuote = await coingeckoAdapter.getQuote(entry.symbol);
-  } catch {
-    cgQuote = null;
   }
 
   const priceFmt = new Intl.NumberFormat("ko-KR", {
