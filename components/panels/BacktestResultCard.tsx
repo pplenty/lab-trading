@@ -1,5 +1,6 @@
 import {FinancialDelta} from "@/components/FinancialDelta";
 import {LineChart, type LineSeries} from "@/components/charts/LineChart";
+import {DrawdownChart} from "@/components/charts/DrawdownChart";
 import {TradesTable} from "./TradesTable";
 import type {BacktestResult} from "@/lib/backtest/types";
 
@@ -37,6 +38,24 @@ export function BacktestResultCard({result, initialCapital, currency}: Props) {
     color: "var(--color-fg-muted)",
     dashed: true,
   };
+
+  // Drawdown curve — equity peak 대비 % 손실. MDD 지점 = 최저점.
+  // peak[i] = max(equity[0..i]); dd[i] = (equity[i] - peak[i]) / peak[i] * 100
+  const ddPoints: Array<{t: number; v: number}> = [];
+  let ddPeak = -Infinity;
+  let ddMaxIdx = -1;
+  let ddMin = 0;
+  for (let i = 0; i < result.equityCurve.length; i++) {
+    const p = result.equityCurve[i];
+    if (p.v > ddPeak) ddPeak = p.v;
+    const dd = ddPeak > 0 ? ((p.v - ddPeak) / ddPeak) * 100 : 0;
+    ddPoints.push({t: p.t, v: dd});
+    if (dd < ddMin) {
+      ddMin = dd;
+      ddMaxIdx = i;
+    }
+  }
+  // 전용 DrawdownChart 가 area + zero baseline 처리. ddPoints/ddMaxIdx/ddMin 만 활용.
 
   const finalEquity =
     result.equityCurve.length > 0
@@ -159,6 +178,36 @@ export function BacktestResultCard({result, initialCapital, currency}: Props) {
           ariaLabel="Equity curve"
         />
       </section>
+
+      {/* Drawdown chart — equity peak 대비 underwater. MDD 지점 marker. */}
+      {ddPoints.length > 1 && (
+        <section className="rounded-lg border border-line bg-surface/30 p-4">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3 text-xs">
+            <div className="flex items-center gap-1.5 text-fg-muted">
+              <span
+                aria-hidden="true"
+                className="inline-block h-2 w-4 rounded-sm"
+                style={{background: "var(--color-down)", opacity: 0.5}}
+              />
+              <span>Drawdown</span>
+              <span className="ml-2 tabular-nums text-fg-subtle">
+                MDD {fmtPct(ddMin, 2)}
+              </span>
+            </div>
+            {ddMaxIdx >= 0 && (
+              <span className="text-fg-subtle tabular-nums">
+                저점 {new Date(ddPoints[ddMaxIdx].t * 1000).toISOString().slice(0, 10)}
+              </span>
+            )}
+          </div>
+          <DrawdownChart
+            points={ddPoints}
+            minIndex={ddMaxIdx >= 0 ? ddMaxIdx : undefined}
+            height={140}
+            ariaLabel="Drawdown underwater curve"
+          />
+        </section>
+      )}
 
       <TradesTable trades={result.trades} currency={currency} maxRows={20} />
     </div>
