@@ -1,4 +1,5 @@
 import {Sparkline} from "@/components/charts/Sparkline";
+import {MacdMiniChart} from "@/components/charts/MacdMiniChart";
 import type {AssetClass} from "@/lib/types";
 import {getDb, isDbAvailable} from "@/lib/db/d1/client";
 import {D1IndicatorRepo} from "@/lib/db/d1/repos";
@@ -18,6 +19,8 @@ type Props = {
 type IndicatorPanelData = {
   rsi: number[];
   macd: number[];
+  macdSignal: number[];
+  macdHist: number[];
   stochK: number[];
   last: {
     rsi_14?: number;
@@ -49,7 +52,21 @@ async function loadIndicatorPanelData(
     const last = recent[recent.length - 1];
 
     const rsi = recent.map((r) => r.rsi_14).filter((v): v is number => v !== undefined);
-    const macd = recent.map((r) => r.macd).filter((v): v is number => v !== undefined);
+    // MACD 3 시리즈는 같은 봉에 모두 있어야 정렬 정합 — undefined 한 봉은 셋 다 skip.
+    const macd: number[] = [];
+    const macdSignal: number[] = [];
+    const macdHist: number[] = [];
+    for (const r of recent) {
+      if (
+        r.macd !== undefined &&
+        r.macd_signal !== undefined &&
+        r.macd_hist !== undefined
+      ) {
+        macd.push(r.macd);
+        macdSignal.push(r.macd_signal);
+        macdHist.push(r.macd_hist);
+      }
+    }
     const stochK = recent
       .map((r) => r.stoch_k_14_3)
       .filter((v): v is number => v !== undefined);
@@ -57,7 +74,7 @@ async function loadIndicatorPanelData(
     // 충분한 데이터 없으면 섹션 hide
     if (rsi.length < 5 && macd.length < 5 && stochK.length < 5) return null;
 
-    return {rsi, macd, stochK, last};
+    return {rsi, macd, macdSignal, macdHist, stochK, last};
   } catch {
     return null;
   }
@@ -66,7 +83,7 @@ async function loadIndicatorPanelData(
 export async function IndicatorPanel({symbol}: Props) {
   const data = await loadIndicatorPanelData(symbol);
   if (!data) return null;
-  const {rsi, macd, stochK, last} = data;
+  const {rsi, macd, macdSignal, macdHist, stochK, last} = data;
 
   return (
     <section className="mt-6 mb-6">
@@ -87,17 +104,13 @@ export async function IndicatorPanel({symbol}: Props) {
           data={rsi}
           footnote="30 과매도 · 70 과매수"
         />
-        <IndicatorCard
-          label="MACD (12, 26, 9)"
+        <MacdCard
           primary={last.macd}
-          primaryFmt={(v) => v.toFixed(2)}
+          signal={last.macd_signal}
           status={macdStatus(last.macd, last.macd_signal)}
-          data={macd}
-          footnote={
-            last.macd_signal !== undefined
-              ? `signal ${last.macd_signal.toFixed(2)}`
-              : undefined
-          }
+          macd={macd}
+          macdSignal={macdSignal}
+          macdHist={macdHist}
         />
         <IndicatorCard
           label="Stochastic %K (14, 3)"
@@ -113,6 +126,51 @@ export async function IndicatorPanel({symbol}: Props) {
         />
       </div>
     </section>
+  );
+}
+
+type MacdCardProps = {
+  primary: number | undefined;
+  signal: number | undefined;
+  status: {label: string; tone: "up" | "down" | "neutral"} | null;
+  macd: number[];
+  macdSignal: number[];
+  macdHist: number[];
+};
+
+function MacdCard({primary, signal, status, macd, macdSignal, macdHist}: MacdCardProps) {
+  const toneClass =
+    status?.tone === "up"
+      ? "text-[var(--color-up)]"
+      : status?.tone === "down"
+      ? "text-[var(--color-down)]"
+      : "text-fg-muted";
+  return (
+    <article className="rounded-lg border border-line bg-surface/30 p-3">
+      <div className="mb-1 text-[11px] uppercase tracking-wide text-fg-subtle">
+        MACD (12, 26, 9)
+      </div>
+      <div className="mb-1 flex items-baseline gap-2">
+        <span className="text-base font-semibold tabular-nums text-fg">
+          {primary !== undefined ? primary.toFixed(2) : "—"}
+        </span>
+        {status && <span className={`text-xs ${toneClass}`}>{status.label}</span>}
+      </div>
+      <div className="h-14 w-full">
+        <MacdMiniChart
+          macd={macd}
+          signal={macdSignal}
+          histogram={macdHist}
+          width={200}
+          height={56}
+          className="w-full h-full"
+          ariaLabel="MACD 12-26-9"
+        />
+      </div>
+      <p className="mt-1 text-[10px] text-fg-subtle">
+        signal {signal !== undefined ? signal.toFixed(2) : "—"} · 점선 signal · 막대 hist
+      </p>
+    </article>
   );
 }
 
