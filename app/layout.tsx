@@ -18,9 +18,15 @@ const ADSENSE_CLIENT = "ca-pub-1005049417920340";
 const isProd = process.env.NODE_ENV === "production";
 
 export const metadata: Metadata = {
+  // app/icon.svg + app/apple-icon.svg 가 자동으로 link 태그 생성. 명시 X.
   other: {
     "google-adsense-account": ADSENSE_CLIENT,
   },
+};
+
+// jdgrid 패밀리와 통일한 다크 chrome 색.
+export const viewport = {
+  themeColor: "#0f172a",
 };
 
 const geistSans = Geist({
