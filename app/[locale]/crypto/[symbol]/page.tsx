@@ -36,7 +36,6 @@ const CandleChart = nextDynamic(() =>
 // Phase 1.5 에 데이터 소스 라우터 (CoinGecko/Binance/Upbit 우선순위 + fallback) 도입.
 
 // 60초 ISR — 라이브성 균형 + cold start 회피.
-// `dynamic = "force-static"` 제거 — searchParams (?range=...) 분기 활성화.
 export const revalidate = 60;
 
 export async function generateMetadata({

@@ -2,9 +2,8 @@ import {MacdMiniChart} from "@/components/charts/MacdMiniChart";
 import {OscillatorMiniChart} from "@/components/charts/OscillatorMiniChart";
 import {AdxMiniChart} from "@/components/charts/AdxMiniChart";
 import type {AssetClass} from "@/lib/types";
-import {getDb, isDbAvailable} from "@/lib/db/d1/client";
-import {D1IndicatorRepo} from "@/lib/db/d1/repos";
 import {INDICATORS_VERSION} from "@/lib/backfill/indicators-batch";
+import {cachedIndicators120d} from "@/lib/data/symbol-detail";
 
 // 종목 상세 — D1 사전계산 indicator 노출 (Phase 2).
 // RSI 14 + MACD + Stochastic — 가장 인기 모멘텀 지표 3종.
@@ -42,19 +41,9 @@ type IndicatorPanelData = {
 async function loadIndicatorPanelData(
   symbol: string
 ): Promise<IndicatorPanelData | null> {
-  if (!(await isDbAvailable())) return null;
+  const rows = await cachedIndicators120d(symbol);
+  if (!rows || rows.length === 0) return null;
   try {
-    const db = await getDb();
-    const repo = new D1IndicatorRepo(db);
-    const latestT = await repo.latestT(symbol, INDICATORS_VERSION);
-    if (latestT === null) return null;
-    const rows = await repo.range({
-      symbol,
-      from: latestT - 120 * 86400, // 최근 ~4개월 — 80 영업일 정도
-      to: latestT + 1,
-      version: INDICATORS_VERSION,
-    });
-    if (rows.length === 0) return null;
 
     const recent = rows.slice(-60);
     const last = recent[recent.length - 1];

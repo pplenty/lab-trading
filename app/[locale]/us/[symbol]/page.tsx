@@ -31,7 +31,7 @@ const CandleChart = nextDynamic(() =>
 );
 
 // 60초 ISR — 라이브성 균형 + cold start 회피.
-// `dynamic = "force-static"` 제거 — searchParams (?range=...) 분기 활성화.
+// searchParams (?range=...) 사용으로 dynamic SSR. ISR cache 는 URL + searchParams 별.
 export const revalidate = 60;
 
 export async function generateMetadata({

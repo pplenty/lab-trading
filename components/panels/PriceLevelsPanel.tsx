@@ -1,7 +1,5 @@
 import type {AssetClass} from "@/lib/types";
-import {getDb, isDbAvailable} from "@/lib/db/d1/client";
-import {D1CandleRepo, D1IndicatorRepo} from "@/lib/db/d1/repos";
-import {INDICATORS_VERSION} from "@/lib/backfill/indicators-batch";
+import {cachedCandles52w, cachedIndicators120d} from "@/lib/data/symbol-detail";
 
 // 종목 상세 — 52주 고저 + 현재가 위치 + SMA200/SMA50 대비 거리.
 // 트레이딩 의사결정에 가장 자주 쓰이는 정보 4개를 카드로.
@@ -30,20 +28,9 @@ type PriceLevelsData = {
 };
 
 async function loadData(symbol: string): Promise<PriceLevelsData | null> {
-  if (!(await isDbAvailable())) return null;
+  const candles = await cachedCandles52w(symbol);
+  if (!candles || candles.length < 30) return null;
   try {
-    const db = await getDb();
-    const candleRepo = new D1CandleRepo(db);
-    const indicatorRepo = new D1IndicatorRepo(db);
-    const now = Math.floor(Date.now() / 1000);
-
-    // 52주 candles (영업일 기준 ~260 + 여유 → 1.4년)
-    const candles = await candleRepo.range({
-      symbol,
-      from: now - Math.ceil(YEAR_DAYS * 1.4) * DAY_SEC,
-      to: now + DAY_SEC,
-    });
-    if (candles.length < 30) return null;
 
     // 52주 high/low — 가장 최근 ~260 영업일 (전체일 수도 그 미만이면 전체)
     const recent = candles.slice(-260);
@@ -62,21 +49,15 @@ async function loadData(symbol: string): Promise<PriceLevelsData | null> {
     const rangePct = ((current - rangeLow) / range) * 100;
 
     // 최신 indicator row. incremental cron 이 새 봉만 받아 SMA200 lookback 부족시 NULL —
-    // 최근 14봉 (영업일 ~2주) 안에서 채워진 값 사용 (조금 stale 하지만 의사결정 영향 작음).
-    const latestT = await indicatorRepo.latestT(symbol, INDICATORS_VERSION);
+    // 120일 캐시된 indicator rows 끝에서 최근 14봉 슬라이스 후 각 컬럼 독립 first non-null.
+    const indRows = await cachedIndicators120d(symbol);
     let sma20: number | undefined;
     let sma50: number | undefined;
     let sma200: number | undefined;
-    if (latestT !== null) {
-      const rows = await indicatorRepo.range({
-        symbol,
-        from: latestT - 14 * DAY_SEC,
-        to: latestT + 1,
-        version: INDICATORS_VERSION,
-      });
-      // asc 정렬 — 역순으로 첫 non-null 찾기 (각 컬럼 독립)
-      for (let i = rows.length - 1; i >= 0; i--) {
-        const r = rows[i];
+    if (indRows && indRows.length > 0) {
+      const tail = indRows.slice(-14);
+      for (let i = tail.length - 1; i >= 0; i--) {
+        const r = tail[i];
         if (sma20 === undefined && r.sma_20 !== undefined) sma20 = r.sma_20;
         if (sma50 === undefined && r.sma_50 !== undefined) sma50 = r.sma_50;
         if (sma200 === undefined && r.sma_200 !== undefined) sma200 = r.sma_200;

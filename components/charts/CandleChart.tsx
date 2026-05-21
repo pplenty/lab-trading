@@ -15,13 +15,15 @@ type Props = {
   height?: number;
   /** 거래량 histogram 표시 (price chart 하단 ~20%). */
   showVolume?: boolean;
+  /** 최근 N봉만 보이게 visibleLogicalRange — 데이터 전체 fetch 후 클라이언트 zoom. 미지정 시 fitContent. */
+  visibleBars?: number;
 };
 
 function readCssVar(el: HTMLElement, name: string): string {
   return getComputedStyle(el).getPropertyValue(name).trim();
 }
 
-export function CandleChart({candles, height = 360, showVolume = false}: Props) {
+export function CandleChart({candles, height = 360, showVolume = false, visibleBars}: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -130,7 +132,16 @@ export function CandleChart({candles, height = 360, showVolume = false}: Props) 
         );
       }
 
-      chart.timeScale().fitContent();
+      // visibleBars 가 있으면 최근 N 봉만 viewport. 없으면 fit 전체.
+      if (visibleBars && visibleBars > 0 && candles.length > visibleBars) {
+        const total = candles.length;
+        chart.timeScale().setVisibleLogicalRange({
+          from: total - visibleBars,
+          to: total,
+        });
+      } else {
+        chart.timeScale().fitContent();
+      }
     })();
 
     const onResize = () => {
@@ -154,7 +165,7 @@ export function CandleChart({candles, height = 360, showVolume = false}: Props) 
       observer.disconnect();
       chart?.remove();
     };
-  }, [candles, height, showVolume]);
+  }, [candles, height, showVolume, visibleBars]);
 
   return <div ref={containerRef} className="w-full" style={{height}} />;
 }

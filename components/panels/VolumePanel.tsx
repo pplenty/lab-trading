@@ -1,8 +1,7 @@
 import {VolatilityMiniChart} from "@/components/charts/VolatilityMiniChart";
 import type {AssetClass} from "@/lib/types";
-import {getDb, isDbAvailable} from "@/lib/db/d1/client";
-import {D1IndicatorRepo, D1CandleRepo} from "@/lib/db/d1/repos";
 import {INDICATORS_VERSION} from "@/lib/backfill/indicators-batch";
+import {cachedIndicators120d, cachedCandles120d} from "@/lib/data/symbol-detail";
 
 // 종목 상세 — 거래량 패널 (OBV + Volume vs SMA20)
 // IndicatorPanel (모멘텀) / VolatilityPanel (가격 변동성) 과 정보 평면 분리.
@@ -29,19 +28,12 @@ type PanelData = {
 };
 
 async function loadData(symbol: string): Promise<PanelData | null> {
-  if (!(await isDbAvailable())) return null;
+  const [indRows, candleRows] = await Promise.all([
+    cachedIndicators120d(symbol),
+    cachedCandles120d(symbol),
+  ]);
+  if (!indRows || indRows.length === 0 || !candleRows) return null;
   try {
-    const db = await getDb();
-    const repo = new D1IndicatorRepo(db);
-    const candleRepo = new D1CandleRepo(db);
-    const latestT = await repo.latestT(symbol, INDICATORS_VERSION);
-    if (latestT === null) return null;
-    const from = latestT - 120 * 86400;
-    const [indRows, candleRows] = await Promise.all([
-      repo.range({symbol, from, to: latestT + 1, version: INDICATORS_VERSION}),
-      candleRepo.range({symbol, from, to: latestT + 1}),
-    ]);
-    if (indRows.length === 0) return null;
 
     const volByT = new Map<number, number>();
     for (const c of candleRows) volByT.set(c.t, c.v);
