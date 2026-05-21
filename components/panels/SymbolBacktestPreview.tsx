@@ -1,8 +1,11 @@
+import {cache} from "react";
 import {Link} from "@/i18n/navigation";
 import {runBacktest} from "@/lib/backtest/run";
 import {LineChart, type LineSeries} from "@/components/charts/LineChart";
 import {loadIndicatorsForCandles} from "@/lib/data/indicators";
+import {getKvJson, setKvJson} from "@/lib/cache/kv-json";
 import type {AssetClass, Candle} from "@/lib/types";
+import type {BacktestResult} from "@/lib/backtest/types";
 
 // 종목 상세 페이지 미리보기 — 같은 화면 안에서 buy-and-hold 결과 즉시 노출.
 // "한 화면에서 백테스트" 핵심 가치 명제 (ADR-0001) 의 가장 가벼운 진입점.
@@ -26,22 +29,25 @@ function fmtPct(v: number, digits = 2) {
   return `${sign}${v.toFixed(digits)}%`;
 }
 
-export async function SymbolBacktestPreview({
-  class: cls,
-  symbol,
-  candles,
-  currency,
-}: Props) {
-  if (candles.length < 30) {
-    return null;
-  }
+// runBacktest 결과 KV cache — buy-and-hold + 마지막 봉 ts 키. backfill 후 자동 invalidate.
+// 24h TTL — D1 latestT 변경 시 새 key 로 자동 fresh.
+// cold start 시 200봉 × loop CPU cost 회피 (key version 일치 시 ~5ms KV hit).
+const cachedRunBacktest = cache(async (params: {
+  symbol: string;
+  cls: AssetClass;
+  candles: Candle[];
+  currency: string;
+}): Promise<BacktestResult | null> => {
+  const {symbol, cls, candles, currency} = params;
+  const lastT = candles[candles.length - 1].t;
+  const key = `bt-preview:${cls}:${symbol}:${lastT}:bh`;
+  const cached = await getKvJson<BacktestResult>(key);
+  if (cached) return cached;
 
   const initialCapital = INITIAL_CAPITAL_BY_CURRENCY[currency] ?? 10_000;
-  // 미니뷰는 buy-and-hold 이라 indicators 필요 X 지만, 일관성 + 미래 확장 대비 전달.
   const indicators = await loadIndicatorsForCandles(symbol, candles);
-  let result;
   try {
-    result = runBacktest({
+    const result = runBacktest({
       symbol,
       class: cls,
       candles,
@@ -53,9 +59,27 @@ export async function SymbolBacktestPreview({
       slippagePct: 0.0005,
       fillModel: "next-open",
     });
+    // fire-and-forget — 응답 영향 X. 24h TTL — 새 봉 들어오면 다른 key 라 자동 fresh.
+    setKvJson(key, result, {ttlSeconds: 86400}).catch(() => {});
+    return result;
   } catch {
     return null;
   }
+});
+
+export async function SymbolBacktestPreview({
+  class: cls,
+  symbol,
+  candles,
+  currency,
+}: Props) {
+  if (candles.length < 30) {
+    return null;
+  }
+
+  const initialCapital = INITIAL_CAPITAL_BY_CURRENCY[currency] ?? 10_000;
+  const result = await cachedRunBacktest({symbol, cls, candles, currency});
+  if (!result) return null;
 
   const m = result.metrics;
   const tone: "up" | "down" | "neutral" =

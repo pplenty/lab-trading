@@ -4,7 +4,9 @@ import {notFound} from "next/navigation";
 import nextDynamic from "next/dynamic";
 import {Link} from "@/i18n/navigation";
 import {absoluteUrl} from "@/lib/site";
+import {cache} from "react";
 import {coingeckoAdapter} from "@/lib/adapters/coingecko";
+import {getKvJson, setKvJson} from "@/lib/cache/kv-json";
 import {loadCandleSeries} from "@/lib/data/candles";
 import {loadQuote} from "@/lib/data/quotes";
 import {cryptoRegistry, getCryptoBySymbol} from "@/lib/symbols/registry";
@@ -37,6 +39,21 @@ const CandleChart = nextDynamic(() =>
 
 // 60초 ISR — 라이브성 균형 + cold start 회피.
 export const revalidate = 60;
+
+// CoinGecko cgQuote KV cache 60s — anonymous rate-limit (분당 10-30회) 안전망.
+// 26 crypto 종목 × ISR cache miss 시 매번 호출 회피.
+const cachedCgQuote = cache(async (symbol: string): Promise<Quote | null> => {
+  const key = `cg-quote:${symbol}`;
+  const hit = await getKvJson<Quote>(key);
+  if (hit) return hit;
+  try {
+    const fresh = await coingeckoAdapter.getQuote(symbol);
+    setKvJson(key, fresh, {ttlSeconds: 60}).catch(() => {});
+    return fresh;
+  } catch {
+    return null;
+  }
+});
 
 export async function generateMetadata({
   params,
@@ -120,7 +137,7 @@ export default async function CryptoSymbolPage({params, searchParams}: PageProps
     const [qRes, sRes, cgRes] = await Promise.allSettled([
       loadQuote("crypto", entry.symbol),
       loadCandleSeries({asset: "crypto", symbol: entry.symbol, limit: bars}),
-      coingeckoAdapter.getQuote(entry.symbol),
+      cachedCgQuote(entry.symbol),
     ]);
     if (qRes.status === "fulfilled") quote = qRes.value;
     else fetchError = qRes.reason instanceof Error ? qRes.reason.message : String(qRes.reason);
