@@ -11,6 +11,7 @@ import {
 } from "@/lib/symbols/registry";
 import {AssetClassCard} from "@/components/panels/AssetClassCard";
 import {BacktestQuickLinks} from "@/components/panels/BacktestQuickLinks";
+import {BrandMark} from "@/components/BrandMark";
 import {siteJsonLd} from "@/lib/seo/site-jsonld";
 import type {Quote} from "@/lib/types";
 
@@ -84,8 +85,9 @@ export default async function HomePage({
       />
 
       <header className="mb-10 flex flex-col gap-3">
-        <h1 className="text-3xl font-semibold tracking-tight text-fg sm:text-4xl">
-          {t("title")}
+        <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-fg sm:text-4xl">
+          <BrandMark size={32} className="shrink-0 text-fg-muted" />
+          <span>{t("title")}</span>
         </h1>
         <p className="max-w-2xl text-base text-fg-muted">{t("subtitle")}</p>
       </header>

@@ -14,7 +14,9 @@ type Props = {
 
 export async function NewsList({class: cls, title, locale}: Props) {
   const tDisc = await getTranslations("disclaimer");
-  const {articles, source} = await loadNewsByClass(cls, 30);
+  // 12 articles — Workers 50ms CPU 한도 안전 마진 (Intl ICU 비용 누적 회피).
+  // 30 articles 였을 때 Error 1102 (Worker exceeded resource limits) 재현.
+  const {articles, source} = await loadNewsByClass(cls, 12);
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10">
