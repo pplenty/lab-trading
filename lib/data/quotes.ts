@@ -1,3 +1,4 @@
+import {cache} from "react";
 import {getDb, isDbAvailable} from "@/lib/db/d1/client";
 import {D1CandleRepo} from "@/lib/db/d1/repos";
 import type {AssetClass, ListQuotesOpts, Quote, RankingKind} from "@/lib/types";
@@ -6,6 +7,7 @@ import {twelveDataAdapter} from "@/lib/adapters/twelve-data";
 import {kisAdapter} from "@/lib/adapters/kis";
 import type {DataAdapter} from "@/lib/adapters/types";
 import type {Candle} from "@/lib/types";
+import {getQuoteCache, setQuoteCache} from "@/lib/cache/quote-kv";
 
 // adapter 실시간 quote 가 외부 API 한도·차단으로 실패할 때 D1 의 최근 candle 로
 // quote 를 합성하는 fallback. backfill 가 채운 D1 가 있으면 어제 종가 + 24h delta 까지 노출 가능.
@@ -100,19 +102,36 @@ export async function loadQuotesFromD1(
   }
 }
 
-/** adapter 라이브 시도 → 실패 시 D1 fallback. 둘 다 실패하면 throw. */
-export async function loadQuote(
+/**
+ * adapter 라이브 시도 → KV 60s 캐시 → 실패 시 D1 fallback.
+ *
+ * Layer 1: react.cache() — 같은 RSC render 안에서 dedup (다중 호출 자산 비용 0)
+ * Layer 2: KV 60s — 다른 render 간 외부 API 호출 200-500ms → ~5ms
+ * Layer 3: D1 fallback — KV miss + 외부 API 실패 시 어제 종가 + delta
+ *
+ * 정상 흐름 (KV hit): TTFB 단축 200-500ms.
+ * 정상 흐름 (KV miss): 외부 fetch 후 KV put (다음 60s 동안 hit).
+ */
+export const loadQuote = cache(async (
   asset: AssetClass,
   symbol: string
-): Promise<Quote> {
+): Promise<Quote> => {
+  // Layer 2: KV
+  const cached = await getQuoteCache(asset, symbol);
+  if (cached) return cached;
+
+  // Layer 3: 외부 API (성공 시 KV put)
   try {
-    return await ADAPTERS[asset].getQuote(symbol);
+    const fresh = await ADAPTERS[asset].getQuote(symbol);
+    // KV put 은 비동기 — 응답 대기 안 하고 fire-and-forget. (await 하면 TTFB 늘어남)
+    setQuoteCache(asset, symbol, fresh).catch(() => {});
+    return fresh;
   } catch (err) {
     const fallback = await loadQuoteFromD1(asset, symbol);
     if (fallback) return fallback;
     throw err;
   }
-}
+});
 
 /**
  * 인덱스 / 대시보드 quote 리스트 — **D1 우선** (~100ms).
