@@ -27,7 +27,7 @@
 	// 사전에 OpenNext 산출물(.open-next/worker.js) 생성하도록.
 	// 직접 deploy (`bun run cf:deploy`) 는 build && deploy 두 단계 — 이쪽도 호환.
 	"build": {
-		"command": "bun run cf:build"
+		"command": "npx opennextjs-cloudflare build"
 	},
 	"assets": {
 		"directory": ".open-next/assets",
