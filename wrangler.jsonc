@@ -23,6 +23,12 @@
 	"workers_dev": true,
 	"preview_urls": true,
 	"main": ".open-next/worker.js",
+	// CF Workers Build (GitHub 자동 연동) 가 `wrangler deploy` 만 실행해도
+	// 사전에 OpenNext 산출물(.open-next/worker.js) 생성하도록.
+	// 직접 deploy (`bun run cf:deploy`) 는 build && deploy 두 단계 — 이쪽도 호환.
+	"build": {
+		"command": "bun run cf:build"
+	},
 	"assets": {
 		"directory": ".open-next/assets",
 		"binding": "ASSETS"
