@@ -3,8 +3,10 @@ import {getDb, isDbAvailable} from "@/lib/db/d1/client";
 import {D1CandleRepo} from "@/lib/db/d1/repos";
 
 // 종목 상세 — 기간별 수익률 카드 (1주 / 1개월 / 3개월 / 1년 / 5년).
-// D1 candles read → 현재가 vs 각 기간 시점 가격 비교.
-// 데이터 부족 (해당 기간 봉 X) 면 그 카드만 hide ("—").
+// 5y 전체 fetch (1250 봉) 가 cold start 시 CPU 한도 trigger 가능 → window 분리:
+//   - recent 1y (250 봉) range query 1회 — 1주/1개월/3개월/1년 baseline 확보
+//   - 5y (1825d) checkpoint 만 별도 좁은 range (≤30 봉) 1회 — 5y 카드만
+// 합산 ~280 봉 (5y 1250 봉 대비 78% ↓)
 
 const DAY_SEC = 86400;
 
@@ -18,14 +20,25 @@ type PeriodReturn = {
   pct: number | null;
 };
 
-// (라벨, lookback 영업일 기준 — 영업일은 240/년 가정, 휴장 여유 위해 1.5x 캘린더일)
-const PERIODS: Array<{label: string; days: number}> = [
+// (라벨, lookback 캘린더일 — 휴장 여유 1.5x)
+const PERIODS_RECENT: Array<{label: string; days: number}> = [
   {label: "1주", days: 7},
   {label: "1개월", days: 31},
   {label: "3개월", days: 93},
   {label: "1년", days: 365},
-  {label: "5년", days: 365 * 5},
 ];
+
+const PERIOD_5Y_DAYS = 365 * 5;
+
+function findBaselineAtOrBefore(
+  candles: Array<{t: number; c: number}>,
+  targetT: number
+): number | null {
+  for (let i = candles.length - 1; i >= 0; i--) {
+    if (candles[i].t <= targetT) return candles[i].c;
+  }
+  return null;
+}
 
 async function loadReturns(symbol: string): Promise<{
   current: number;
@@ -37,30 +50,41 @@ async function loadReturns(symbol: string): Promise<{
     const db = await getDb();
     const repo = new D1CandleRepo(db);
     const now = Math.floor(Date.now() / 1000);
-    // 5년치 전부 read — D1 한 번 호출로 충분.
-    const candles = await repo.range({
+
+    // window 1: 최근 1년 + 여유 30일 (~250 봉)
+    const recentCandles = await repo.range({
       symbol,
-      from: now - PERIODS[PERIODS.length - 1].days * DAY_SEC - 30 * DAY_SEC,
+      from: now - 365 * DAY_SEC - 30 * DAY_SEC,
       to: now + DAY_SEC,
     });
-    if (candles.length < 2) return null;
-    const last = candles[candles.length - 1];
+    if (recentCandles.length < 2) return null;
+    const last = recentCandles[recentCandles.length - 1];
 
-    const returns: PeriodReturn[] = PERIODS.map(({label, days}) => {
+    const recentReturns: PeriodReturn[] = PERIODS_RECENT.map(({label, days}) => {
       const targetT = last.t - days * DAY_SEC;
-      // 가장 가까운 (이전 또는 같은 시점) 봉 찾기 — binary search 단순 linear.
-      let baseline: number | null = null;
-      for (let i = candles.length - 1; i >= 0; i--) {
-        if (candles[i].t <= targetT) {
-          baseline = candles[i].c;
-          break;
-        }
-      }
-      if (baseline === null) return {label, pct: null};
-      if (baseline === 0) return {label, pct: null};
+      const baseline = findBaselineAtOrBefore(recentCandles, targetT);
+      if (baseline === null || baseline === 0) return {label, pct: null};
       return {label, pct: ((last.c - baseline) / baseline) * 100};
     });
-    return {current: last.c, asOf: last.t, returns};
+
+    // window 2: 5y 시점 ±30일 좁은 range (~30 봉) — 5y 카드 전용
+    const target5y = last.t - PERIOD_5Y_DAYS * DAY_SEC;
+    const fiveYearCandles = await repo.range({
+      symbol,
+      from: target5y - 30 * DAY_SEC,
+      to: target5y + 30 * DAY_SEC,
+    });
+    let pct5y: number | null = null;
+    const baseline5y = findBaselineAtOrBefore(fiveYearCandles, target5y);
+    if (baseline5y !== null && baseline5y !== 0) {
+      pct5y = ((last.c - baseline5y) / baseline5y) * 100;
+    }
+
+    return {
+      current: last.c,
+      asOf: last.t,
+      returns: [...recentReturns, {label: "5년", pct: pct5y}],
+    };
   } catch {
     return null;
   }
