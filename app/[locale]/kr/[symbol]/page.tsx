@@ -17,6 +17,7 @@ import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
 import {SymbolBacktestPreview} from "@/components/panels/SymbolBacktestPreview";
 import {SymbolRelatedNews} from "@/components/panels/SymbolRelatedNews";
 import {IndicatorPanel} from "@/components/panels/IndicatorPanel";
+import {VolatilityPanel} from "@/components/panels/VolatilityPanel";
 import {PriceLevelsPanel} from "@/components/panels/PriceLevelsPanel";
 import {ReturnsPanel} from "@/components/panels/ReturnsPanel";
 import {assetJsonLd} from "@/lib/seo/asset-jsonld";
@@ -213,6 +214,8 @@ export default async function KrSymbolPage({params}: PageProps) {
       <PriceLevelsPanel class="kr" symbol={entry.symbol} currency="KRW" />
 
       <IndicatorPanel class="kr" symbol={entry.symbol} />
+
+      <VolatilityPanel class="kr" symbol={entry.symbol} />
 
       {series && series.candles.length >= 30 && (
         <SymbolBacktestPreview
