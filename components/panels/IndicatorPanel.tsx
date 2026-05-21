@@ -1,5 +1,5 @@
-import {Sparkline} from "@/components/charts/Sparkline";
 import {MacdMiniChart} from "@/components/charts/MacdMiniChart";
+import {OscillatorMiniChart} from "@/components/charts/OscillatorMiniChart";
 import type {AssetClass} from "@/lib/types";
 import {getDb, isDbAvailable} from "@/lib/db/d1/client";
 import {D1IndicatorRepo} from "@/lib/db/d1/repos";
@@ -22,6 +22,7 @@ type IndicatorPanelData = {
   macdSignal: number[];
   macdHist: number[];
   stochK: number[];
+  stochD: number[];
   last: {
     rsi_14?: number;
     macd?: number;
@@ -67,14 +68,20 @@ async function loadIndicatorPanelData(
         macdHist.push(r.macd_hist);
       }
     }
-    const stochK = recent
-      .map((r) => r.stoch_k_14_3)
-      .filter((v): v is number => v !== undefined);
+    // Stochastic %K + %D 도 같은 봉 정합 — 둘 다 있는 봉만 push.
+    const stochK: number[] = [];
+    const stochD: number[] = [];
+    for (const r of recent) {
+      if (r.stoch_k_14_3 !== undefined && r.stoch_d_14_3 !== undefined) {
+        stochK.push(r.stoch_k_14_3);
+        stochD.push(r.stoch_d_14_3);
+      }
+    }
 
     // 충분한 데이터 없으면 섹션 hide
     if (rsi.length < 5 && macd.length < 5 && stochK.length < 5) return null;
 
-    return {rsi, macd, macdSignal, macdHist, stochK, last};
+    return {rsi, macd, macdSignal, macdHist, stochK, stochD, last};
   } catch {
     return null;
   }
@@ -83,7 +90,7 @@ async function loadIndicatorPanelData(
 export async function IndicatorPanel({symbol}: Props) {
   const data = await loadIndicatorPanelData(symbol);
   if (!data) return null;
-  const {rsi, macd, macdSignal, macdHist, stochK, last} = data;
+  const {rsi, macd, macdSignal, macdHist, stochK, stochD, last} = data;
 
   return (
     <section className="mt-6 mb-6">
@@ -96,13 +103,16 @@ export async function IndicatorPanel({symbol}: Props) {
         </span>
       </header>
       <div className="grid gap-3 sm:grid-cols-3">
-        <IndicatorCard
+        <OscillatorCard
           label="RSI (14)"
           primary={last.rsi_14}
           primaryFmt={(v) => v.toFixed(1)}
           status={rsiStatus(last.rsi_14)}
-          data={rsi}
+          values={rsi}
+          lower={30}
+          upper={70}
           footnote="30 과매도 · 70 과매수"
+          ariaLabel="RSI 14"
         />
         <MacdCard
           primary={last.macd}
@@ -112,20 +122,84 @@ export async function IndicatorPanel({symbol}: Props) {
           macdSignal={macdSignal}
           macdHist={macdHist}
         />
-        <IndicatorCard
+        <OscillatorCard
           label="Stochastic %K (14, 3)"
           primary={last.stoch_k_14_3}
           primaryFmt={(v) => v.toFixed(1)}
           status={stochStatus(last.stoch_k_14_3)}
-          data={stochK}
+          values={stochK}
+          secondary={stochD}
+          lower={20}
+          upper={80}
           footnote={
             last.stoch_d_14_3 !== undefined
-              ? `%D ${last.stoch_d_14_3.toFixed(1)}`
-              : undefined
+              ? `%D ${last.stoch_d_14_3.toFixed(1)} · 20 과매도 · 80 과매수`
+              : "20 과매도 · 80 과매수"
           }
+          ariaLabel="Stochastic K D 14 3"
         />
       </div>
     </section>
+  );
+}
+
+type OscillatorCardProps = {
+  label: string;
+  primary: number | undefined;
+  primaryFmt: (v: number) => string;
+  status: {label: string; tone: "up" | "down" | "neutral"} | null;
+  values: number[];
+  secondary?: number[];
+  lower: number;
+  upper: number;
+  footnote?: string;
+  ariaLabel?: string;
+};
+
+function OscillatorCard({
+  label,
+  primary,
+  primaryFmt,
+  status,
+  values,
+  secondary,
+  lower,
+  upper,
+  footnote,
+  ariaLabel,
+}: OscillatorCardProps) {
+  const toneClass =
+    status?.tone === "up"
+      ? "text-[var(--color-up)]"
+      : status?.tone === "down"
+      ? "text-[var(--color-down)]"
+      : "text-fg-muted";
+  return (
+    <article className="rounded-lg border border-line bg-surface/30 p-3">
+      <div className="mb-1 text-[11px] uppercase tracking-wide text-fg-subtle">
+        {label}
+      </div>
+      <div className="mb-1 flex items-baseline gap-2">
+        <span className="text-base font-semibold tabular-nums text-fg">
+          {primary !== undefined ? primaryFmt(primary) : "—"}
+        </span>
+        {status && <span className={`text-xs ${toneClass}`}>{status.label}</span>}
+      </div>
+      <div className="h-14 w-full">
+        <OscillatorMiniChart
+          values={values}
+          secondary={secondary}
+          lower={lower}
+          upper={upper}
+          domain={[0, 100]}
+          width={200}
+          height={56}
+          className="w-full h-full"
+          ariaLabel={ariaLabel}
+        />
+      </div>
+      {footnote && <p className="mt-1 text-[10px] text-fg-subtle">{footnote}</p>}
+    </article>
   );
 }
 
@@ -195,39 +269,3 @@ function macdStatus(m?: number, s?: number) {
     : {label: "▼ bear", tone: "down" as const};
 }
 
-type CardProps = {
-  label: string;
-  primary: number | undefined;
-  primaryFmt: (v: number) => string;
-  status: {label: string; tone: "up" | "down" | "neutral"} | null;
-  data: number[];
-  footnote?: string;
-};
-
-function IndicatorCard({label, primary, primaryFmt, status, data, footnote}: CardProps) {
-  const toneClass =
-    status?.tone === "up"
-      ? "text-[var(--color-up)]"
-      : status?.tone === "down"
-      ? "text-[var(--color-down)]"
-      : "text-fg-muted";
-  return (
-    <article className="rounded-lg border border-line bg-surface/30 p-3">
-      <div className="mb-1 text-[11px] uppercase tracking-wide text-fg-subtle">{label}</div>
-      <div className="mb-1 flex items-baseline gap-2">
-        <span className="text-base font-semibold tabular-nums text-fg">
-          {primary !== undefined ? primaryFmt(primary) : "—"}
-        </span>
-        {status && (
-          <span className={`text-xs ${toneClass}`}>{status.label}</span>
-        )}
-      </div>
-      <div className="h-10 w-full">
-        <Sparkline values={data} width={200} height={40} className="w-full h-full" />
-      </div>
-      {footnote && (
-        <p className="mt-1 text-[10px] text-fg-subtle">{footnote}</p>
-      )}
-    </article>
-  );
-}
