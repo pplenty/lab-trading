@@ -1,41 +1,35 @@
 "use client";
 
-import {useLocale} from "next-intl";
-import {usePathname, useRouter} from "@/i18n/navigation";
+// ADR-0004: 1차 출시는 ko 단독. EN 은 routing 정의만 유지 (인프라 보존),
+// 실제 사용자 노출은 비활성. middleware 가 /en/* → /ko/* redirect.
 
 const locales = [
-  {code: "ko", label: "KO"},
-  {code: "en", label: "EN"},
+  {code: "ko", label: "KO", active: true},
+  {code: "en", label: "EN", active: false},
 ] as const;
 
 export function LocaleSwitcher() {
-  const locale = useLocale();
-  const pathname = usePathname();
-  const router = useRouter();
-
   return (
     <div className="flex items-center gap-1 text-xs font-medium">
-      {locales.map((l) => {
-        const active = l.code === locale;
-        return (
-          <button
-            key={l.code}
-            type="button"
-            onClick={() => {
-              if (!active) router.replace(pathname, {locale: l.code});
-            }}
-            aria-current={active ? "true" : undefined}
-            aria-label={`Switch language to ${l.label}`}
-            className={
-              active
-                ? "rounded-md bg-fg px-2 py-1 text-bg"
-                : "rounded-md px-2 py-1 text-fg-muted transition-colors hover:bg-surface hover:text-fg"
-            }
-          >
-            {l.label}
-          </button>
-        );
-      })}
+      {locales.map((l) => (
+        <button
+          key={l.code}
+          type="button"
+          disabled={!l.active}
+          aria-current={l.active ? "true" : undefined}
+          aria-label={
+            l.active ? `Current language: ${l.label}` : `${l.label} (coming in Phase 2)`
+          }
+          title={l.active ? undefined : "Phase 2 — coming soon"}
+          className={
+            l.active
+              ? "rounded-md bg-fg px-2 py-1 text-bg"
+              : "rounded-md px-2 py-1 text-fg-subtle/60 cursor-not-allowed"
+          }
+        >
+          {l.label}
+        </button>
+      ))}
     </div>
   );
 }
