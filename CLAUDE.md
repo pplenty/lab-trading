@@ -38,7 +38,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 현재 상태 (2026-05-21, Phase 2 마감)
 
-- **Production 라이브 (`trading.jdgrid.com`).** 80 종목 × 시세·랭킹·종목상세·백테스트 (**6 preset**) + 대시보드 / 통합 검색 (**한글 초성 매칭**) / 즐겨찾기·최근 / 저장된 전략 / URL 공유 + **26 indicator 사전계산** + **6 매체 RSS 뉴스 + 종목 ↔ 관련 뉴스** + **OG 동적 SVG image** + **종목 상세 캔들 + 거래량 dual-axis 차트**.
+- **Production 라이브 (`trading.jdgrid.com`).** 80 종목 × 시세·랭킹·종목상세 (**위젯 6**)·백테스트 (**6 preset**) + 대시보드 / 통합 검색 (**한글 초성 + 영문 두벌식 매핑**) / 즐겨찾기·최근 / 저장된 전략 / URL 공유 + **26 indicator 사전계산** + **6 매체 RSS 뉴스 + 종목 ↔ 관련 뉴스** + **OG 동적 SVG image** + **종목 상세 캔들 + 거래량 dual-axis 차트**.
 - 자산군별 상태 (모두 라이브, **80 종목**):
   - **crypto**: Upbit Public API + CoinGecko 보조 — **26 종목**.
   - **us**: Twelve Data — **30 종목**.
@@ -47,9 +47,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - **indicators 26 컬럼 v2**: SMA 5/20/50/100/200, EMA 12/26/50, RSI 14, MACD 3, BB 3, ATR 14, VolSMA 20 (Phase 1) + Stochastic K/D, CCI 20, Williams %R 14, ADX/DI+/DI- 14, OBV, ROC 12 (Phase 2).
   - 페이지·백테스트가 `loadCandleSeries` / `loadQuote` / `loadQuotesList` / `loadIndicatorsForCandles` 헬퍼로 D1 사용. **인덱스/대시보드는 D1 우선** (어제 종가 + 24h 변동) — SSR 100ms. 종목 상세는 라이브 + D1 fallback. 어댑터 부분 실패 시 누락 종목만 D1 합성 + `D1FallbackBadge` UI 라벨.
 - **뉴스 (`news_articles` 테이블)**: 한경 finance/economy + 매경 + 파이낸셜뉴스 증권/금융 + 토큰포스트 6 endpoint. 30분 cron + D1 UPSERT + KV `news:{class}` hot cache. 종목 상세에 keyword OR LIKE 매칭 관련 뉴스 5개.
-- 종목 상세 추가 위젯: **PriceLevelsPanel** (52주 고저 + 현재가 위치 % + SMA 20/50/200 거리), **IndicatorPanel** (RSI/MACD/Stochastic 3 카드 + sparkline + 과매수/과매도 라벨), **CandleChart `showVolume`** (캔들 + 거래량 histogram dual-axis).
+- **종목 상세 위젯 6**:
+  - **CandleChart `showVolume`** (캔들 + 거래량 histogram dual-axis, lightweight-charts)
+  - **ReturnsPanel** (1주/1개월/3개월/1년/5년 종가 기준 수익률)
+  - **PriceLevelsPanel** (52주 고저 + 현재가 위치 % + SMA 20/50/200 거리)
+  - **IndicatorPanel — 4 카드**: RSI 14 + MACD (12,26,9) + Stochastic %K/%D + ADX/DI+/DI-. 각 카드 mini chart (zone tint + reference line + bull/bear 색).
+  - **SymbolBacktestPreview** (buy-and-hold 미니뷰 SSR)
+  - **SymbolRelatedNews** + **RelatedSymbolChips**
 - **백테스트 6 preset** (ADR-0020): buy-and-hold · sma-cross · rsi-reversion · donchian-breakout (Turtle) · macd-cross · bollinger-reversion. 추세 추종 3 + 평균 회귀 2 + baseline 1. BacktestResultCard 에 **outperformance verdict** 카드 (전략 vs Buy&Hold 한 줄 결론).
-- **검색**: 정적 인덱스 73 entry + symbol/ticker/name/nameKo 매칭 + **한글 초성 매칭** ("ㅂㅌㅋ" → 비트코인, lib/search/hangul.ts).
+- **검색**: 정적 인덱스 73 entry + symbol/ticker/name/nameKo + **한글 초성** ("ㅂㅌㅋ" → 비트코인) + **영문 두벌식** ("qlxmzhdls" → 비트코인). `lib/search/{hangul,keyboard}.ts`.
 - 활성 라우트: 대시보드(/), 3 자산군 × {/, /gainers, /losers, /volume, /[symbol], /news}, /backtest/{new,saved}, /search, /settings + 404 catch-all + `/api/{health,backfill,cron/backfill,cron/news-pull,recompute-indicators,og/[asset]/[symbol]}`. **/kr/kospi · /kr/kosdaq stub** ("준비 중" 안내 — Phase 1.5 활성화 예정).
 - 사용자 자산 (localStorage, ADR-0016): 즐겨찾기 ⭐ + 최근 본 ⏰ + 저장된 전략 + 결과 URL 공유 prefill.
 - **운영**:
@@ -518,3 +524,4 @@ wrangler.jsonc
 | 2026-05-19 | 종목 상세 PriceLevelsPanel + 문서 동기화 | 52주 고저 + 현재가 위치 % 막대 + SMA 20/50/200 거리. incremental cron 의 SMA200 lookback 부족 (최신 봉 NULL) → 14 봉 fallback 검색. CLAUDE.md / README Phase 2 마감 동기화. | components/panels/PriceLevelsPanel (신규), app/[locale]/{crypto,us,kr}/[symbol]/page.tsx, CLAUDE.md, README.md | follow-up #91: incremental backfill 의 indicator lookback fix (D1 과거 봉 합쳐 재계산). |
 | 2026-05-20 | **incremental indicator lookback fix + outperformance verdict + Donchian Breakout + 검색 초성 매칭** | (1) backfillSymbol 가 D1 과거 250 봉 합쳐 computeIndicators → 새 봉의 sma_200 NULL 회피. (2) BacktestResultCard 에 "전략이 단순 보유 대비 우위 / 열위 / ≈" + 초과 수익 %/금액 박스. (3) Donchian Breakout 전략 (4번째 preset, Turtle Trading). (4) 검색 한글 초성 매칭 ("ㅂㅌㅋ" → 비트코인) — lib/search/hangul.ts. | lib/{backfill/run,search/{index,hangul},backtest/strategies/donchian-breakout}, components/panels/BacktestResultCard, lib/backtest/strategies/{registry,strategies.test} | Vitest 98 → 105. 도메인 지식 누적: Patterns 3 (3-Layer SSR Cache · Incremental Backfill Lookback Merge · Link prefetch=false) + Bugs 1 (Incremental indicator lookback 부족) |
 | 2026-05-21 | **MACD Crossover + Bollinger Reversion + 거래량 차트 + RankingPage D1 우선 + KOSPI/KOSDAQ stub** | (1) MACD Crossover 전략 (5번째) — D1 macd/macd_signal 활용. (2) Bollinger Bands Mean Reversion (6번째) — D1 bb_upper/lower 활용. (3) CandleChart showVolume prop — HistogramSeries 하단 22% + up/down 색 매핑. (4) RankingPage 가 loadRankingsFromD1 우선 — KIS 직렬 호출 회피, /kr/volume 10.6s → 1.0s. (5) 9 ranking 페이지 revalidate=300 ISR. (6) /kr/kospi · /kr/kosdaq stub 페이지 ("준비 중" 안내) — 404 → 200. | lib/backtest/strategies/{macd-cross,bollinger-reversion,registry}, components/charts/CandleChart, components/panels/RankingPage, app/[locale]/kr/{kospi,kosdaq}/page, app/[locale]/{crypto,us,kr}/[symbol]/page | 6 preset 마감. Vitest 105 → 112 ✓. 140+ 파일 / ~13,500 줄. |
+| 2026-05-21 (2) | **종목 상세 위젯 강화 — MACD/RSI/Stoch/ADX mini chart + ReturnsPanel + 영문 두벌식 검색** | (1) MacdMiniChart (MACD line + signal 점선 + hist bar + 0 ref). (2) OscillatorMiniChart (RSI/Stoch 공용, zone tint + secondary). (3) AdxMiniChart (ADX 점선 + DI+/DI- 실선, 25 ref + weak zone). (4) IndicatorPanel 4번째 카드 ADX 추가 (3→4 카드). (5) ReturnsPanel — 1주/1개월/3개월/1년/5년 종가 수익률. (6) 검색 영문 두벌식 매핑 — "qlxmzhdls" → 비트코인. lib/search/keyboard.ts. | components/charts/{Macd,Oscillator,Adx}MiniChart, components/panels/{IndicatorPanel,ReturnsPanel}, lib/search/keyboard, app/[locale]/{crypto,us,kr}/[symbol]/page | 종목 상세 위젯 5 → 6. Vitest 112 → 115. 150+ 파일 / ~14,500 줄. 4 mini chart 시각 언어 통일: zone tint + reference line + bull/bear 색 분기. |

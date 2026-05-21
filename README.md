@@ -6,7 +6,7 @@
 
 ## 현재 상태 (2026-05-21, Phase 2 마감)
 
-**Production 라이브 — <https://trading.jdgrid.com>**. 3 자산군 **80 종목** × 시세·랭킹·종목상세·**백테스트 6 preset** + **6 매체 RSS 뉴스 + 종목 매칭** + **26 indicator 사전계산** + **종목 상세 위젯 5종** + **검색 한글 초성 매칭** + **OG 동적 이미지**.
+**Production 라이브 — <https://trading.jdgrid.com>**. 3 자산군 **80 종목** × 시세·랭킹·종목상세·**백테스트 6 preset** + **6 매체 RSS 뉴스 + 종목 매칭** + **26 indicator 사전계산** + **종목 상세 위젯 6종** + **검색 한글 초성 + 영문 두벌식** + **OG 동적 이미지**.
 
 **D1 historical: 107,677 candles + 107,677 indicators (26 컬럼 v2, 2021-05-17 ~)**.
 
@@ -22,10 +22,11 @@
 
 **뉴스 시스템** (ADR-0008): 한경 finance/economy + 매경 + 파이낸셜뉴스 증권/금융 + 토큰포스트. 30분 cron → D1 archive + KV hot cache. 종목 상세에 keyword OR LIKE 매칭 관련 뉴스 5개.
 
-**종목 상세 위젯**:
+**종목 상세 위젯 6종**:
 - **CandleChart** — 캔들 + 거래량 dual-axis (하단 22% histogram)
+- **ReturnsPanel** — 1주/1개월/3개월/1년/5년 종가 수익률 5 카드
 - **PriceLevelsPanel** — 52주 고저 + 현재가 위치 % 막대 + SMA 20/50/200 거리
-- **IndicatorPanel** — RSI/MACD/Stochastic 3 카드 + sparkline + 과매수/과매도 라벨
+- **IndicatorPanel** — RSI / MACD / Stochastic / ADX 4 카드 + 각 카드 mini chart (zone tint + reference line + bull/bear)
 - **SymbolBacktestPreview** — buy-and-hold 결과 미니뷰 + ⚡ 전체 백테스트 CTA
 - **SymbolRelatedNews** — keyword 매칭 관련 뉴스 5개
 - **RelatedSymbolChips** — 같은 자산군의 다른 종목 nav
@@ -58,9 +59,9 @@ BacktestResultCard 에 **outperformance verdict** — "전략이 단순 보유 �
 **SEO** (ADR-0015 D): 종목 상세에 schema.org FinancialProduct + BreadcrumbList JSON-LD + OpenGraph + Twitter card. 홈에 WebSite + SearchAction. sitemap 198 URLs (80 종목 × 2 locale + static + 뉴스).
 **a11y**: AppShell drag handle 키보드 (Arrow ±8px, Shift+Arrow ±32px, Home/End), 컬러 + 부호/화살표 병기, role=combobox 검색.
 
-**검색** (`/search`, ADR-0022): 80 종목 정적 인덱스 + symbol/ticker/name/nameKo prefix·substring + **한글 초성 매칭** (예: "ㅂㅌㅋ" → 비트코인, "ㅅㅅ" → 삼성전자/삼성바이오로직스).
+**검색** (`/search`, ADR-0022): 80 종목 정적 인덱스 + symbol/ticker/name/nameKo prefix·substring + **한글 초성** ("ㅂㅌㅋ" → 비트코인, "ㅅㅅ" → 삼성전자/삼성바이오로직스) + **영문 두벌식** ("qlxmzhdls" → 비트코인, "tkatjdwjswk" → 삼성전자).
 
-코드: TypeScript strict / ESLint 9 / **Vitest 112 ✓** (140+ 파일 / ~13,500 줄).
+코드: TypeScript strict / ESLint 9 / **Vitest 115 ✓** (150+ 파일 / ~14,500 줄).
 
 ## 빌드 / 실행
 
