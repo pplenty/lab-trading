@@ -4,9 +4,9 @@
 
 세 자산군의 시세·랭킹을 한 곳에서 비교하고, 같은 화면에서 사용자 전략을 일봉 기준으로 백테스트하여 수익률·MDD·Sharpe 결과를 즉시 확인할 수 있다.
 
-## 현재 상태 (2026-05-19, Phase 2 마감)
+## 현재 상태 (2026-05-21, Phase 2 마감)
 
-**Production 라이브 — <https://trading.jdgrid.com>**. 3 자산군 **80 종목** × 시세·랭킹·종목상세·백테스트 + **6 매체 RSS 뉴스 + 종목 매칭** + **26 indicator 사전계산 + 모멘텀/가격레벨 위젯** + **OG 동적 이미지**.
+**Production 라이브 — <https://trading.jdgrid.com>**. 3 자산군 **80 종목** × 시세·랭킹·종목상세·**백테스트 6 preset** + **6 매체 RSS 뉴스 + 종목 매칭** + **26 indicator 사전계산** + **종목 상세 위젯 5종** + **검색 한글 초성 매칭** + **OG 동적 이미지**.
 
 **D1 historical: 107,677 candles + 107,677 indicators (26 컬럼 v2, 2021-05-17 ~)**.
 
@@ -23,11 +23,22 @@
 **뉴스 시스템** (ADR-0008): 한경 finance/economy + 매경 + 파이낸셜뉴스 증권/금융 + 토큰포스트. 30분 cron → D1 archive + KV hot cache. 종목 상세에 keyword OR LIKE 매칭 관련 뉴스 5개.
 
 **종목 상세 위젯**:
+- **CandleChart** — 캔들 + 거래량 dual-axis (하단 22% histogram)
 - **PriceLevelsPanel** — 52주 고저 + 현재가 위치 % 막대 + SMA 20/50/200 거리
 - **IndicatorPanel** — RSI/MACD/Stochastic 3 카드 + sparkline + 과매수/과매도 라벨
 - **SymbolBacktestPreview** — buy-and-hold 결과 미니뷰 + ⚡ 전체 백테스트 CTA
 - **SymbolRelatedNews** — keyword 매칭 관련 뉴스 5개
 - **RelatedSymbolChips** — 같은 자산군의 다른 종목 nav
+
+**백테스트 6 preset** (ADR-0020):
+- `buy-and-hold` (baseline)
+- `sma-cross` (단기/장기 이동평균 교차, trend)
+- `rsi-reversion` (RSI < 30 / > 70 평균 회귀)
+- `donchian-breakout` (N일 high 돌파, Turtle Trading)
+- `macd-cross` (MACD vs signal 교차)
+- `bollinger-reversion` (BB 상/하단 터치, 평균 회귀)
+
+BacktestResultCard 에 **outperformance verdict** — "전략이 단순 보유 대비 우위 / 열위 / ≈" 한 줄 결론.
 
 활성 라우트: 대시보드 + 3 자산군 × {인덱스, gainers, losers, volume, 종목상세, 뉴스} + 백테스트 {작업장, 저장된 전략} + 통합 검색 + 설정 + 404 + `/api/{health,backfill,cron/{backfill,news-pull},recompute-indicators,og/[asset]/[symbol]}`.
 
@@ -47,7 +58,9 @@
 **SEO** (ADR-0015 D): 종목 상세에 schema.org FinancialProduct + BreadcrumbList JSON-LD + OpenGraph + Twitter card. 홈에 WebSite + SearchAction. sitemap 198 URLs (80 종목 × 2 locale + static + 뉴스).
 **a11y**: AppShell drag handle 키보드 (Arrow ±8px, Shift+Arrow ±32px, Home/End), 컬러 + 부호/화살표 병기, role=combobox 검색.
 
-코드: TypeScript strict / ESLint 9 / **Vitest 98 ✓** (130+ 파일 / ~13,000 줄).
+**검색** (`/search`, ADR-0022): 80 종목 정적 인덱스 + symbol/ticker/name/nameKo prefix·substring + **한글 초성 매칭** (예: "ㅂㅌㅋ" → 비트코인, "ㅅㅅ" → 삼성전자/삼성바이오로직스).
+
+코드: TypeScript strict / ESLint 9 / **Vitest 112 ✓** (140+ 파일 / ~13,500 줄).
 
 ## 빌드 / 실행
 
