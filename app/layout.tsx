@@ -1,4 +1,6 @@
 import "./globals.css";
+import type {Metadata} from "next";
+import Script from "next/script";
 import {Geist, Geist_Mono} from "next/font/google";
 import {
   themes,
@@ -9,6 +11,17 @@ import {
   DEFAULT_MODE,
   DEFAULT_COLOR_SEMANTICS,
 } from "@/lib/themes";
+
+// GA4 + AdSense — production 만 활성화.
+const GA_ID = "G-KVKVBMCWYE";
+const ADSENSE_CLIENT = "ca-pub-1005049417920340";
+const isProd = process.env.NODE_ENV === "production";
+
+export const metadata: Metadata = {
+  other: {
+    "google-adsense-account": ADSENSE_CLIENT,
+  },
+};
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -45,6 +58,20 @@ export default function RootLayout({
           suppressHydrationWarning
           dangerouslySetInnerHTML={{__html: themeInitHtml}}
         />
+        {isProd && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga-init" strategy="afterInteractive">
+              {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+gtag('config', '${GA_ID}');`}
+            </Script>
+          </>
+        )}
         {children}
       </body>
     </html>
