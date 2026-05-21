@@ -84,4 +84,20 @@ describe("searchAssets", () => {
     const r = searchAssets("ㅋ");
     expect(r.length).toBeGreaterThan(0);
   });
+
+  it("영문 두벌식 — qlxmzhdls → 비트코인", () => {
+    const r = searchAssets("qlxmzhdls");
+    expect(r.some((e) => e.symbol === "btc")).toBe(true);
+  });
+
+  it("영문 두벌식 — tkatjdwjswk → 삼성전자", () => {
+    const r = searchAssets("tkatjdwjswk");
+    expect(r.some((e) => e.symbol === "005930")).toBe(true);
+  });
+
+  it("두벌식 변환 — 라이브 영문 매칭이 우선 (AAPL 영문)", () => {
+    // "aapl" 은 ticker 정확 매칭 — 두벌식 변환 안 함.
+    const r = searchAssets("aapl");
+    expect(r[0].symbol).toBe("aapl");
+  });
 });

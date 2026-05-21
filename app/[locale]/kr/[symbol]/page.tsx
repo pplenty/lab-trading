@@ -18,6 +18,7 @@ import {SymbolBacktestPreview} from "@/components/panels/SymbolBacktestPreview";
 import {SymbolRelatedNews} from "@/components/panels/SymbolRelatedNews";
 import {IndicatorPanel} from "@/components/panels/IndicatorPanel";
 import {PriceLevelsPanel} from "@/components/panels/PriceLevelsPanel";
+import {ReturnsPanel} from "@/components/panels/ReturnsPanel";
 import {assetJsonLd} from "@/lib/seo/asset-jsonld";
 import type {Quote, CandleSeries} from "@/lib/types";
 
@@ -206,6 +207,8 @@ export default async function KrSymbolPage({params}: PageProps) {
           <CandleChart candles={series.candles} height={420} showVolume />
         </section>
       )}
+
+      <ReturnsPanel class="kr" symbol={entry.symbol} />
 
       <PriceLevelsPanel class="kr" symbol={entry.symbol} currency="KRW" />
 

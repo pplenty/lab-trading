@@ -5,6 +5,7 @@ import {
 } from "@/lib/symbols/registry";
 import type {AssetClass} from "@/lib/types";
 import {isPureChoSet, jamoChoString} from "./hangul";
+import {convertEngToHangul, hasHangulSyllable} from "./keyboard";
 
 // 정적 검색 인덱스 (ADR-0022).
 //
@@ -109,6 +110,26 @@ export function searchAssets(query: string, limit: number = 8): SearchEntry[] {
     const s = scoreEntry(entry, choIndex[i], q, qIsCho);
     if (s > 0) scored.push({entry, score: s});
   }
+
+  // 매칭 적고 query 가 *영문만* 일 때, 두벌식 한↔영 변환 시도 (예: "qlxmzhdls" → "비트코인").
+  // 영문 alphabet 만 → convertEngToHangul → 한글 음절. 결과가 유효 음절을 포함하면 한국어 매칭 재시도.
+  if (scored.length < 3 && /^[a-zA-Z]+$/.test(q) && q.length >= 3) {
+    const converted = convertEngToHangul(q);
+    if (hasHangulSyllable(converted) && converted !== q) {
+      const convIsCho = isPureChoSet(converted);
+      for (let i = 0; i < searchIndex.length; i++) {
+        const entry = searchIndex[i];
+        // 이미 영문 매칭 점수 받은 entry 는 합산 X (중복 회피)
+        if (scored.some((sc) => sc.entry === entry)) continue;
+        const s = scoreEntry(entry, choIndex[i], converted, convIsCho);
+        if (s > 0) {
+          // 변환 매칭 점수 감점 (라이브 한국어 우선) — 50% 가중
+          scored.push({entry, score: Math.floor(s * 0.5)});
+        }
+      }
+    }
+  }
+
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, limit).map((s) => s.entry);
 }
