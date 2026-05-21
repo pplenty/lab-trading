@@ -17,6 +17,8 @@ import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
 import {SymbolBacktestPreview} from "@/components/panels/SymbolBacktestPreview";
 import {SymbolRelatedNews} from "@/components/panels/SymbolRelatedNews";
 import {IndicatorPanel} from "@/components/panels/IndicatorPanel";
+import {ChartRangeToggle} from "@/components/charts/ChartRangeToggle";
+import {parseRangeParam, rangeBars} from "@/lib/chart/range";
 import {VolatilityPanel} from "@/components/panels/VolatilityPanel";
 import {VolumePanel} from "@/components/panels/VolumePanel";
 import {PriceLevelsPanel} from "@/components/panels/PriceLevelsPanel";
@@ -28,8 +30,8 @@ const CandleChart = nextDynamic(() =>
   import("@/components/charts/CandleChart").then((m) => m.CandleChart)
 );
 
-// 60초 ISR — 라이브성 균형 + cold start 회피
-export const dynamic = "force-static";
+// 60초 ISR — 라이브성 균형 + cold start 회피.
+// `dynamic = "force-static"` 제거 — searchParams (?range=...) 분기 활성화.
 export const revalidate = 60;
 
 export async function generateMetadata({
@@ -82,10 +84,13 @@ export async function generateMetadata({
 
 type PageProps = {
   params: Promise<{locale: string; symbol: string}>;
+  searchParams: Promise<{range?: string | string[]}>;
 };
 
-export default async function KrSymbolPage({params}: PageProps) {
+export default async function KrSymbolPage({params, searchParams}: PageProps) {
   const {symbol: rawSymbol} = await params;
+  const range = parseRangeParam((await searchParams).range);
+  const bars = rangeBars(range);
   let normalized: string;
   try {
     normalized = toSymbol(rawSymbol, "kr");
@@ -105,7 +110,7 @@ export default async function KrSymbolPage({params}: PageProps) {
   try {
     [quote, series] = await Promise.all([
       loadQuote("kr", entry.symbol),
-      loadCandleSeries({asset: "kr", symbol: entry.symbol, limit: 200}),
+      loadCandleSeries({asset: "kr", symbol: entry.symbol, limit: bars}),
     ]);
   } catch (err) {
     fetchError = err instanceof Error ? err.message : String(err);
@@ -206,6 +211,9 @@ export default async function KrSymbolPage({params}: PageProps) {
 
       {series && series.candles.length > 0 && (
         <section className="mb-6 rounded-lg border border-line bg-surface/30 p-3">
+          <div className="mb-2 flex justify-end">
+            <ChartRangeToggle basePath={`/kr/${entry.symbol}`} current={range} />
+          </div>
           <CandleChart candles={series.candles} height={420} showVolume />
         </section>
       )}
