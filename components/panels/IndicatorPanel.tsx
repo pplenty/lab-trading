@@ -1,5 +1,6 @@
 import {MacdMiniChart} from "@/components/charts/MacdMiniChart";
 import {OscillatorMiniChart} from "@/components/charts/OscillatorMiniChart";
+import {AdxMiniChart} from "@/components/charts/AdxMiniChart";
 import type {AssetClass} from "@/lib/types";
 import {getDb, isDbAvailable} from "@/lib/db/d1/client";
 import {D1IndicatorRepo} from "@/lib/db/d1/repos";
@@ -23,12 +24,18 @@ type IndicatorPanelData = {
   macdHist: number[];
   stochK: number[];
   stochD: number[];
+  adx: number[];
+  diPlus: number[];
+  diMinus: number[];
   last: {
     rsi_14?: number;
     macd?: number;
     macd_signal?: number;
     stoch_k_14_3?: number;
     stoch_d_14_3?: number;
+    adx_14?: number;
+    di_plus_14?: number;
+    di_minus_14?: number;
   };
 };
 
@@ -78,10 +85,26 @@ async function loadIndicatorPanelData(
       }
     }
 
+    // ADX + DI+ + DI- 도 같은 봉 정합.
+    const adx: number[] = [];
+    const diPlus: number[] = [];
+    const diMinus: number[] = [];
+    for (const r of recent) {
+      if (
+        r.adx_14 !== undefined &&
+        r.di_plus_14 !== undefined &&
+        r.di_minus_14 !== undefined
+      ) {
+        adx.push(r.adx_14);
+        diPlus.push(r.di_plus_14);
+        diMinus.push(r.di_minus_14);
+      }
+    }
+
     // 충분한 데이터 없으면 섹션 hide
     if (rsi.length < 5 && macd.length < 5 && stochK.length < 5) return null;
 
-    return {rsi, macd, macdSignal, macdHist, stochK, stochD, last};
+    return {rsi, macd, macdSignal, macdHist, stochK, stochD, adx, diPlus, diMinus, last};
   } catch {
     return null;
   }
@@ -90,7 +113,7 @@ async function loadIndicatorPanelData(
 export async function IndicatorPanel({symbol}: Props) {
   const data = await loadIndicatorPanelData(symbol);
   if (!data) return null;
-  const {rsi, macd, macdSignal, macdHist, stochK, stochD, last} = data;
+  const {rsi, macd, macdSignal, macdHist, stochK, stochD, adx, diPlus, diMinus, last} = data;
 
   return (
     <section className="mt-6 mb-6">
@@ -102,7 +125,7 @@ export async function IndicatorPanel({symbol}: Props) {
           D1 사전계산 v{INDICATORS_VERSION}
         </span>
       </header>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <OscillatorCard
           label="RSI (14)"
           primary={last.rsi_14}
@@ -138,8 +161,78 @@ export async function IndicatorPanel({symbol}: Props) {
           }
           ariaLabel="Stochastic K D 14 3"
         />
+        <AdxCard
+          primary={last.adx_14}
+          plus={last.di_plus_14}
+          minus={last.di_minus_14}
+          status={adxStatus(last.adx_14)}
+          adx={adx}
+          diPlus={diPlus}
+          diMinus={diMinus}
+        />
       </div>
     </section>
+  );
+}
+
+function adxStatus(v?: number) {
+  if (v === undefined) return null;
+  if (v >= 25) return {label: "추세 강함", tone: "up"} as const;
+  if (v < 20) return {label: "추세 약함", tone: "neutral"} as const;
+  return {label: "중간", tone: "neutral"} as const;
+}
+
+type AdxCardProps = {
+  primary: number | undefined;
+  plus: number | undefined;
+  minus: number | undefined;
+  status: {label: string; tone: "up" | "down" | "neutral"} | null;
+  adx: number[];
+  diPlus: number[];
+  diMinus: number[];
+};
+
+function AdxCard({primary, plus, minus, status, adx, diPlus, diMinus}: AdxCardProps) {
+  const toneClass =
+    status?.tone === "up"
+      ? "text-[var(--color-up)]"
+      : status?.tone === "down"
+      ? "text-[var(--color-down)]"
+      : "text-fg-muted";
+  const direction =
+    plus !== undefined && minus !== undefined
+      ? plus > minus
+        ? "상승 추세"
+        : plus < minus
+        ? "하락 추세"
+        : "—"
+      : "—";
+  return (
+    <article className="rounded-lg border border-line bg-surface/30 p-3">
+      <div className="mb-1 text-[11px] uppercase tracking-wide text-fg-subtle">
+        ADX (14)
+      </div>
+      <div className="mb-1 flex items-baseline gap-2">
+        <span className="text-base font-semibold tabular-nums text-fg">
+          {primary !== undefined ? primary.toFixed(1) : "—"}
+        </span>
+        {status && <span className={`text-xs ${toneClass}`}>{status.label}</span>}
+      </div>
+      <div className="h-14 w-full">
+        <AdxMiniChart
+          adx={adx}
+          plus={diPlus}
+          minus={diMinus}
+          width={200}
+          height={56}
+          className="w-full h-full"
+          ariaLabel="ADX 14 with DI+ / DI-"
+        />
+      </div>
+      <p className="mt-1 text-[10px] text-fg-subtle">
+        DI+ {plus?.toFixed(1) ?? "—"} · DI- {minus?.toFixed(1) ?? "—"} · {direction}
+      </p>
+    </article>
   );
 }
 
