@@ -53,6 +53,14 @@ export const searchIndex: SearchEntry[] = [
   })),
 ];
 
+// (class, symbol) → SearchEntry lookup. 즐겨찾기/최근 본 → SearchEntry 변환에 사용.
+const indexLookup = new Map<string, SearchEntry>();
+for (const e of searchIndex) indexLookup.set(`${e.class}:${e.symbol}`, e);
+
+export function getEntry(cls: AssetClass, symbol: string): SearchEntry | null {
+  return indexLookup.get(`${cls}:${symbol}`) ?? null;
+}
+
 // 초성 검색용 미리 계산된 cho 시퀀스 (nameKo 만 — 한국식 검색 의도).
 // entry index 와 1:1.
 const choIndex: string[] = searchIndex.map((e) =>
