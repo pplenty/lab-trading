@@ -3,7 +3,7 @@ import type {AssetClass, Quote, RankingKind} from "@/lib/types";
 import type {DataAdapter} from "@/lib/adapters/types";
 import {QuoteTable} from "./QuoteTable";
 import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
-import {loadRankingsFromD1} from "@/lib/data/quotes";
+import {loadRankingsFromD1, loadSparklineCloses} from "@/lib/data/quotes";
 
 // 자산군 × 랭킹 종류 공용 페이지 컴포넌트.
 // 각 자산군의 어댑터 (rankings 구현) 위임 + 실패 시 D1 candles 기반 fallback.
@@ -57,6 +57,10 @@ export async function RankingPage({
     }
   }
 
+  // 7일 sparkline — 표 행에 mini chart 인라인 (md+ 노출).
+  const visibleSymbols = quotes.slice(0, 50).map((q) => q.symbol);
+  const sparklines = await loadSparklineCloses(visibleSymbols, 7);
+
   const label = locale === "ko" ? KIND_LABEL[kind].ko : KIND_LABEL[kind].en;
   const assetLabel = locale === "ko" ? t(cls === "crypto" ? "crypto" : cls === "us" ? "us" : "kr") : cls.toUpperCase();
 
@@ -90,7 +94,13 @@ export async function RankingPage({
         />
       )}
 
-      <QuoteTable class={cls} quotes={quotes} nameMap={nameMap} locale={locale} />
+      <QuoteTable
+        class={cls}
+        quotes={quotes}
+        nameMap={nameMap}
+        locale={locale}
+        sparklines={sparklines}
+      />
 
       <footer className="mt-8 border-t border-line pt-4 text-xs text-fg-subtle">
         <p>{tDisc("general")}</p>

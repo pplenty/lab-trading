@@ -156,6 +156,39 @@ export function isQuoteFromD1(quote: Quote | null | undefined): boolean {
 }
 
 /**
+ * 여러 종목의 최근 N 봉 close 가격 — 랭킹 테이블의 sparkline 용.
+ * 비용: 50 종목 × 7 봉 ≈ 350 row D1 SELECT, ~50ms.
+ */
+export async function loadSparklineCloses(
+  symbols: string[],
+  bars: number = 7
+): Promise<Map<string, number[]>> {
+  const out = new Map<string, number[]>();
+  if (symbols.length === 0) return out;
+  if (!(await isDbAvailable())) return out;
+  try {
+    const db = await getDb();
+    const repo = new D1CandleRepo(db);
+    const now = Math.floor(Date.now() / 1000);
+    // 휴장 여유 1.5x — 7 봉이면 ~12 day window 충분.
+    const window = Math.ceil(bars * 1.6);
+    const bySymbol = await repo.recentBySymbols({
+      symbols,
+      from: now - window * DAY_SEC,
+      to: now + DAY_SEC,
+      perSymbol: bars,
+    });
+    for (const [sym, candles] of bySymbol) {
+      // recentBySymbols 는 t 오름차순 정렬해 반환 (repos.ts:172).
+      out.set(sym, candles.map((c) => c.c));
+    }
+    return out;
+  } catch {
+    return out;
+  }
+}
+
+/**
  * 자산군 × 랭킹 종류 D1 합성. adapter.rankings 실패 시 fallback.
  * gainers/losers 는 changePct24h, volume 은 volume24h 기준 정렬.
  */

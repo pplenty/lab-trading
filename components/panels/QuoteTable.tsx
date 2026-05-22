@@ -1,5 +1,6 @@
 import {Link} from "@/i18n/navigation";
 import {FinancialDelta} from "@/components/FinancialDelta";
+import {Sparkline} from "@/components/charts/Sparkline";
 import type {AssetClass, Quote} from "@/lib/types";
 
 // 자산군 시세 / 랭킹 공용 표.
@@ -13,6 +14,8 @@ type Props = {
   /** name lookup — registry 의 한글/영문명. 미제공 시 symbol 만 표시. */
   nameMap?: Record<string, {name: string; nameKo?: string}>;
   locale: string;
+  /** 종목별 최근 N 봉 close — sparkline 컬럼. undefined 면 컬럼 자체 hide. */
+  sparklines?: Map<string, number[]>;
 };
 
 const FORMATTERS = new Map<string, Intl.NumberFormat>();
@@ -36,7 +39,8 @@ const volFmt = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 2,
 });
 
-export function QuoteTable({class: cls, quotes, nameMap, locale}: Props) {
+export function QuoteTable({class: cls, quotes, nameMap, locale, sparklines}: Props) {
+  const hasSparklines = !!sparklines && sparklines.size > 0;
   return (
     <div className="overflow-hidden rounded-lg border border-line">
       <table className="w-full text-sm">
@@ -44,6 +48,11 @@ export function QuoteTable({class: cls, quotes, nameMap, locale}: Props) {
           <tr>
             <th className="px-4 py-2 text-left font-medium">#</th>
             <th className="px-4 py-2 text-left font-medium">Asset</th>
+            {hasSparklines && (
+              <th className="hidden px-4 py-2 text-center font-medium md:table-cell">
+                7d
+              </th>
+            )}
             <th className="px-4 py-2 text-right font-medium">Price</th>
             <th className="px-4 py-2 text-right font-medium">24h Δ</th>
             <th className="hidden px-4 py-2 text-right font-medium sm:table-cell">
@@ -61,7 +70,7 @@ export function QuoteTable({class: cls, quotes, nameMap, locale}: Props) {
           {quotes.length === 0 ? (
             <tr>
               <td
-                colSpan={7}
+                colSpan={hasSparklines ? 8 : 7}
                 className="px-4 py-6 text-center text-fg-muted"
               >
                 No data
@@ -75,6 +84,7 @@ export function QuoteTable({class: cls, quotes, nameMap, locale}: Props) {
                   ? meta.nameKo
                   : meta.name
                 : q.symbol.toUpperCase();
+              const spark = sparklines?.get(q.symbol);
               return (
                 <tr
                   key={`${cls}:${q.symbol}`}
@@ -95,6 +105,22 @@ export function QuoteTable({class: cls, quotes, nameMap, locale}: Props) {
                       </span>
                     </Link>
                   </td>
+                  {hasSparklines && (
+                    <td className="hidden px-4 py-1 md:table-cell">
+                      <div className="flex justify-center">
+                        {spark && spark.length >= 2 ? (
+                          <Sparkline
+                            values={spark}
+                            width={64}
+                            height={22}
+                            ariaLabel={`${name} 7일 추세`}
+                          />
+                        ) : (
+                          <span className="text-fg-subtle text-[10px]">—</span>
+                        )}
+                      </div>
+                    </td>
+                  )}
                   <td className="px-4 py-2 text-right tabular-nums text-fg">
                     {priceFmt(q.currency).format(q.price)}
                   </td>
