@@ -1,18 +1,15 @@
 import {Link} from "@/i18n/navigation";
-import {SymbolPicker} from "./SymbolPicker";
 import type {AssetClass} from "@/lib/types";
 
 // 종목 상세 페이지 헤더 아래 액션 영역.
-// 백테스트 빠른 진입 + 다른 종목으로 빠른 전환 (SymbolPicker) + 자산군 인덱스.
+// 백테스트 빠른 진입 + (Phase 후속) 즐겨찾기 / 알림.
 
 type Props = {
   class: AssetClass;
   symbol: string;
-  /** 현재 종목 표시명 — SymbolPicker 의 button 라벨에 사용. */
-  label?: string;
 };
 
-export function SymbolActions({class: cls, symbol, label}: Props) {
+export function SymbolActions({class: cls, symbol}: Props) {
   return (
     <div className="mb-6 flex flex-wrap items-center gap-2">
       <Link
@@ -22,10 +19,6 @@ export function SymbolActions({class: cls, symbol, label}: Props) {
         <span aria-hidden="true">⚡</span>
         <span>이 종목으로 백테스트</span>
       </Link>
-      <SymbolPicker
-        currentLabel={label ? `${label} · ${symbol.toUpperCase()}` : symbol.toUpperCase()}
-        destination={(e) => `/${e.class}/${e.symbol}`}
-      />
       <Link
         href={`/${cls}`}
         className="inline-flex items-center gap-1 rounded-md border border-line bg-bg px-3 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:border-fg hover:text-fg"

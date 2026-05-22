@@ -21,13 +21,11 @@ const CLASS_LABELS_KO: Record<AssetClass, string> = {
 type Props = {
   /** 현재 선택된 종목 표시명. */
   currentLabel: string;
-  /** 선택 시 이동할 path 빌더. 미지정 시 백테스트 페이지 default. */
-  destination?: (entry: SearchEntry) => string;
-  /** URL 의 strategy/param 등 query 를 다음 진입에서 보존 (백테스트 default 한정). */
+  /** URL 의 strategy/param 등 query 를 다음 진입에서 보존. */
   preserveQuery?: Record<string, string | number>;
 };
 
-export function SymbolPicker({currentLabel, destination, preserveQuery}: Props) {
+export function SymbolPicker({currentLabel, preserveQuery}: Props) {
   const router = useRouter();
   const listboxId = useId();
   const [query, setQuery] = useState("");
@@ -99,21 +97,16 @@ export function SymbolPicker({currentLabel, destination, preserveQuery}: Props) 
   }, [entries]);
 
   function selectEntry(entry: SearchEntry) {
-    if (destination) {
-      router.push(destination(entry));
-    } else {
-      // default — 백테스트 페이지로 preserveQuery 와 함께
-      const params = new URLSearchParams();
-      params.set("asset", entry.class);
-      params.set("symbol", entry.symbol);
-      if (preserveQuery) {
-        for (const [k, v] of Object.entries(preserveQuery)) {
-          if (k === "asset" || k === "symbol") continue;
-          params.set(k, String(v));
-        }
+    const params = new URLSearchParams();
+    params.set("asset", entry.class);
+    params.set("symbol", entry.symbol);
+    if (preserveQuery) {
+      for (const [k, v] of Object.entries(preserveQuery)) {
+        if (k === "asset" || k === "symbol") continue;
+        params.set(k, String(v));
       }
-      router.push(`/backtest/new?${params.toString()}`);
     }
+    router.push(`/backtest/new?${params.toString()}`);
     setOpen(false);
     setQuery("");
   }
