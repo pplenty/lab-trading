@@ -1,5 +1,5 @@
 import {getTranslations} from "next-intl/server";
-import {notFound} from "next/navigation";
+import {notFound, redirect} from "next/navigation";
 import {loadCandleSeries} from "@/lib/data/candles";
 import {loadComparisonFromCache, type ComparisonRow} from "@/lib/data/backtest-cache";
 import {loadIndicatorsForCandles} from "@/lib/data/indicators";
@@ -27,6 +27,14 @@ type Props = {
 export default async function BacktestNewPage({params, searchParams}: Props) {
   const {locale} = await params;
   const sp = await searchParams;
+
+  // 빈 URL (asset/symbol 없음) → default 종목 명시 URL 로 redirect.
+  // Next 16 + opennextjs/cloudflare 의 ISR cache + catch-all 라우팅 mismatch 우회
+  // (빈 searchParams 가 catch-all 로 잘못 매칭돼 404 stuck cache 패턴).
+  if (sp.asset === undefined && sp.symbol === undefined) {
+    redirect(`/${locale}/backtest/new?asset=crypto&symbol=btc`);
+  }
+
   const assetParam = sp.asset;
   const assetClass: AssetClass =
     assetParam === "us" || assetParam === "kr" ? assetParam : "crypto";
