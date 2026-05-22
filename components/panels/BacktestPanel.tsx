@@ -8,6 +8,7 @@ import type {Candle, AssetClass, IndicatorRow} from "@/lib/types";
 import {BacktestResultCard} from "./BacktestResultCard";
 import {SaveStrategyButton} from "./SaveStrategyButton";
 import {CopyResultUrlButton} from "./CopyResultUrlButton";
+import {SymbolPicker} from "./SymbolPicker";
 
 // 6 preset 별 icon + 짧은 캐치프레이즈. 카드 grid 의 빠른 직관 인식.
 const STRATEGY_META: Record<
@@ -171,13 +172,17 @@ export function BacktestPanel({
   return (
     <div className="flex flex-col gap-6">
       <section className="rounded-lg border border-line bg-surface/30 p-4">
-        {/* Step 1 — 자산 + 자본 (read-only) */}
-        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-3">
-          <div className="text-xs text-fg-subtle">
-            <span className="font-semibold uppercase tracking-wider">대상</span>{" "}
-            <span className="ml-2 tabular-nums text-fg">
-              {symbolLabel ?? symbol.toUpperCase()}
-            </span>
+        {/* Step 1 — 자산 selector + 자본 (read-only) */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b border-line pb-3">
+          <div className="flex items-center gap-2 text-xs text-fg-subtle">
+            <span className="font-semibold uppercase tracking-wider">대상</span>
+            <SymbolPicker
+              currentLabel={`${symbolLabel ?? symbol.toUpperCase()} · ${symbol.toUpperCase()}`}
+              preserveQuery={{
+                strategy: strategyId,
+                ...params,
+              }}
+            />
           </div>
           <div className="text-xs text-fg-subtle">
             <span className="font-semibold uppercase tracking-wider">초기 자본</span>{" "}
