@@ -1,6 +1,6 @@
 "use client";
 
-import {useMemo, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import {Anchor, TrendingUp, Repeat, Mountain, Activity, GitBranch} from "lucide-react";
 import {runBacktest} from "@/lib/backtest/run";
 import {strategies, getStrategy} from "@/lib/backtest/strategies/registry";
@@ -79,10 +79,16 @@ export function BacktestPanel({
     setParams(defaultParams);
   }
 
-  const result = useMemo(() => {
-    if (!strategy || candles.length < 2) return null;
+  // 선택된 전략 결과 — useMemo 도 RSC SSR pass 에서 실행되므로 useEffect 로 회피.
+  // SSR HTML 엔 결과 placeholder (loading), client hydration 직후 채움.
+  const [result, setResult] = useState<ReturnType<typeof runBacktest> | null>(null);
+  useEffect(() => {
+    if (!strategy || candles.length < 2) {
+      setResult(null);
+      return;
+    }
     try {
-      return runBacktest({
+      const r = runBacktest({
         symbol,
         class: cls,
         candles,
@@ -94,37 +100,57 @@ export function BacktestPanel({
         slippagePct: SLIPPAGE_PCT,
         fillModel: "next-open",
       });
+      setResult(r);
     } catch (err) {
       console.error("runBacktest failed:", err);
-      return null;
+      setResult(null);
     }
   }, [strategy, candles, indicators, symbol, cls, strategyId, params]);
 
   // 모든 전략 default 파라미터 결과 — "다른 전략은 어땠을까" 한 줄 비교.
-  // 같은 (candles, indicators) 의존이라 다른 strategy 만 변경. 비용 ~5-15ms × 6 = OK.
-  const allResults = useMemo(() => {
-    if (candles.length < 2) return [];
-    return strategies.map((s) => {
-      const defaults: Record<string, number> = {};
-      for (const p of s.params) defaults[p.key] = p.default;
-      try {
-        const r = runBacktest({
-          symbol,
-          class: cls,
-          candles,
-          indicators,
-          strategyId: s.id,
-          params: defaults,
-          initialCapital: INITIAL_CAPITAL,
-          feePct: FEE_PCT,
-          slippagePct: SLIPPAGE_PCT,
-          fillModel: "next-open",
-        });
-        return {id: s.id, nameKo: s.nameKo, pct: r.metrics.totalReturnPct};
-      } catch {
-        return {id: s.id, nameKo: s.nameKo, pct: null as number | null};
-      }
-    });
+  // **SSR 회피** — useMemo 는 RSC SSR pass 에서도 실행돼 6 × 200봉 simulation 이
+  // cold start 50ms CPU 한도 trigger (Error 1102). useEffect 로 client hydration
+  // 이후 계산 → SSR HTML 엔 빈 상태로 들어가고 client 측에서 채움.
+  const [allResults, setAllResults] = useState<
+    Array<{id: string; nameKo: string; pct: number | null}>
+  >([]);
+  useEffect(() => {
+    if (candles.length < 2) {
+      setAllResults([]);
+      return;
+    }
+    // requestIdleCallback 활용 가능 시 main thread 양보 — 미지원 환경은 즉시.
+    const compute = () => {
+      const out = strategies.map((s) => {
+        const defaults: Record<string, number> = {};
+        for (const p of s.params) defaults[p.key] = p.default;
+        try {
+          const r = runBacktest({
+            symbol,
+            class: cls,
+            candles,
+            indicators,
+            strategyId: s.id,
+            params: defaults,
+            initialCapital: INITIAL_CAPITAL,
+            feePct: FEE_PCT,
+            slippagePct: SLIPPAGE_PCT,
+            fillModel: "next-open",
+          });
+          return {id: s.id, nameKo: s.nameKo, pct: r.metrics.totalReturnPct};
+        } catch {
+          return {id: s.id, nameKo: s.nameKo, pct: null as number | null};
+        }
+      });
+      setAllResults(out);
+    };
+    const ric = (window as unknown as {requestIdleCallback?: (cb: () => void) => number})
+      .requestIdleCallback;
+    if (typeof ric === "function") {
+      ric(compute);
+    } else {
+      setTimeout(compute, 0);
+    }
   }, [candles, indicators, symbol, cls]);
 
   const currencyFmt = useMemo(
@@ -326,10 +352,14 @@ export function BacktestPanel({
           currency={currency}
           candles={candles}
         />
-      ) : (
+      ) : candles.length < 2 ? (
         <p className="rounded-md border border-line bg-surface p-4 text-sm text-fg-muted">
           데이터가 부족해 백테스트를 실행할 수 없습니다.
         </p>
+      ) : (
+        <div className="rounded-md border border-line bg-surface/30 p-6 text-center text-sm text-fg-muted">
+          <span className="inline-block animate-pulse">백테스트 실행 중…</span>
+        </div>
       )}
     </div>
   );
