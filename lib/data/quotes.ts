@@ -8,6 +8,7 @@ import {kisAdapter} from "@/lib/adapters/kis";
 import type {DataAdapter} from "@/lib/adapters/types";
 import type {Candle} from "@/lib/types";
 import {getQuoteCache, setQuoteCache} from "@/lib/cache/quote-kv";
+import {getKvJson, setKvJson} from "@/lib/cache/kv-json";
 
 // adapter 실시간 quote 가 외부 API 한도·차단으로 실패할 때 D1 의 최근 candle 로
 // quote 를 합성하는 fallback. backfill 가 채운 D1 가 있으면 어제 종가 + 24h delta 까지 노출 가능.
@@ -165,6 +166,15 @@ export async function loadSparklineCloses(
 ): Promise<Map<string, number[]>> {
   const out = new Map<string, number[]>();
   if (symbols.length === 0) return out;
+
+  // KV cache 300s — symbol set 해시 기반 key. 같은 set 호출은 D1 query 회피.
+  const key = `spark:${bars}:${[...symbols].sort().join(",").slice(0, 200)}`;
+  const hit = await getKvJson<Record<string, number[]>>(key);
+  if (hit) {
+    for (const [s, vals] of Object.entries(hit)) out.set(s, vals);
+    return out;
+  }
+
   if (!(await isDbAvailable())) return out;
   try {
     const db = await getDb();
@@ -182,6 +192,10 @@ export async function loadSparklineCloses(
       // recentBySymbols 는 t 오름차순 정렬해 반환 (repos.ts:172).
       out.set(sym, candles.map((c) => c.c));
     }
+    // fire-and-forget KV put — 다음 진입 시 D1 query skip.
+    const objForKv: Record<string, number[]> = {};
+    for (const [s, v] of out) objForKv[s] = v;
+    setKvJson(key, objForKv, {ttlSeconds: 300}).catch(() => {});
     return out;
   } catch {
     return out;
@@ -198,6 +212,11 @@ export async function loadRankingsFromD1(opts: {
   kind: RankingKind;
   limit?: number;
 }): Promise<Quote[]> {
+  // KV cache 300s — ISR revalidate=300 와 일치. D1 batch 부하 시 503 안전망.
+  const key = `rank:${opts.asset}:${opts.kind}:${opts.limit ?? 50}`;
+  const hit = await getKvJson<Quote[]>(key);
+  if (hit) return hit;
+
   const quotes = await loadQuotesFromD1(opts.asset, opts.symbols);
   const sorted = (() => {
     switch (opts.kind) {
@@ -215,5 +234,8 @@ export async function loadRankingsFromD1(opts: {
         );
     }
   })();
-  return sorted.slice(0, opts.limit ?? 50);
+  const result = sorted.slice(0, opts.limit ?? 50);
+  // fire-and-forget put — 응답 영향 X.
+  setKvJson(key, result, {ttlSeconds: 300}).catch(() => {});
+  return result;
 }
