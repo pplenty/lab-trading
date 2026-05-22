@@ -1,3 +1,4 @@
+import {fetchWithTimeout} from "./_fetch";
 import type {
   Asset,
   Candle,
@@ -137,7 +138,7 @@ export const binanceAdapter: DataAdapter = {
   async getQuote(symbol: Symbol): Promise<Quote> {
     const entry = registryEntry(symbol);
     const url = `${BASE_URL}/api/v3/ticker/24hr?symbol=${entry.binancePair}`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) {
       throw new Error(`binance.getQuote ${symbol}: HTTP ${res.status}`);
     }
@@ -152,7 +153,7 @@ export const binanceAdapter: DataAdapter = {
     const pairs = limited.map((e) => e.binancePair);
     const symbolsParam = encodeURIComponent(JSON.stringify(pairs));
     const url = `${BASE_URL}/api/v3/ticker/24hr?symbols=${symbolsParam}`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) {
       throw new Error(`binance.listQuotes: HTTP ${res.status}`);
     }
@@ -180,7 +181,7 @@ export const binanceAdapter: DataAdapter = {
     if (opts.to !== undefined) params.set("endTime", String(opts.to * 1000));
 
     const url = `${BASE_URL}/api/v3/klines?${params}`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) {
       throw new Error(`binance.getCandles ${symbol}: HTTP ${res.status}`);
     }

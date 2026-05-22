@@ -1,3 +1,4 @@
+import {fetchWithTimeout} from "./_fetch";
 import type {
   Asset,
   Candle,
@@ -107,7 +108,7 @@ async function getAccessToken(): Promise<string> {
     return kvToken.token;
   }
   // 3) 신규 발급
-  const res = await fetch(`${kisBaseUrl()}/oauth2/tokenP`, {
+  const res = await fetchWithTimeout(`${kisBaseUrl()}/oauth2/tokenP`, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({
@@ -204,7 +205,7 @@ async function liveGetQuote(symbol: Symbol): Promise<Quote> {
   if (!entry) throw new Error(`kis: unknown symbol ${symbol}`);
   const token = await getAccessToken();
   const url = `${kisBaseUrl()}/uapi/domestic-stock/v1/quotations/inquire-price?fid_cond_mrkt_div_code=J&fid_input_iscd=${entry.ticker}`;
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     headers: kisAuthHeaders(token, "FHKST01010100"),
   });
   if (!res.ok) {
@@ -246,7 +247,7 @@ async function liveGetCandles(
     fid_org_adj_prc: "0", // 수정주가 미적용 (Phase 2 에 옵션화)
   });
   const url = `${kisBaseUrl()}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice?${params}`;
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     headers: kisAuthHeaders(token, "FHKST03010100"),
   });
   if (!res.ok) {

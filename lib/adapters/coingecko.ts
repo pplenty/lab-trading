@@ -1,3 +1,4 @@
+import {fetchWithTimeout} from "./_fetch";
 import type {
   Asset,
   Candle,
@@ -99,7 +100,7 @@ export const coingeckoAdapter: DataAdapter = {
     if (!entry) throw new Error(`coingecko: unknown symbol ${symbol}`);
     // 단일 ticker 도 /coins/markets?ids= 로 호출 — `/simple/price` 보다 풍부.
     const url = `${BASE_URL}/coins/markets?vs_currency=usd&ids=${entry.cgId}`;
-    const res = await fetch(url, {headers: apiHeaders()});
+    const res = await fetchWithTimeout(url, {headers: apiHeaders()});
     if (!res.ok) {
       throw new Error(`coingecko.getQuote ${symbol}: HTTP ${res.status}`);
     }
@@ -116,7 +117,7 @@ export const coingeckoAdapter: DataAdapter = {
       .map((e) => e.cgId)
       .join(",");
     const url = `${BASE_URL}/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc`;
-    const res = await fetch(url, {headers: apiHeaders()});
+    const res = await fetchWithTimeout(url, {headers: apiHeaders()});
     if (!res.ok) {
       throw new Error(`coingecko.listQuotes: HTTP ${res.status}`);
     }
@@ -141,7 +142,7 @@ export const coingeckoAdapter: DataAdapter = {
     }
     const days = Math.min(opts.limit ?? 365, 365);
     const url = `${BASE_URL}/coins/${entry.cgId}/ohlc?vs_currency=usd&days=${days}`;
-    const res = await fetch(url, {headers: apiHeaders()});
+    const res = await fetchWithTimeout(url, {headers: apiHeaders()});
     if (!res.ok) {
       throw new Error(`coingecko.getCandles ${symbol}: HTTP ${res.status}`);
     }

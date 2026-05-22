@@ -1,3 +1,4 @@
+import {fetchWithTimeout} from "./_fetch";
 import type {
   Asset,
   Candle,
@@ -48,7 +49,7 @@ async function callTwelve<T>(
   label: string
 ): Promise<T> {
   params.set("apikey", process.env.TWELVE_DATA_API_KEY!);
-  const res = await fetch(`${BASE_URL}${endpoint}?${params}`);
+  const res = await fetchWithTimeout(`${BASE_URL}${endpoint}?${params}`);
   if (!res.ok) {
     throw new Error(`twelve-data.${label}: HTTP ${res.status}`);
   }

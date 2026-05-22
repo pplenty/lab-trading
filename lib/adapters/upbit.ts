@@ -1,3 +1,4 @@
+import {fetchWithTimeout} from "./_fetch";
 import type {
   Asset,
   Candle,
@@ -127,7 +128,7 @@ export const upbitAdapter: DataAdapter = {
   async getQuote(symbol: Symbol): Promise<Quote> {
     const entry = registryEntry(symbol);
     const url = `${BASE_URL}/v1/ticker?markets=${entry.upbitMarket}`;
-    const res = await fetch(url, {headers: {Accept: "application/json"}});
+    const res = await fetchWithTimeout(url, {headers: {Accept: "application/json"}});
     if (!res.ok) {
       throw new Error(`upbit.getQuote ${symbol}: HTTP ${res.status}`);
     }
@@ -143,7 +144,7 @@ export const upbitAdapter: DataAdapter = {
     const limited = opts?.limit ? entries.slice(0, opts.limit) : entries;
     const markets = limited.map((e) => e.upbitMarket).join(",");
     const url = `${BASE_URL}/v1/ticker?markets=${markets}`;
-    const res = await fetch(url, {headers: {Accept: "application/json"}});
+    const res = await fetchWithTimeout(url, {headers: {Accept: "application/json"}});
     if (!res.ok) {
       throw new Error(`upbit.listQuotes: HTTP ${res.status}`);
     }
@@ -170,7 +171,7 @@ export const upbitAdapter: DataAdapter = {
       params.set("to", new Date(opts.to * 1000).toISOString());
     }
     const url = `${BASE_URL}/v1/candles/days?${params}`;
-    const res = await fetch(url, {headers: {Accept: "application/json"}});
+    const res = await fetchWithTimeout(url, {headers: {Accept: "application/json"}});
     if (!res.ok) {
       throw new Error(`upbit.getCandles ${symbol}: HTTP ${res.status}`);
     }
