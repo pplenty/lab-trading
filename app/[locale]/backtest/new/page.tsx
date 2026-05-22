@@ -1,6 +1,7 @@
 import {getTranslations} from "next-intl/server";
 import {notFound} from "next/navigation";
 import {loadCandleSeries} from "@/lib/data/candles";
+import {loadComparisonFromCache, type ComparisonRow} from "@/lib/data/backtest-cache";
 import {loadIndicatorsForCandles} from "@/lib/data/indicators";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {
@@ -14,6 +15,9 @@ import type {AssetClass, Candle, CandleSeries} from "@/lib/types";
 // 백테스트 작업장 — `/backtest/new?asset=crypto&symbol=btc` URL params 로 종목 prefill.
 // 활성: crypto (Upbit KRW 라이브) + us (Twelve Data) + kr (KIS). us / kr 은 키 미발급 시 demo GBM 자동 분기.
 // candles 는 server (RSC) 가 fetch 해 BacktestPanel client 컴포넌트로 전달 (ADR-0019).
+
+// 60s ISR — searchParams 분기 dynamic SSR + 실패 캐시 빠른 회복 (CF Workers cold start 안전망).
+export const revalidate = 60;
 
 type Props = {
   params: Promise<{locale: string}>;
@@ -121,6 +125,14 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
   // D1 사전계산 indicators — strategy 가 자체 계산 대신 D1 값 우선 사용 (ADR-0021).
   const indicators = await loadIndicatorsForCandles(symbol, candles);
 
+  // 6 전략 비교 KV cache — hit 면 server-side 즉시 prop, miss 면 null (client 가 채움).
+  // SSR cold start 의 6 backtest 비용 회피 (Worker CPU 한도 안전망).
+  let comparisonCache: ComparisonRow[] | null = null;
+  if (candles.length >= 2) {
+    const lastT = candles[candles.length - 1].t;
+    comparisonCache = await loadComparisonFromCache(assetClass, symbol, lastT);
+  }
+
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
       <header className="mb-6">
@@ -185,6 +197,7 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
             Object.keys(initialParams).length > 0 ? initialParams : undefined
           }
           symbolLabel={displayName}
+          initialComparison={comparisonCache ?? undefined}
         />
       ) : !fetchError ? (
         <p className="rounded-md border border-line bg-surface p-4 text-sm text-fg-muted">

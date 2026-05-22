@@ -42,6 +42,8 @@ type Props = {
   initialParams?: Record<string, number>;
   /** 종목 표시명 — "전략 저장" 의 디폴트 라벨에 사용. */
   symbolLabel?: string;
+  /** server KV cache 에서 미리 받은 6 전략 비교 — null 면 client 가 useEffect 로 채움. */
+  initialComparison?: Array<{id: string; nameKo: string; pct: number | null}>;
 };
 
 export function BacktestPanel({
@@ -53,6 +55,7 @@ export function BacktestPanel({
   initialStrategyId,
   initialParams,
   symbolLabel,
+  initialComparison,
 }: Props) {
   const [strategyId, setStrategyId] = useState<string>(
     initialStrategyId ?? "buy-and-hold"
@@ -113,8 +116,10 @@ export function BacktestPanel({
   // 이후 계산 → SSR HTML 엔 빈 상태로 들어가고 client 측에서 채움.
   const [allResults, setAllResults] = useState<
     Array<{id: string; nameKo: string; pct: number | null}>
-  >([]);
+  >(initialComparison ?? []);
   useEffect(() => {
+    // server-side KV cache hit → 이미 채워짐. client compute skip.
+    if (initialComparison && initialComparison.length > 0) return;
     if (candles.length < 2) {
       setAllResults([]);
       return;
