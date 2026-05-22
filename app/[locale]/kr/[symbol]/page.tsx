@@ -181,7 +181,11 @@ export default async function KrSymbolPage({params, searchParams}: PageProps) {
         )}
       </header>
 
-      <SymbolActions class="kr" symbol={entry.symbol} />
+      <SymbolActions
+        class="kr"
+        symbol={entry.symbol}
+        label={entry.nameKo ?? entry.name}
+      />
 
       <D1FallbackBadge quote={quote} variant="banner" />
 
