@@ -1,7 +1,7 @@
 import {getTranslations} from "next-intl/server";
 
 export const revalidate = 300;
-import {loadQuotesList} from "@/lib/data/quotes";
+import {loadQuotesList, loadSparklineCloses} from "@/lib/data/quotes";
 import {krRegistry} from "@/lib/symbols/registry";
 import {QuoteTable} from "@/components/panels/QuoteTable";
 import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
@@ -38,6 +38,9 @@ export default async function KrIndexPage({params}: Props) {
   for (const e of krRegistry) {
     nameMap[e.symbol] = {name: e.name, nameKo: e.nameKo};
   }
+
+  // 7일 sparkline — 표 행에 mini chart
+  const sparklines = await loadSparklineCloses(quotes.map((q) => q.symbol), 7);
 
   const isDemo = quotes[0]?.source.includes("demo") ?? true;
   const krLabel = t("kr").replace(" (Phase 1.5)", "");
@@ -85,7 +88,7 @@ export default async function KrIndexPage({params}: Props) {
         />
       )}
 
-      <QuoteTable class="kr" quotes={quotes} nameMap={nameMap} locale={locale} />
+      <QuoteTable class="kr" quotes={quotes} nameMap={nameMap} locale={locale} sparklines={sparklines} />
 
       <footer className="mt-8 border-t border-line pt-4 text-xs text-fg-subtle">
         <p>{tDisc("general")}</p>

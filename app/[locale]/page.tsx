@@ -1,5 +1,5 @@
 import {getTranslations} from "next-intl/server";
-import {loadQuotesList} from "@/lib/data/quotes";
+import {loadQuotesList, loadSparklineCloses} from "@/lib/data/quotes";
 
 // 5분 ISR — Next.js 가 HTML 자체 캐시. 같은 worker 인스턴스 fast path.
 // quotes 갱신 주기 (cron 5분) 와 동기화.
@@ -77,6 +77,19 @@ export default async function HomePage({
   const usDemo = us.quotes[0]?.source.includes("demo") ?? true;
   const krDemo = kr.quotes[0]?.source.includes("demo") ?? true;
 
+  // 7일 sparkline — top mover 6 종목 × 3 자산군 = 18. 1 query 각.
+  const topSymbols = (qs: typeof crypto.quotes) => {
+    const sorted = [...qs].sort(
+      (a, b) => (b.changePct24h ?? 0) - (a.changePct24h ?? 0)
+    );
+    return [...sorted.slice(0, 3), ...sorted.slice(-3)].map((q) => q.symbol);
+  };
+  const [cryptoSparks, usSparks, krSparks] = await Promise.all([
+    loadSparklineCloses(topSymbols(crypto.quotes), 7),
+    loadSparklineCloses(topSymbols(us.quotes), 7),
+    loadSparklineCloses(topSymbols(kr.quotes), 7),
+  ]);
+
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10 sm:py-12">
       <script
@@ -110,6 +123,7 @@ export default async function HomePage({
             sourceLabel="Upbit · KRW"
             isDemo={cryptoDemo}
             fetchError={crypto.error}
+            sparklines={cryptoSparks}
           />
           <AssetClassCard
             class="us"
@@ -121,6 +135,7 @@ export default async function HomePage({
             sourceLabel="Twelve Data · USD"
             isDemo={usDemo}
             fetchError={us.error}
+            sparklines={usSparks}
           />
           <AssetClassCard
             class="kr"
@@ -132,6 +147,7 @@ export default async function HomePage({
             sourceLabel="KIS · KRW"
             isDemo={krDemo}
             fetchError={kr.error}
+            sparklines={krSparks}
           />
         </div>
       </section>

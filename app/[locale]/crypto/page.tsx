@@ -1,7 +1,7 @@
 import {getTranslations} from "next-intl/server";
 
 export const revalidate = 300;
-import {loadQuotesList} from "@/lib/data/quotes";
+import {loadQuotesList, loadSparklineCloses} from "@/lib/data/quotes";
 import {cryptoRegistry} from "@/lib/symbols/registry";
 import {QuoteTable} from "@/components/panels/QuoteTable";
 import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
@@ -39,6 +39,9 @@ export default async function CryptoIndexPage({params}: Props) {
   for (const e of cryptoRegistry) {
     nameMap[e.symbol] = {name: e.name, nameKo: e.nameKo};
   }
+
+  // 7일 sparkline — 표 행에 mini chart
+  const sparklines = await loadSparklineCloses(quotes.map((q) => q.symbol), 7);
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
@@ -78,7 +81,7 @@ export default async function CryptoIndexPage({params}: Props) {
         />
       )}
 
-      <QuoteTable class="crypto" quotes={quotes} nameMap={nameMap} locale={locale} />
+      <QuoteTable class="crypto" quotes={quotes} nameMap={nameMap} locale={locale} sparklines={sparklines} />
 
       <footer className="mt-8 border-t border-line pt-4 text-xs text-fg-subtle">
         <p>{tDisc("general")}</p>

@@ -1,5 +1,6 @@
 import {Link} from "@/i18n/navigation";
 import {FinancialDelta} from "@/components/FinancialDelta";
+import {Sparkline} from "@/components/charts/Sparkline";
 import type {AssetClass, Quote} from "@/lib/types";
 
 // 대시보드의 자산군 1개 카드.
@@ -21,6 +22,8 @@ type Props = {
   isDemo?: boolean;
   /** fetch 실패 메시지 (있을 때만). */
   fetchError?: string | null;
+  /** 종목별 최근 7봉 close — top movers 행 옆에 sparkline. */
+  sparklines?: Map<string, number[]>;
 };
 
 function priceFmt(currency: string): Intl.NumberFormat {
@@ -52,6 +55,7 @@ export function AssetClassCard({
   sourceLabel,
   isDemo,
   fetchError,
+  sparklines,
 }: Props) {
   const gainers = [...quotes]
     .sort((a, b) => b.changePct24h - a.changePct24h)
@@ -88,6 +92,7 @@ export function AssetClassCard({
             cls={cls}
             nameMap={nameMap}
             locale={locale}
+            sparklines={sparklines}
           />
           <MoverList
             heading="Top losers"
@@ -95,6 +100,7 @@ export function AssetClassCard({
             cls={cls}
             nameMap={nameMap}
             locale={locale}
+            sparklines={sparklines}
           />
         </div>
       )}
@@ -117,12 +123,14 @@ function MoverList({
   cls,
   nameMap,
   locale,
+  sparklines,
 }: {
   heading: string;
   quotes: Quote[];
   cls: AssetClass;
   nameMap: Props["nameMap"];
   locale: string;
+  sparklines?: Map<string, number[]>;
 }) {
   return (
     <div>
@@ -133,28 +141,40 @@ function MoverList({
         {quotes.length === 0 ? (
           <li className="px-2 py-1 text-xs text-fg-subtle">—</li>
         ) : (
-          quotes.map((q) => (
-            <li key={q.symbol}>
-              <Link
-                href={`/${cls}/${q.symbol}`}
-                prefetch={false}
-                className="flex items-center justify-between gap-2 rounded-md px-2 py-1 text-xs transition-colors hover:bg-surface"
-              >
-                <span className="truncate font-medium text-fg">
-                  {pickName(q, nameMap, locale)}
-                  <span className="ml-1.5 text-fg-subtle">
-                    {q.symbol.toUpperCase()}
+          quotes.map((q) => {
+            const spark = sparklines?.get(q.symbol);
+            return (
+              <li key={q.symbol}>
+                <Link
+                  href={`/${cls}/${q.symbol}`}
+                  prefetch={false}
+                  className="flex items-center justify-between gap-2 rounded-md px-2 py-1 text-xs transition-colors hover:bg-surface"
+                >
+                  <span className="truncate font-medium text-fg">
+                    {pickName(q, nameMap, locale)}
+                    <span className="ml-1.5 text-fg-subtle">
+                      {q.symbol.toUpperCase()}
+                    </span>
                   </span>
-                </span>
-                <span className="flex items-center gap-2 tabular-nums">
-                  <span className="text-fg-muted">
-                    {priceFmt(q.currency).format(q.price)}
+                  <span className="flex items-center gap-2 tabular-nums">
+                    {spark && spark.length >= 2 && (
+                      <Sparkline
+                        values={spark}
+                        width={40}
+                        height={16}
+                        ariaLabel={`${q.symbol} 7일 추세`}
+                        className="opacity-80"
+                      />
+                    )}
+                    <span className="text-fg-muted">
+                      {priceFmt(q.currency).format(q.price)}
+                    </span>
+                    <FinancialDelta changePct={q.changePct24h} digits={2} />
                   </span>
-                  <FinancialDelta changePct={q.changePct24h} digits={2} />
-                </span>
-              </Link>
-            </li>
-          ))
+                </Link>
+              </li>
+            );
+          })
         )}
       </ul>
     </div>
