@@ -1,7 +1,9 @@
 import nextDynamic from "next/dynamic";
+import {TrendingUp, Zap, ArrowDownToLine, BarChart3, Target, Trophy, Repeat, Clock} from "lucide-react";
 import {FinancialDelta} from "@/components/FinancialDelta";
 import {LineChart, type LineSeries} from "@/components/charts/LineChart";
 import {DrawdownChart} from "@/components/charts/DrawdownChart";
+import {MonthlyReturnsHeatmap} from "@/components/charts/MonthlyReturnsHeatmap";
 import {TradesTable} from "./TradesTable";
 import type {BacktestResult} from "@/lib/backtest/types";
 import type {Candle} from "@/lib/types";
@@ -128,23 +130,59 @@ export function BacktestResultCard({result, initialCapital, currency, candles}: 
 
       <section className="grid gap-3 sm:grid-cols-4">
         <Stat
-          label="Total Return"
+          Icon={TrendingUp}
+          label="총 수익률"
+          hint="전체 기간 누적"
           value={fmtPct(m.totalReturnPct)}
-          tone={
-            m.totalReturnPct > 0 ? "up" : m.totalReturnPct < 0 ? "down" : "neutral"
-          }
+          tone={m.totalReturnPct > 0 ? "up" : m.totalReturnPct < 0 ? "down" : "neutral"}
         />
-        <Stat label="CAGR" value={fmtPct(m.cagrPct)} />
         <Stat
+          Icon={Zap}
+          label="CAGR"
+          hint="연복리 수익률"
+          value={fmtPct(m.cagrPct)}
+          tone={m.cagrPct > 0 ? "up" : m.cagrPct < 0 ? "down" : "neutral"}
+        />
+        <Stat
+          Icon={ArrowDownToLine}
           label="MDD"
+          hint="최대 낙폭"
           value={`-${m.mddPct.toFixed(2)}%`}
           tone={m.mddPct > 0 ? "down" : "neutral"}
         />
-        <Stat label="Sharpe" value={m.sharpe.toFixed(2)} />
-        <Stat label="Sortino" value={m.sortino.toFixed(2)} />
-        <Stat label="Win Rate" value={fmtPct(m.winRatePct)} />
-        <Stat label="Trades" value={String(m.tradeCount)} />
-        <Stat label="Avg Hold" value={`${m.avgHoldDays.toFixed(1)}d`} />
+        <Stat
+          Icon={BarChart3}
+          label="Sharpe"
+          hint="위험조정 수익률"
+          value={m.sharpe.toFixed(2)}
+          tone={m.sharpe > 1 ? "up" : m.sharpe < 0 ? "down" : "neutral"}
+        />
+        <Stat
+          Icon={Target}
+          label="Sortino"
+          hint="하방위험조정"
+          value={m.sortino.toFixed(2)}
+          tone={m.sortino > 1 ? "up" : m.sortino < 0 ? "down" : "neutral"}
+        />
+        <Stat
+          Icon={Trophy}
+          label="승률"
+          hint="수익 거래 비율"
+          value={fmtPct(m.winRatePct, 1)}
+          tone={m.winRatePct > 50 ? "up" : m.winRatePct < 40 ? "down" : "neutral"}
+        />
+        <Stat
+          Icon={Repeat}
+          label="거래 횟수"
+          hint="round-trip"
+          value={String(m.tradeCount)}
+        />
+        <Stat
+          Icon={Clock}
+          label="평균 보유"
+          hint="포지션 지속 일수"
+          value={`${m.avgHoldDays.toFixed(1)}일`}
+        />
       </section>
 
       <section className="rounded-lg border border-line bg-surface/30 p-4">
@@ -249,30 +287,68 @@ export function BacktestResultCard({result, initialCapital, currency, candles}: 
         </section>
       )}
 
+      {/* 월별 수익률 heatmap — 시즌별 강세/약세 한 눈 시각화 */}
+      <MonthlyReturnsHeatmap
+        equity={result.equityCurve}
+        initialCapital={initialCapital}
+      />
+
       <TradesTable trades={result.trades} currency={currency} maxRows={20} />
     </div>
   );
 }
 
 function Stat({
+  Icon,
   label,
+  hint,
   value,
   tone,
 }: {
+  Icon?: typeof TrendingUp;
   label: string;
+  hint?: string;
   value: string;
   tone?: "up" | "down" | "neutral";
 }) {
   const colorClass =
-    tone === "up" ? "text-up" : tone === "down" ? "text-down" : "text-fg";
+    tone === "up"
+      ? "text-[var(--color-up)]"
+      : tone === "down"
+      ? "text-[var(--color-down)]"
+      : "text-fg";
+  const borderClass =
+    tone === "up"
+      ? "border-[var(--color-up)]/30"
+      : tone === "down"
+      ? "border-[var(--color-down)]/30"
+      : "border-line";
   return (
-    <div className="rounded-md border border-line bg-bg p-3">
-      <div className="text-[10px] uppercase tracking-wider text-fg-subtle">
-        {label}
+    <div className={`rounded-md border ${borderClass} bg-bg p-3 transition-colors`}>
+      <div className="flex items-center gap-1.5">
+        {Icon && (
+          <Icon
+            size={12}
+            className={
+              tone === "up"
+                ? "text-[var(--color-up)]"
+                : tone === "down"
+                ? "text-[var(--color-down)]"
+                : "text-fg-subtle"
+            }
+            aria-hidden="true"
+          />
+        )}
+        <div className="text-[10px] uppercase tracking-wider text-fg-subtle">
+          {label}
+        </div>
       </div>
-      <div className={`mt-1 text-lg font-medium tabular-nums ${colorClass}`}>
+      <div className={`mt-1 text-lg font-semibold tabular-nums ${colorClass}`}>
         {value}
       </div>
+      {hint && (
+        <div className="mt-0.5 text-[10px] text-fg-subtle">{hint}</div>
+      )}
     </div>
   );
 }
