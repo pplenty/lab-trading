@@ -1,11 +1,13 @@
 import type {KVNamespace} from "@cloudflare/workers-types";
 import type {Quote} from "@/lib/types";
 
-// loadQuote KV cache layer — Upbit/Twelve Data/KIS 외부 API 호출 결과 60s 캐시.
+// loadQuote KV cache layer — Upbit/Twelve Data/KIS 외부 API 호출 결과 캐시.
 // 종목 상세 SSR 의 TTFB 외부 quote 부분을 200-500ms → ~5ms (KV hit) 로 단축.
-// revalidate=60 ISR 보다 짧은 TTL — ISR cache hit 안 풀려도 KV miss 시 fresh 1회만 외부 호출.
+//
+// TTL 180s — KR cold start 시 KIS API hang (5-13s) 안전망. 일봉 컨텍스트라 3분 stale OK.
+// 종목 상세 ISR revalidate 300s 와 일관 — KV 가 ISR 보다 약간 짧아 fresh 신호.
 
-const TTL_SECONDS = 60;
+const TTL_SECONDS = 180;
 
 function key(asset: string, symbol: string): string {
   return `quote:${asset}:${symbol}`;

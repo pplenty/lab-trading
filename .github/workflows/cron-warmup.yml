@@ -23,13 +23,22 @@ jobs:
         env:
           SITE: https://trading.jdgrid.com
         run: |
-          # 대시보드 / 3 자산군 인덱스 (revalidate=300) + top 9 종목 (revalidate=60).
+          # 대시보드 + 3 자산군 인덱스 + 통합 뉴스 + top 종목 (각 자산군 4-6개).
+          # 종목 상세 revalidate=300s 와 cron 5분 정합. KR 종목은 KIS cold start 안정화
+          # 위해 더 많이 prefetch (사용자 첫 진입 시 1-3s KIS API 비용 회피).
           pages=(
             "/ko"
+            "/ko/news"
             "/ko/crypto" "/ko/us" "/ko/kr"
-            "/ko/crypto/btc" "/ko/crypto/eth" "/ko/crypto/sol"
-            "/ko/us/aapl" "/ko/us/nvda" "/ko/us/tsla"
-            "/ko/kr/005930" "/ko/kr/000660" "/ko/kr/373220"
+            # crypto top 4
+            "/ko/crypto/btc" "/ko/crypto/eth" "/ko/crypto/sol" "/ko/crypto/xrp"
+            # us top 4
+            "/ko/us/aapl" "/ko/us/nvda" "/ko/us/tsla" "/ko/us/msft"
+            # kr top 6 (KIS cold start 가장 무거움)
+            "/ko/kr/005930" "/ko/kr/000660" "/ko/kr/207940"
+            "/ko/kr/373220" "/ko/kr/035420" "/ko/kr/035720"
+            # 백테스트 default
+            "/ko/backtest/new?asset=crypto&symbol=btc"
           )
           for p in "${pages[@]}"; do
             t=$(curl -s -o /dev/null -w "%{time_total}" --max-time 30 "$SITE$p" || echo "TIMEOUT")
