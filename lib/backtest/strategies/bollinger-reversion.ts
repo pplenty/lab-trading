@@ -87,9 +87,19 @@ export const bollingerReversion: Strategy<BBState> = {
     if (upper === undefined || lower === undefined) return "hold";
 
     // 매수: 종가 < 하단 (oversold).
-    if (position === 0 && candle.c < lower) return "buy";
+    if (position === 0 && candle.c < lower) {
+      return {
+        action: "buy",
+        reason: `Bollinger 하단 ${lower.toFixed(2)} 이탈 (종가 ${candle.c.toFixed(2)}) — 평균 회귀`,
+      };
+    }
     // 매도: 종가 > 상단 (overbought).
-    if (position === 1 && candle.c > upper) return "sell";
+    if (position === 1 && candle.c > upper) {
+      return {
+        action: "sell",
+        reason: `Bollinger 상단 ${upper.toFixed(2)} 이탈 (종가 ${candle.c.toFixed(2)}) — 평균 회귀`,
+      };
+    }
     return "hold";
   },
 };

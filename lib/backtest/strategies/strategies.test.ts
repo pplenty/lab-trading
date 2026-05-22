@@ -6,6 +6,7 @@ import {rsiReversion} from "./rsi-reversion";
 import {donchianBreakout} from "./donchian-breakout";
 import {macdCross} from "./macd-cross";
 import {bollingerReversion} from "./bollinger-reversion";
+import {normalizeSignal, type Signal, type SignalAction} from "../types";
 
 const mkCandle = (i: number, c: number): Candle => ({
   t: i * 86400,
@@ -16,14 +17,17 @@ const mkCandle = (i: number, c: number): Candle => ({
   v: 1,
 });
 
+/** Signal (action 만 또는 {action, reason}) → action string — 테스트 단순화. */
+const act = (s: Signal): SignalAction => normalizeSignal(s).action;
+
 describe("buyAndHold", () => {
   it("first bar with no position → buy, subsequent → hold", () => {
     const state = buyAndHold.init({});
-    expect(buyAndHold.onBar(mkCandle(0, 100), undefined, state, 0)).toBe("buy");
-    expect(buyAndHold.onBar(mkCandle(1, 105), undefined, state, 1)).toBe(
+    expect(act(buyAndHold.onBar(mkCandle(0, 100), undefined, state, 0))).toBe("buy");
+    expect(act(buyAndHold.onBar(mkCandle(1, 105), undefined, state, 1))).toBe(
       "hold"
     );
-    expect(buyAndHold.onBar(mkCandle(2, 110), undefined, state, 1)).toBe(
+    expect(act(buyAndHold.onBar(mkCandle(2, 110), undefined, state, 1))).toBe(
       "hold"
     );
   });
@@ -57,7 +61,7 @@ describe("smaCross", () => {
     const upTrend = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
     let pos: 0 | 1 = 0;
     for (let i = 0; i < upTrend.length; i++) {
-      const sig = smaCross.onBar(mkCandle(i, upTrend[i]), undefined, state, pos);
+      const sig = act(smaCross.onBar(mkCandle(i, upTrend[i]), undefined, state, pos));
       expect(sig).toBe("hold");
       if (sig === "buy") pos = 1;
     }
@@ -70,7 +74,7 @@ describe("smaCross", () => {
     let pos: 0 | 1 = 0;
     let buyAtIdx = -1;
     for (let i = 0; i < series.length; i++) {
-      const sig = smaCross.onBar(mkCandle(i, series[i]), undefined, state, pos);
+      const sig = act(smaCross.onBar(mkCandle(i, series[i]), undefined, state, pos));
       if (sig === "buy") {
         buyAtIdx = i;
         pos = 1;
@@ -88,7 +92,7 @@ describe("smaCross", () => {
     let buyIdx = -1;
     let sellIdx = -1;
     for (let i = 0; i < series.length; i++) {
-      const sig = smaCross.onBar(mkCandle(i, series[i]), undefined, state, pos);
+      const sig = act(smaCross.onBar(mkCandle(i, series[i]), undefined, state, pos));
       if (sig === "buy") {
         buyIdx = i;
         pos = 1;
@@ -105,7 +109,7 @@ describe("smaCross", () => {
     const state = smaCross.init({fast: 3, slow: 5});
     const pos: 0 | 1 = 0;
     for (let i = 0; i < 20; i++) {
-      const sig = smaCross.onBar(mkCandle(i, 100), undefined, state, pos);
+      const sig = act(smaCross.onBar(mkCandle(i, 100), undefined, state, pos));
       // 가격이 같으면 fast == slow == 100, sign 0 → 첫 비교는 hold, 이후도 hold
       expect(sig).toBe("hold");
     }
@@ -144,12 +148,10 @@ describe("rsiReversion", () => {
     let buy = false;
     let pos: 0 | 1 = 0;
     for (let i = 0; i < 30; i++) {
-      const sig = rsiReversion.onBar(
-        mkCandle(i, 1000 - i * 10),
+      const sig = act(rsiReversion.onBar(mkCandle(i, 1000 - i * 10),
         undefined,
         state,
-        pos
-      );
+        pos));
       if (sig === "buy") {
         buy = true;
         pos = 1;
@@ -161,12 +163,10 @@ describe("rsiReversion", () => {
   it("indicators row overrides streaming when precomputed available", () => {
     const state = rsiReversion.init({period: 14, oversold: 30, overbought: 70});
     // streaming 으로는 첫 봉에서 RSI 미정 — but indicators 에 명시
-    const sig = rsiReversion.onBar(
-      mkCandle(0, 100),
+    const sig = act(rsiReversion.onBar(mkCandle(0, 100),
       {t: 0, computed_version: 1, rsi_14: 20},
       state,
-      0
-    );
+      0));
     expect(sig).toBe("buy");
   });
 });
@@ -176,11 +176,11 @@ describe("donchianBreakout", () => {
     const state = donchianBreakout.init({highWindow: 5, lowWindow: 5});
     // 5 봉 high 가 100, 6번째 종가 110 → buy
     for (let i = 0; i < 5; i++) {
-      expect(donchianBreakout.onBar(mkCandle(i, 100), undefined, state, 0)).toBe(
+      expect(act(donchianBreakout.onBar(mkCandle(i, 100), undefined, state, 0))).toBe(
         "hold"
       );
     }
-    expect(donchianBreakout.onBar(mkCandle(5, 110), undefined, state, 0)).toBe(
+    expect(act(donchianBreakout.onBar(mkCandle(5, 110), undefined, state, 0))).toBe(
       "buy"
     );
   });
@@ -191,7 +191,7 @@ describe("donchianBreakout", () => {
     for (let i = 0; i < 5; i++) {
       donchianBreakout.onBar(mkCandle(i, 100), undefined, state, 1);
     }
-    expect(donchianBreakout.onBar(mkCandle(5, 90), undefined, state, 1)).toBe(
+    expect(act(donchianBreakout.onBar(mkCandle(5, 90), undefined, state, 1))).toBe(
       "sell"
     );
   });
@@ -226,21 +226,21 @@ describe("macdCross", () => {
     const state = macdCross.init({fast: 12, slow: 26, signal: 9});
     // prevSign = 0 (init), 첫 봉 hold
     expect(
-      macdCross.onBar(
+      act(macdCross.onBar(
         mkCandle(0, 100),
         {t: 0, computed_version: 2, macd: -1, macd_signal: 1},
         state,
         0
-      )
+      ))
     ).toBe("hold");
     // 두 번째 봉: macd > signal → buy (sign 1 vs prev -1)
     expect(
-      macdCross.onBar(
+      act(macdCross.onBar(
         mkCandle(1, 105),
         {t: 86400, computed_version: 2, macd: 2, macd_signal: 1},
         state,
         0
-      )
+      ))
     ).toBe("buy");
   });
 });
@@ -257,8 +257,7 @@ describe("bollingerReversion", () => {
 
   it("buys when close drops below lower band (using indicators)", () => {
     const state = bollingerReversion.init({period: 20, stdDev: 2});
-    const sig = bollingerReversion.onBar(
-      mkCandle(0, 90),
+    const sig = act(bollingerReversion.onBar(mkCandle(0, 90),
       {
         t: 0,
         computed_version: 2,
@@ -267,15 +266,13 @@ describe("bollingerReversion", () => {
         bb_lower: 95,
       },
       state,
-      0
-    );
+      0));
     expect(sig).toBe("buy");
   });
 
   it("sells when close exceeds upper band", () => {
     const state = bollingerReversion.init({period: 20, stdDev: 2});
-    const sig = bollingerReversion.onBar(
-      mkCandle(0, 115),
+    const sig = act(bollingerReversion.onBar(mkCandle(0, 115),
       {
         t: 0,
         computed_version: 2,
@@ -284,8 +281,7 @@ describe("bollingerReversion", () => {
         bb_lower: 90,
       },
       state,
-      1
-    );
+      1));
     expect(sig).toBe("sell");
   });
 

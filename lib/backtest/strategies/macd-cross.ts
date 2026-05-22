@@ -143,8 +143,18 @@ export const macdCross: Strategy<MacdState> = {
 
     if (prevSign === 0) return "hold";
 
-    if (sign === 1 && prevSign !== 1 && position === 0) return "buy";
-    if (sign === -1 && prevSign !== -1 && position === 1) return "sell";
+    if (sign === 1 && prevSign !== 1 && position === 0) {
+      return {
+        action: "buy",
+        reason: `MACD 골든크로스 — MACD ${macd.toFixed(2)} > signal ${signal.toFixed(2)}`,
+      };
+    }
+    if (sign === -1 && prevSign !== -1 && position === 1) {
+      return {
+        action: "sell",
+        reason: `MACD 데드크로스 — MACD ${macd.toFixed(2)} < signal ${signal.toFixed(2)}`,
+      };
+    }
     return "hold";
   },
 };

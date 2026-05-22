@@ -16,7 +16,7 @@ export const buyAndHold: Strategy<{bought: boolean}> = {
   onBar: (_candle, _indicators, state, position) => {
     if (position === 0 && !state.bought) {
       state.bought = true;
-      return "buy";
+      return {action: "buy", reason: "시작 시점 단순 매수"};
     }
     return "hold";
   },

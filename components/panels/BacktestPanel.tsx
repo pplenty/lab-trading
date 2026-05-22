@@ -186,6 +186,7 @@ export function BacktestPanel({
           result={result}
           initialCapital={INITIAL_CAPITAL}
           currency={currency}
+          candles={candles}
         />
       ) : (
         <p className="rounded-md border border-line bg-surface p-4 text-sm text-fg-muted">

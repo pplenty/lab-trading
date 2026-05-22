@@ -103,9 +103,19 @@ export const smaCross: Strategy<SmaCrossState> = {
     if (prevSign === 0) return "hold";
 
     // 골든크로스
-    if (sign === 1 && prevSign !== 1 && position === 0) return "buy";
+    if (sign === 1 && prevSign !== 1 && position === 0) {
+      return {
+        action: "buy",
+        reason: `골든크로스 — SMA${state.fast} ${fastVal.toFixed(2)} > SMA${state.slow} ${slowVal.toFixed(2)}`,
+      };
+    }
     // 데드크로스
-    if (sign === -1 && prevSign !== -1 && position === 1) return "sell";
+    if (sign === -1 && prevSign !== -1 && position === 1) {
+      return {
+        action: "sell",
+        reason: `데드크로스 — SMA${state.fast} ${fastVal.toFixed(2)} < SMA${state.slow} ${slowVal.toFixed(2)}`,
+      };
+    }
 
     return "hold";
   },

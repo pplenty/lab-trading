@@ -40,6 +40,8 @@ export interface Trade {
   cash: number;
   /** 체결 후 자산가치 (cash + size × price). */
   equity: number;
+  /** 신호 사유 — 사용자가 왜 매수/매도 했는지 이해할 수 있도록 strategy 가 생성한 한 줄 텍스트. */
+  reason?: string;
 }
 
 export interface EquityPoint {
@@ -67,8 +69,15 @@ export interface BacktestResult {
   metrics: BacktestMetrics;
 }
 
-/** 전략 onBar 결과. `hold` 는 신호 없음. */
-export type Signal = "buy" | "sell" | "hold";
+/** 전략 onBar 결과. `hold` 는 신호 없음.
+ *  객체 형식 `{action, reason}` 또는 문자열 (legacy, reason 없음) 모두 허용. */
+export type SignalAction = "buy" | "sell" | "hold";
+export type SignalDetail = {action: SignalAction; reason?: string};
+export type Signal = SignalAction | SignalDetail;
+
+export function normalizeSignal(s: Signal): SignalDetail {
+  return typeof s === "string" ? {action: s} : s;
+}
 
 export type Position = 0 | 1;
 

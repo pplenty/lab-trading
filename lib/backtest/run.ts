@@ -16,9 +16,10 @@ import type {
   BacktestResult,
   EquityPoint,
   Position,
-  Signal,
+  SignalDetail,
   Trade,
 } from "./types";
+import {normalizeSignal} from "./types";
 
 // ADR-0019 백테스트 엔진 코어.
 // fillModel:
@@ -61,17 +62,16 @@ export function runBacktest(config: BacktestConfig): BacktestResult {
   let position: Position = 0;
   const trades: Trade[] = [];
   const equityCurve: EquityPoint[] = [];
-  let pendingSignal: Signal = "hold";
+  let pendingSignal: SignalDetail = {action: "hold"};
 
   for (let i = 0; i < candles.length; i++) {
     const candle = candles[i];
     const indRow = indicators?.[i];
 
     // 1) next-open 체결 — 이전 봉의 pendingSignal 을 이 봉 시가에 체결.
-    if (config.fillModel === "next-open" && pendingSignal !== "hold") {
-      if (pendingSignal === "buy" && position === 0) {
+    if (config.fillModel === "next-open" && pendingSignal.action !== "hold") {
+      if (pendingSignal.action === "buy" && position === 0) {
         const fillPrice = candle.o * (1 + slip);
-        // 100% allocation: 모든 cash 를 매수 (수수료 차감 후).
         const investable = cash * (1 - fee);
         size = investable / fillPrice;
         cash = 0;
@@ -83,8 +83,9 @@ export function runBacktest(config: BacktestConfig): BacktestResult {
           size,
           cash,
           equity: cash + size * candle.c,
+          reason: pendingSignal.reason,
         });
-      } else if (pendingSignal === "sell" && position === 1) {
+      } else if (pendingSignal.action === "sell" && position === 1) {
         const fillPrice = candle.o * (1 - slip);
         const gross = size * fillPrice;
         cash = gross * (1 - fee) * (1 - tax);
@@ -97,17 +98,17 @@ export function runBacktest(config: BacktestConfig): BacktestResult {
           size,
           cash,
           equity: cash,
+          reason: pendingSignal.reason,
         });
       }
-      pendingSignal = "hold";
+      pendingSignal = {action: "hold"};
     }
 
     // 2) 이 봉의 신호 결정 — next-open 모델에선 다음 봉 시가 체결 대기용으로 저장.
-    const sig = strategy.onBar(candle, indRow, state, position);
+    const sig = normalizeSignal(strategy.onBar(candle, indRow, state, position));
 
     if (config.fillModel === "same-close") {
-      // 같은 봉 종가에 즉시 체결 (룩어헤드).
-      if (sig === "buy" && position === 0) {
+      if (sig.action === "buy" && position === 0) {
         const fillPrice = candle.c * (1 + slip);
         const investable = cash * (1 - fee);
         size = investable / fillPrice;
@@ -120,8 +121,9 @@ export function runBacktest(config: BacktestConfig): BacktestResult {
           size,
           cash,
           equity: cash + size * candle.c,
+          reason: sig.reason,
         });
-      } else if (sig === "sell" && position === 1) {
+      } else if (sig.action === "sell" && position === 1) {
         const fillPrice = candle.c * (1 - slip);
         const gross = size * fillPrice;
         cash = gross * (1 - fee) * (1 - tax);
@@ -134,6 +136,7 @@ export function runBacktest(config: BacktestConfig): BacktestResult {
           size,
           cash,
           equity: cash,
+          reason: sig.reason,
         });
       }
     } else {

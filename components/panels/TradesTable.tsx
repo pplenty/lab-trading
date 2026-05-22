@@ -73,6 +73,8 @@ export function TradesTable({trades, currency, maxRows = 20}: Props) {
   const visible = [...trips].reverse().slice(0, maxRows);
   const fmt = priceFmt(currency);
 
+  const anyReason = visible.some((t) => t.buy.reason || t.sell?.reason);
+
   return (
     <section className="rounded-lg border border-line">
       <div className="border-b border-line bg-surface px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
@@ -97,44 +99,78 @@ export function TradesTable({trades, currency, maxRows = 20}: Props) {
             {visible.map((trip, i) => {
               const idx = trips.length - i;
               const open = trip.sell === null;
+              const buyReason = trip.buy.reason;
+              const sellReason = trip.sell?.reason;
               return (
-                <tr
-                  key={`${trip.buy.t}-${idx}`}
-                  className="border-t border-line tabular-nums"
-                >
-                  <td className="px-4 py-2 text-fg-subtle">{idx}</td>
-                  <td className="px-4 py-2 text-fg-muted">
-                    {dateFmt.format(new Date(trip.buy.t * 1000))}
-                  </td>
-                  <td className="px-4 py-2 text-right text-fg">
-                    {fmt.format(trip.buy.price)}
-                  </td>
-                  <td className="px-4 py-2 text-fg-muted">
-                    {trip.sell ? dateFmt.format(new Date(trip.sell.t * 1000)) : "—"}
-                  </td>
-                  <td className="px-4 py-2 text-right text-fg">
-                    {trip.sell ? fmt.format(trip.sell.price) : "—"}
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    {trip.pnlPct === null ? (
-                      <span className="text-fg-subtle">
-                        {open ? "open" : "—"}
-                      </span>
-                    ) : (
-                      <FinancialDelta changePct={trip.pnlPct} digits={2} />
-                    )}
-                  </td>
-                  <td className="hidden px-4 py-2 text-right text-fg-muted sm:table-cell">
-                    {trip.holdDays !== null
-                      ? `${trip.holdDays.toFixed(0)}d`
-                      : "—"}
-                  </td>
-                </tr>
+                <>
+                  <tr
+                    key={`${trip.buy.t}-${idx}`}
+                    className="border-t border-line tabular-nums"
+                  >
+                    <td className="px-4 py-2 text-fg-subtle">{idx}</td>
+                    <td className="px-4 py-2 text-fg-muted">
+                      {dateFmt.format(new Date(trip.buy.t * 1000))}
+                    </td>
+                    <td className="px-4 py-2 text-right text-fg">
+                      {fmt.format(trip.buy.price)}
+                    </td>
+                    <td className="px-4 py-2 text-fg-muted">
+                      {trip.sell ? dateFmt.format(new Date(trip.sell.t * 1000)) : "—"}
+                    </td>
+                    <td className="px-4 py-2 text-right text-fg">
+                      {trip.sell ? fmt.format(trip.sell.price) : "—"}
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      {trip.pnlPct === null ? (
+                        <span className="text-fg-subtle">
+                          {open ? "open" : "—"}
+                        </span>
+                      ) : (
+                        <FinancialDelta changePct={trip.pnlPct} digits={2} />
+                      )}
+                    </td>
+                    <td className="hidden px-4 py-2 text-right text-fg-muted sm:table-cell">
+                      {trip.holdDays !== null
+                        ? `${trip.holdDays.toFixed(0)}d`
+                        : "—"}
+                    </td>
+                  </tr>
+                  {(buyReason || sellReason) && (
+                    <tr
+                      key={`${trip.buy.t}-${idx}-reason`}
+                      className="border-t border-line/50 bg-surface/20 text-[11px]"
+                    >
+                      <td className="px-4 py-2 text-fg-subtle" colSpan={1}></td>
+                      <td className="px-4 py-1.5 text-fg-subtle" colSpan={2}>
+                        {buyReason && (
+                          <span className="inline-flex items-baseline gap-1">
+                            <span className="text-[10px] font-medium text-[var(--color-up)]">▲ 매수</span>
+                            <span className="text-fg-muted">{buyReason}</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-1.5 text-fg-subtle" colSpan={3}>
+                        {sellReason && (
+                          <span className="inline-flex items-baseline gap-1">
+                            <span className="text-[10px] font-medium text-[var(--color-down)]">▼ 매도</span>
+                            <span className="text-fg-muted">{sellReason}</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="hidden px-4 py-2 sm:table-cell" colSpan={1}></td>
+                    </tr>
+                  )}
+                </>
               );
             })}
           </tbody>
         </table>
       </div>
+      {!anyReason && (
+        <div className="border-t border-line bg-bg/40 px-4 py-2 text-[11px] text-fg-subtle">
+          이 전략은 신호 사유를 제공하지 않습니다.
+        </div>
+      )}
     </section>
   );
 }

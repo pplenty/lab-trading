@@ -64,16 +64,20 @@ export const donchianBreakout: Strategy<DonchianState> = {
     lows: [],
   }),
   onBar: (candle, _indicators, state, position) => {
-    // 직전까지의 최고/최저 계산 (현재 봉 제외 — lookahead 회피).
-    let signal: "buy" | "sell" | "hold" = "hold";
-
     if (state.highs.length >= state.highWindow && position === 0) {
       let priorHigh = -Infinity;
       const start = state.highs.length - state.highWindow;
       for (let i = start; i < state.highs.length; i++) {
         if (state.highs[i] > priorHigh) priorHigh = state.highs[i];
       }
-      if (candle.c > priorHigh) signal = "buy";
+      if (candle.c > priorHigh) {
+        state.highs.push(candle.h);
+        state.lows.push(candle.l);
+        return {
+          action: "buy",
+          reason: `${state.highWindow}일 신고가 ${priorHigh.toFixed(2)} 돌파 (종가 ${candle.c.toFixed(2)})`,
+        };
+      }
     }
 
     if (state.lows.length >= state.lowWindow && position === 1) {
@@ -82,12 +86,18 @@ export const donchianBreakout: Strategy<DonchianState> = {
       for (let i = start; i < state.lows.length; i++) {
         if (state.lows[i] < priorLow) priorLow = state.lows[i];
       }
-      if (candle.c < priorLow) signal = "sell";
+      if (candle.c < priorLow) {
+        state.highs.push(candle.h);
+        state.lows.push(candle.l);
+        return {
+          action: "sell",
+          reason: `${state.lowWindow}일 신저가 ${priorLow.toFixed(2)} 하향 돌파 (종가 ${candle.c.toFixed(2)})`,
+        };
+      }
     }
 
-    // 현재 봉의 high/low 누적 (다음 봉 결정에 사용)
     state.highs.push(candle.h);
     state.lows.push(candle.l);
-    return signal;
+    return "hold";
   },
 };

@@ -128,8 +128,18 @@ export const rsiReversion: Strategy<RsiState> = {
     const rsi = indicatorRsi(indicators, state.period) ?? streamingRsi(state);
     if (rsi === undefined) return "hold";
 
-    if (rsi < state.oversold && position === 0) return "buy";
-    if (rsi > state.overbought && position === 1) return "sell";
+    if (rsi < state.oversold && position === 0) {
+      return {
+        action: "buy",
+        reason: `RSI ${rsi.toFixed(1)} — 과매도 (< ${state.oversold})`,
+      };
+    }
+    if (rsi > state.overbought && position === 1) {
+      return {
+        action: "sell",
+        reason: `RSI ${rsi.toFixed(1)} — 과매수 (> ${state.overbought})`,
+      };
+    }
     return "hold";
   },
 };
