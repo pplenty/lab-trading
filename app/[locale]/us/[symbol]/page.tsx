@@ -181,7 +181,11 @@ export default async function UsSymbolPage({params, searchParams}: PageProps) {
         )}
       </header>
 
-      <SymbolActions class="us" symbol={entry.symbol} />
+      <SymbolActions
+        class="us"
+        symbol={entry.symbol}
+        label={entry.nameKo ?? entry.name}
+      />
 
       <D1FallbackBadge quote={quote} variant="banner" />
 

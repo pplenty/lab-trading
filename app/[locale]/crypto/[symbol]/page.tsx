@@ -208,7 +208,11 @@ export default async function CryptoSymbolPage({params, searchParams}: PageProps
         )}
       </header>
 
-      <SymbolActions class="crypto" symbol={entry.symbol} />
+      <SymbolActions
+        class="crypto"
+        symbol={entry.symbol}
+        label={entry.nameKo ?? entry.name}
+      />
 
       <D1FallbackBadge quote={quote} variant="banner" />
 
