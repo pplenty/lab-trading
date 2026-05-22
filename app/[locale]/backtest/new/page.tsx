@@ -134,6 +134,29 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
         <p className="mt-1 text-sm text-fg-muted">
           {sourceLabel} · 최근 {candles.length} 봉
         </p>
+        <details className="mt-3 rounded-md border border-line bg-surface/40 px-3 py-2 text-xs text-fg-muted">
+          <summary className="cursor-pointer select-none text-fg-muted hover:text-fg">
+            💡 백테스트 처음이라면 — 1분 가이드
+          </summary>
+          <div className="mt-2 flex flex-col gap-1.5 text-[12px] leading-relaxed text-fg-subtle">
+            <p>
+              <span className="font-semibold text-fg-muted">백테스트</span> 는 과거 데이터에
+              전략을 시뮬레이션해 "이 전략이 지난 N년 동안 어땠을까" 를 측정합니다. 실제
+              매매가 아닙니다.
+            </p>
+            <p>
+              <span className="font-semibold text-fg-muted">사용법</span>: ① 아래 카드에서
+              전략 선택 → ② 슬라이더로 파라미터 조정 → ③ 결과 카드의 차트·메트릭·
+              <span className="text-[var(--color-up)]">▲ 매수</span> /{" "}
+              <span className="text-[var(--color-down)]">▼ 매도</span> 사유 확인.
+            </p>
+            <p>
+              <span className="font-semibold text-fg-muted">초보 추천</span>: 먼저{" "}
+              <span className="text-fg">매수 후 보유</span> 와 비교해 다른 전략이 의미
+              있는지 확인. 단순 보유보다 못하면 그 전략은 이 종목엔 안 맞는 거.
+            </p>
+          </div>
+        </details>
       </header>
 
       {isDemo && (

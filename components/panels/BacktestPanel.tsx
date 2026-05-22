@@ -1,12 +1,26 @@
 "use client";
 
 import {useMemo, useState} from "react";
+import {Anchor, TrendingUp, Repeat, Mountain, Activity, GitBranch} from "lucide-react";
 import {runBacktest} from "@/lib/backtest/run";
 import {strategies, getStrategy} from "@/lib/backtest/strategies/registry";
 import type {Candle, AssetClass, IndicatorRow} from "@/lib/types";
 import {BacktestResultCard} from "./BacktestResultCard";
 import {SaveStrategyButton} from "./SaveStrategyButton";
 import {CopyResultUrlButton} from "./CopyResultUrlButton";
+
+// 6 preset 별 icon + 짧은 캐치프레이즈. 카드 grid 의 빠른 직관 인식.
+const STRATEGY_META: Record<
+  string,
+  {Icon: typeof Anchor; tagline: string}
+> = {
+  "buy-and-hold": {Icon: Anchor, tagline: "단순 보유"},
+  "sma-cross": {Icon: TrendingUp, tagline: "이동평균 교차"},
+  "rsi-reversion": {Icon: Repeat, tagline: "과매도/과매수 회귀"},
+  "donchian-breakout": {Icon: Mountain, tagline: "N일 신고가 돌파"},
+  "macd-cross": {Icon: Activity, tagline: "MACD 교차"},
+  "bollinger-reversion": {Icon: GitBranch, tagline: "밴드 평균 회귀"},
+};
 
 // 백테스트 클라이언트 패널 — 전략 selector + 파라미터 슬라이더 + 결과.
 // candles 와 자산 메타는 server (RSC) 가 prop 으로 전달 (ADR-0019: 데이터는 서버 캐시 후 클라이언트).
@@ -86,6 +100,33 @@ export function BacktestPanel({
     }
   }, [strategy, candles, indicators, symbol, cls, strategyId, params]);
 
+  // 모든 전략 default 파라미터 결과 — "다른 전략은 어땠을까" 한 줄 비교.
+  // 같은 (candles, indicators) 의존이라 다른 strategy 만 변경. 비용 ~5-15ms × 6 = OK.
+  const allResults = useMemo(() => {
+    if (candles.length < 2) return [];
+    return strategies.map((s) => {
+      const defaults: Record<string, number> = {};
+      for (const p of s.params) defaults[p.key] = p.default;
+      try {
+        const r = runBacktest({
+          symbol,
+          class: cls,
+          candles,
+          indicators,
+          strategyId: s.id,
+          params: defaults,
+          initialCapital: INITIAL_CAPITAL,
+          feePct: FEE_PCT,
+          slippagePct: SLIPPAGE_PCT,
+          fillModel: "next-open",
+        });
+        return {id: s.id, nameKo: s.nameKo, pct: r.metrics.totalReturnPct};
+      } catch {
+        return {id: s.id, nameKo: s.nameKo, pct: null as number | null};
+      }
+    });
+  }, [candles, indicators, symbol, cls]);
+
   const currencyFmt = useMemo(
     () =>
       new Intl.NumberFormat(undefined, {
@@ -99,60 +140,104 @@ export function BacktestPanel({
   return (
     <div className="flex flex-col gap-6">
       <section className="rounded-lg border border-line bg-surface/30 p-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium uppercase tracking-wider text-fg-muted">
-              Strategy
+        {/* Step 1 — 자산 + 자본 (read-only) */}
+        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 border-b border-line pb-3">
+          <div className="text-xs text-fg-subtle">
+            <span className="font-semibold uppercase tracking-wider">대상</span>{" "}
+            <span className="ml-2 tabular-nums text-fg">
+              {symbolLabel ?? symbol.toUpperCase()}
             </span>
-            <select
-              value={strategyId}
-              onChange={(e) => {
-                setStrategyId(e.target.value);
-              }}
-              className="rounded-md border border-line bg-bg px-3 py-2 text-sm text-fg focus:border-fg focus:outline-none"
-            >
-              {strategies.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium uppercase tracking-wider text-fg-muted">
-              Asset / Capital
+          </div>
+          <div className="text-xs text-fg-subtle">
+            <span className="font-semibold uppercase tracking-wider">초기 자본</span>{" "}
+            <span className="ml-2 tabular-nums text-fg">
+              {currencyFmt.format(INITIAL_CAPITAL)}
             </span>
-            <div className="rounded-md border border-line bg-bg px-3 py-2 text-sm tabular-nums text-fg">
-              {symbol.toUpperCase()} · {currencyFmt.format(INITIAL_CAPITAL)}
-            </div>
           </div>
         </div>
 
-        {strategy && strategy.params.length > 0 && (
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            {strategy.params.map((p) => (
-              <label key={p.key} className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-fg-muted">
-                  {p.labelKo}{" "}
-                  <span className="text-fg-subtle">
-                    ({params[p.key] ?? p.default})
+        {/* Step 2 — 전략 카드 grid (dropdown 대체) */}
+        <div className="mb-3">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
+            전략 선택
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {strategies.map((s) => {
+              const meta = STRATEGY_META[s.id] ?? {Icon: Anchor, tagline: ""};
+              const Icon = meta.Icon;
+              const active = s.id === strategyId;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setStrategyId(s.id)}
+                  aria-pressed={active}
+                  className={
+                    "flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors " +
+                    (active
+                      ? "border-fg bg-surface-hover shadow-sm"
+                      : "border-line bg-bg hover:border-fg-subtle hover:bg-surface")
+                  }
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Icon
+                      size={14}
+                      className={active ? "text-accent" : "text-fg-muted"}
+                      aria-hidden="true"
+                    />
+                    <span
+                      className={
+                        "text-xs font-semibold " +
+                        (active ? "text-fg" : "text-fg-muted")
+                      }
+                    >
+                      {s.nameKo}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-fg-subtle">
+                    {meta.tagline}
                   </span>
-                </span>
-                <input
-                  type="range"
-                  min={p.min}
-                  max={p.max}
-                  step={p.step ?? (p.type === "int" ? 1 : 0.01)}
-                  value={params[p.key] ?? p.default}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    setParams((prev) => ({...prev, [p.key]: v}));
-                  }}
-                  className="accent-accent"
-                />
-              </label>
-            ))}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Step 3 — 선택된 전략 설명 + 파라미터 */}
+        {strategy && (
+          <div className="rounded-md border border-line bg-bg/40 p-3">
+            <p className="text-[12px] leading-relaxed text-fg-muted">
+              {strategy.descriptionKo}
+            </p>
+            {strategy.params.length > 0 && (
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                {strategy.params.map((p) => (
+                  <label key={p.key} className="flex flex-col gap-1">
+                    <span className="flex items-baseline justify-between text-[11px] font-medium text-fg-muted">
+                      <span>{p.labelKo}</span>
+                      <span className="tabular-nums text-fg">
+                        {params[p.key] ?? p.default}
+                      </span>
+                    </span>
+                    <input
+                      type="range"
+                      min={p.min}
+                      max={p.max}
+                      step={p.step ?? (p.type === "int" ? 1 : 0.01)}
+                      value={params[p.key] ?? p.default}
+                      onChange={(e) => {
+                        const v = Number(e.target.value);
+                        setParams((prev) => ({...prev, [p.key]: v}));
+                      }}
+                      className="accent-accent"
+                    />
+                    <span className="text-[10px] text-fg-subtle tabular-nums">
+                      {p.min} ~ {p.max}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -180,6 +265,59 @@ export function BacktestPanel({
           )}
         </div>
       </section>
+
+      {/* 전략 비교 — default 파라미터 기준 6 전략 한 줄. 선택된 strategy 클릭 가능. */}
+      {allResults.length > 0 && (
+        <section className="rounded-lg border border-line bg-surface/30 p-4">
+          <header className="mb-2 flex items-baseline justify-between text-xs">
+            <h3 className="text-sm font-semibold text-fg">전략 비교</h3>
+            <span className="text-[10px] text-fg-subtle">
+              default 파라미터 기준 · 클릭하면 전환
+            </span>
+          </header>
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
+            {allResults.map((r) => {
+              const active = r.id === strategyId;
+              const tone: "up" | "down" | "neutral" =
+                r.pct === null
+                  ? "neutral"
+                  : r.pct > 0
+                  ? "up"
+                  : r.pct < 0
+                  ? "down"
+                  : "neutral";
+              const toneClass =
+                tone === "up"
+                  ? "text-[var(--color-up)]"
+                  : tone === "down"
+                  ? "text-[var(--color-down)]"
+                  : "text-fg-muted";
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setStrategyId(r.id)}
+                  className={
+                    "flex flex-col items-start gap-0.5 rounded-md border px-2.5 py-1.5 text-left transition-colors " +
+                    (active
+                      ? "border-fg bg-surface-hover"
+                      : "border-line bg-bg hover:border-fg-subtle")
+                  }
+                >
+                  <span className="text-[10px] text-fg-subtle truncate w-full">
+                    {r.nameKo}
+                  </span>
+                  <span className={`text-sm font-semibold tabular-nums ${toneClass}`}>
+                    {r.pct === null
+                      ? "—"
+                      : `${r.pct > 0 ? "+" : ""}${r.pct.toFixed(1)}%`}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {result ? (
         <BacktestResultCard
