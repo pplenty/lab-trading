@@ -35,6 +35,7 @@ const STATIC_PATHS = [
   "/backtest/saved",
   "/compare",
   "/market",
+  "/alerts",
   "/settings",
 ];
 

@@ -11,6 +11,7 @@ import {
 } from "@/lib/symbols/registry";
 import {AssetClassCard} from "@/components/panels/AssetClassCard";
 import {BacktestQuickLinks} from "@/components/panels/BacktestQuickLinks";
+import {Link} from "@/i18n/navigation";
 import {BrandMark} from "@/components/BrandMark";
 import {siteJsonLd} from "@/lib/seo/site-jsonld";
 import type {Quote} from "@/lib/types";
@@ -154,6 +155,58 @@ export default async function HomePage({
 
       <section className="mb-10">
         <BacktestQuickLinks heading="백테스트 빠른 진입" />
+      </section>
+
+      <section className="mb-10">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">
+          더 보기
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Link
+            href="/market"
+            className="group rounded-lg border border-line bg-bg p-4 transition-colors hover:border-fg"
+          >
+            <p className="text-sm font-semibold text-fg group-hover:text-accent">
+              📊 시장 분위기
+            </p>
+            <p className="mt-1 text-xs text-fg-muted">
+              자산군 × 80 종목 24h 변동 분포 + Top movers
+            </p>
+          </Link>
+          <Link
+            href="/compare"
+            className="group rounded-lg border border-line bg-bg p-4 transition-colors hover:border-fg"
+          >
+            <p className="text-sm font-semibold text-fg group-hover:text-accent">
+              ⇆ 비교 차트
+            </p>
+            <p className="mt-1 text-xs text-fg-muted">
+              여러 종목 normalized 추세 비교 (4종목까지)
+            </p>
+          </Link>
+          <Link
+            href="/backtest/portfolio"
+            className="group rounded-lg border border-line bg-bg p-4 transition-colors hover:border-fg"
+          >
+            <p className="text-sm font-semibold text-fg group-hover:text-accent">
+              💼 포트폴리오 백테스트
+            </p>
+            <p className="mt-1 text-xs text-fg-muted">
+              여러 종목 비중 배분 시뮬레이션
+            </p>
+          </Link>
+          <Link
+            href="/alerts"
+            className="group rounded-lg border border-line bg-bg p-4 transition-colors hover:border-fg"
+          >
+            <p className="text-sm font-semibold text-fg group-hover:text-accent">
+              🔔 가격 알림
+            </p>
+            <p className="mt-1 text-xs text-fg-muted">
+              조건 도달 시 자동 감지 · localStorage
+            </p>
+          </Link>
+        </div>
       </section>
 
       <footer className="border-t border-line pt-4 text-xs text-fg-subtle">
