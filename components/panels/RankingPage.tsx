@@ -42,23 +42,27 @@ export async function RankingPage({
   // D1 우선 — adapter.rankings 의 직렬 호출 (KIS 24 종목 × 100ms sleep) 회피.
   // 인덱스/대시보드 페이지와 동일 트레이드오프: 어제 종가 + 24h 변동.
   // D1 미가용 (신규 종목 / D1 binding X) 시 adapter fallback.
+  // limit 20 — top N 만 의미 (사용자 가치) + Workers CPU 한도 안전 (50ms ceiling).
+  // 50 종목 quote 빌드 + 50 sparkline SVG path 계산이 1101 trigger 의 한 요소.
+  // top 20 으로 줄여 JS compute ~60% 절감.
+  const TOP_N = 20;
   let quotes: Quote[] = await loadRankingsFromD1({
     asset: cls,
     symbols,
     kind,
-    limit: 50,
+    limit: TOP_N,
   });
   let fetchError: string | null = null;
   if (quotes.length === 0 && adapter.rankings) {
     try {
-      quotes = await adapter.rankings(kind, {limit: 50});
+      quotes = await adapter.rankings(kind, {limit: TOP_N});
     } catch (err) {
       fetchError = err instanceof Error ? err.message : String(err);
     }
   }
 
-  // 7일 sparkline — 표 행에 mini chart 인라인 (md+ 노출).
-  const visibleSymbols = quotes.slice(0, 50).map((q) => q.symbol);
+  // 7일 sparkline — quotes 가 이미 limit=20 이라 sparkline 도 20개만.
+  const visibleSymbols = quotes.map((q) => q.symbol);
   const sparklines = await loadSparklineCloses(visibleSymbols, 7);
 
   const label = locale === "ko" ? KIND_LABEL[kind].ko : KIND_LABEL[kind].en;
