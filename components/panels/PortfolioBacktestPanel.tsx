@@ -4,7 +4,12 @@ import {useEffect, useMemo, useState} from "react";
 import {X} from "lucide-react";
 import {Link} from "@/i18n/navigation";
 import {SymbolPicker} from "./SymbolPicker";
-import {runPortfolioBacktest, type PortfolioPosition, type PortfolioResult} from "@/lib/backtest/portfolio";
+import {
+  runPortfolioBacktest,
+  type PortfolioPosition,
+  type PortfolioResult,
+  type RebalanceMode,
+} from "@/lib/backtest/portfolio";
 import {FinancialDelta} from "@/components/FinancialDelta";
 import {LineChart, type LineSeries} from "@/components/charts/LineChart";
 import type {AssetClass, Candle} from "@/lib/types";
@@ -30,15 +35,29 @@ type Props = {
   initialPositions: InitialPosition[];
   /** "?symbols=..&weights=..&range=..." 의 range query. URL preserve 용. */
   range: string;
+  /** URL 에서 받은 초기 rebalance mode. default "none". */
+  initialRebalance?: RebalanceMode;
+};
+
+const REBALANCE_LABEL: Record<RebalanceMode, string> = {
+  none: "없음 (Buy & Hold)",
+  monthly: "매월",
+  quarterly: "분기",
+  yearly: "매년",
 };
 
 type PanelPosition = InitialPosition;
 
-export function PortfolioBacktestPanel({initialPositions, range}: Props) {
+export function PortfolioBacktestPanel({
+  initialPositions,
+  range,
+  initialRebalance = "none",
+}: Props) {
   const [positions, setPositions] = useState<PanelPosition[]>(initialPositions);
+  const [rebalance, setRebalance] = useState<RebalanceMode>(initialRebalance);
   const [result, setResult] = useState<PortfolioResult | null>(null);
 
-  // weight slider 또는 종목 변경 시 client-side 백테스트 재실행
+  // weight slider · rebalance · 종목 변경 시 client-side 백테스트 재실행
   useEffect(() => {
     if (positions.length < 2) {
       setResult(null);
@@ -52,7 +71,7 @@ export function PortfolioBacktestPanel({initialPositions, range}: Props) {
         candles: p.candles,
       })),
       initialCapital: INITIAL_CAPITAL,
-      rebalance: "none",
+      rebalance,
       feePct: FEE_PCT,
       slippagePct: SLIPPAGE_PCT,
     };
@@ -62,7 +81,7 @@ export function PortfolioBacktestPanel({initialPositions, range}: Props) {
       console.error("runPortfolioBacktest failed:", err);
       setResult(null);
     }
-  }, [positions]);
+  }, [positions, rebalance]);
 
   function updateWeight(idx: number, w: number) {
     setPositions((prev) =>
@@ -103,6 +122,23 @@ export function PortfolioBacktestPanel({initialPositions, range}: Props) {
         <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-sm font-semibold text-fg">포트폴리오 구성</h2>
           <div className="flex items-center gap-2 text-[11px] text-fg-subtle">
+            <label className="flex items-center gap-1.5">
+              <span>Rebalance</span>
+              <select
+                value={rebalance}
+                onChange={(e) => setRebalance(e.target.value as RebalanceMode)}
+                aria-label="Rebalance 주기"
+                className="rounded-md border border-line bg-bg px-2 py-1 text-[11px] text-fg focus:border-fg focus:outline-none"
+              >
+                {(["none", "monthly", "quarterly", "yearly"] as RebalanceMode[]).map(
+                  (m) => (
+                    <option key={m} value={m}>
+                      {REBALANCE_LABEL[m]}
+                    </option>
+                  )
+                )}
+              </select>
+            </label>
             <button
               type="button"
               onClick={rebalanceEqual}
@@ -182,7 +218,11 @@ export function PortfolioBacktestPanel({initialPositions, range}: Props) {
                   (p) => `${p.class}:${p.symbol}`
                 );
                 symbols.push(`${e.class}:${e.symbol}`);
-                return `/backtest/portfolio?symbols=${symbols.join(",")}&range=${range}`;
+                const params = new URLSearchParams();
+                params.set("symbols", symbols.join(","));
+                params.set("range", range);
+                if (rebalance !== "none") params.set("rebalance", rebalance);
+                return `/backtest/portfolio?${params.toString()}`;
               }}
             />
           </div>
@@ -196,6 +236,7 @@ export function PortfolioBacktestPanel({initialPositions, range}: Props) {
           positions={positions}
           initialCapital={INITIAL_CAPITAL}
           currencyFmt={currencyFmt}
+          rebalance={rebalance}
         />
       ) : positions.length < 2 ? (
         <div className="rounded-md border border-line bg-surface p-4 text-sm text-fg-muted">
@@ -215,11 +256,13 @@ function PortfolioResultCard({
   positions,
   initialCapital,
   currencyFmt,
+  rebalance,
 }: {
   result: PortfolioResult;
   positions: PanelPosition[];
   initialCapital: number;
   currencyFmt: Intl.NumberFormat;
+  rebalance: RebalanceMode;
 }) {
   const m = result.metrics;
   const finalEquity =
@@ -283,6 +326,29 @@ function PortfolioResultCard({
             </span>
           </div>
         </div>
+        {rebalance !== "none" && (
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[11px] text-fg-subtle">
+            <span>
+              Rebalance{" "}
+              <span className="text-fg-muted">
+                {rebalance === "monthly"
+                  ? "매월"
+                  : rebalance === "quarterly"
+                  ? "분기"
+                  : "매년"}
+              </span>{" "}
+              · <span className="tabular-nums text-fg-muted">{result.rebalanceCount}회 실행</span>
+            </span>
+            {result.rebalanceCost > 0 && (
+              <span>
+                누적 비용{" "}
+                <span className="tabular-nums text-[var(--color-down)]">
+                  -{currencyFmt.format(result.rebalanceCost)}
+                </span>
+              </span>
+            )}
+          </div>
+        )}
       </section>
 
       {/* metrics */}

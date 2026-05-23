@@ -12,7 +12,14 @@ import {parseRangeParam, rangeBars, rangeLabel} from "@/lib/chart/range";
 import {parseCompareToken} from "@/lib/compare/normalize";
 import {ChartRangeToggle} from "@/components/charts/ChartRangeToggle";
 import {PortfolioBacktestPanel} from "@/components/panels/PortfolioBacktestPanel";
+import type {RebalanceMode} from "@/lib/backtest/portfolio";
 import type {AssetClass, Candle} from "@/lib/types";
+
+function parseRebalance(raw: string | string[] | undefined): RebalanceMode {
+  const v = typeof raw === "string" ? raw : "";
+  if (v === "monthly" || v === "quarterly" || v === "yearly") return v;
+  return "none";
+}
 
 // 다중 종목 포트폴리오 백테스트 (ADR-0019 1차 출시 확장).
 // /backtest/portfolio?symbols=us:aapl,us:tsla,crypto:btc&weights=40,30,30&range=1y
@@ -57,6 +64,7 @@ type Props = {
     symbols?: string | string[];
     weights?: string | string[];
     range?: string | string[];
+    rebalance?: string | string[];
   }>;
 };
 
@@ -77,6 +85,7 @@ export default async function PortfolioBacktestPage({
   const tDisc = await getTranslations("disclaimer");
   const range = parseRangeParam(sp.range);
   const bars = rangeBars(range);
+  const initialRebalance = parseRebalance(sp.rebalance);
 
   const rawSymbols = typeof sp.symbols === "string" ? sp.symbols : "";
   const tokens = rawSymbols
@@ -162,9 +171,9 @@ export default async function PortfolioBacktestPage({
             ③ "균등 배분" 비교로 가중치 효과 검증.
           </p>
           <p>
-            <span className="font-semibold text-fg-muted">모델</span>: 첫 시점 매수
-            후 끝까지 보유 (Buy &amp; Hold). 주기적 rebalance 는 다음 라운드.
-            수수료 0.1% · 슬리피지 0.05%.
+            <span className="font-semibold text-fg-muted">모델</span>: Buy &amp; Hold
+            (기본) 또는 주기적 rebalance (매월/분기/매년) — 경계 시점에 weight
+            비율로 단위 수 재조정. 수수료 0.1% · 슬리피지 0.05%.
           </p>
         </div>
       </details>
@@ -190,6 +199,7 @@ export default async function PortfolioBacktestPage({
           key={positions.map((p) => `${p.class}:${p.symbol}`).join(",")}
           initialPositions={positions}
           range={range}
+          initialRebalance={initialRebalance}
         />
       )}
 
