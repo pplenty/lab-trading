@@ -24,6 +24,8 @@ const STATIC_PATHS = [
   "/us/volume",
   "/us/news",
   "/kr",
+  "/kr/kospi",
+  "/kr/kosdaq",
   "/kr/gainers",
   "/kr/losers",
   "/kr/volume",
