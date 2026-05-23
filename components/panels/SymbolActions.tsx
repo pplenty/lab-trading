@@ -33,6 +33,12 @@ export function SymbolActions({class: cls, symbol, label}: Props) {
         destination={(e) => `/${e.class}/${e.symbol}`}
       />
       <Link
+        href={`/compare?symbols=${cls}:${symbol}`}
+        className="inline-flex items-center gap-1 rounded-md border border-line bg-bg px-3 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:border-fg hover:text-fg"
+      >
+        ⇆ 다른 종목과 비교
+      </Link>
+      <Link
         href={`/${cls}`}
         className="inline-flex items-center gap-1 rounded-md border border-line bg-bg px-3 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:border-fg hover:text-fg"
       >
