@@ -206,6 +206,17 @@ export default async function HomePage({
               조건 도달 시 자동 감지 · localStorage
             </p>
           </Link>
+          <Link
+            href="/notes"
+            className="group rounded-lg border border-line bg-bg p-4 transition-colors hover:border-fg"
+          >
+            <p className="text-sm font-semibold text-fg group-hover:text-accent">
+              📝 내 메모
+            </p>
+            <p className="mt-1 text-xs text-fg-muted">
+              종목별 작성 메모 통합 관리
+            </p>
+          </Link>
         </div>
       </section>
 
