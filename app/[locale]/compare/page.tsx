@@ -1,5 +1,6 @@
 import type {Metadata} from "next";
 import nextDynamic from "next/dynamic";
+import {redirect} from "next/navigation";
 import {getTranslations} from "next-intl/server";
 import {Link} from "@/i18n/navigation";
 import {loadCandleSeries} from "@/lib/data/candles";
@@ -79,6 +80,12 @@ export default async function ComparePage({params, searchParams}: Props) {
   const {locale} = await params;
   const sp = await searchParams;
   const tDisc = await getTranslations("disclaimer");
+
+  // 빈 URL → default mixed suggestion 으로 redirect (Next 16 catch-all routing quirk 우회).
+  // 동시에 사용자 첫 진입 시 즉시 비교 결과 노출.
+  if (sp.symbols === undefined) {
+    redirect(`/${locale}/compare?symbols=crypto:btc,us:aapl,kr:005930&range=1y`);
+  }
 
   const range = parseRangeParam(sp.range);
   const bars = rangeBars(range);
