@@ -46,6 +46,7 @@
       "kospi": "KOSPI",
       "kosdaq": "KOSDAQ",
       "backtest-new": "New strategy",
+      "backtest-portfolio": "Portfolio",
       "backtest-saved": "My strategies"
     }
   },

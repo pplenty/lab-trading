@@ -31,6 +31,7 @@ const STATIC_PATHS = [
   "/kr/volume",
   "/kr/news",
   "/backtest/new",
+  "/backtest/portfolio",
   "/backtest/saved",
   "/compare",
   "/settings",
