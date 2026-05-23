@@ -18,6 +18,7 @@ import {SymbolActions} from "@/components/panels/SymbolActions";
 import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
 import {SymbolBacktestPreview} from "@/components/panels/SymbolBacktestPreview";
 import {SymbolRelatedNews} from "@/components/panels/SymbolRelatedNews";
+import {SymbolNotesPanel} from "@/components/panels/SymbolNotesPanel";
 import {IndicatorPanel} from "@/components/panels/IndicatorPanel";
 import {ChartRangeToggle} from "@/components/charts/ChartRangeToggle";
 import {parseRangeParam, rangeBars} from "@/lib/chart/range";
@@ -261,6 +262,13 @@ export default async function UsSymbolPage({params, searchParams}: PageProps) {
       )}
 
       <SymbolRelatedNews class="us" symbol={entry.symbol} locale="ko" />
+
+      <SymbolNotesPanel
+        class="us"
+        symbol={entry.symbol}
+        currentPrice={quote?.price}
+        currency="USD"
+      />
 
       <RelatedSymbolChips
         class="us"

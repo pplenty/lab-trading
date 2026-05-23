@@ -20,6 +20,7 @@ import {RecentTracker} from "@/components/RecentTracker";
 import {SymbolActions} from "@/components/panels/SymbolActions";
 import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
 import {SymbolBacktestPreview} from "@/components/panels/SymbolBacktestPreview";
+import {SymbolNotesPanel} from "@/components/panels/SymbolNotesPanel";
 import {SymbolRelatedNews} from "@/components/panels/SymbolRelatedNews";
 import {IndicatorPanel} from "@/components/panels/IndicatorPanel";
 import {ChartRangeToggle} from "@/components/charts/ChartRangeToggle";
@@ -315,6 +316,13 @@ export default async function CryptoSymbolPage({params, searchParams}: PageProps
       )}
 
       <SymbolRelatedNews class="crypto" symbol={entry.symbol} locale="ko" />
+
+      <SymbolNotesPanel
+        class="crypto"
+        symbol={entry.symbol}
+        currentPrice={quote?.price}
+        currency="KRW"
+      />
 
       <RelatedSymbolChips
         class="crypto"
