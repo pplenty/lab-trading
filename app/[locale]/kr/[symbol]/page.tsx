@@ -10,6 +10,8 @@ import {krRegistry, getKrBySymbol} from "@/lib/symbols/registry";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {FinancialDelta} from "@/components/FinancialDelta";
 import {FavoriteButton} from "@/components/FavoriteButton";
+import {AlertButton} from "@/components/AlertButton";
+import {AlertNotice} from "@/components/AlertNotice";
 import {D1FallbackBadge} from "@/components/D1FallbackBadge";
 import {RecentTracker} from "@/components/RecentTracker";
 import {SymbolActions} from "@/components/panels/SymbolActions";
@@ -163,6 +165,15 @@ export default async function KrSymbolPage({params, searchParams}: PageProps) {
               <span className="text-fg-subtle">({entry.ticker})</span>
             </h1>
             <FavoriteButton class="kr" symbol={entry.symbol} label={entry.nameKo} />
+            {quote && (
+              <AlertButton
+                class="kr"
+                symbol={entry.symbol}
+                label={entry.nameKo}
+                currentPrice={quote.price}
+                currency="KRW"
+              />
+            )}
           </div>
           <p className="text-xs text-fg-subtle">{entry.market}</p>
         </div>
@@ -186,6 +197,15 @@ export default async function KrSymbolPage({params, searchParams}: PageProps) {
         symbol={entry.symbol}
         label={entry.nameKo ?? entry.name}
       />
+
+      {quote && (
+        <AlertNotice
+          class="kr"
+          symbol={entry.symbol}
+          currentPrice={quote.price}
+          currency="KRW"
+        />
+      )}
 
       <D1FallbackBadge quote={quote} variant="banner" />
 

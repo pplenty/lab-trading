@@ -13,6 +13,8 @@ import {cryptoRegistry, getCryptoBySymbol} from "@/lib/symbols/registry";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {FinancialDelta} from "@/components/FinancialDelta";
 import {FavoriteButton} from "@/components/FavoriteButton";
+import {AlertButton} from "@/components/AlertButton";
+import {AlertNotice} from "@/components/AlertNotice";
 import {D1FallbackBadge} from "@/components/D1FallbackBadge";
 import {RecentTracker} from "@/components/RecentTracker";
 import {SymbolActions} from "@/components/panels/SymbolActions";
@@ -192,6 +194,15 @@ export default async function CryptoSymbolPage({params, searchParams}: PageProps
             <span className="text-fg-subtle">({entry.symbol.toUpperCase()})</span>
           </h1>
           <FavoriteButton class="crypto" symbol={entry.symbol} label={entry.nameKo ?? entry.name} />
+          {quote && (
+            <AlertButton
+              class="crypto"
+              symbol={entry.symbol}
+              label={entry.nameKo ?? entry.name}
+              currentPrice={quote.price}
+              currency="KRW"
+            />
+          )}
         </div>
         {quote && (
           <div className="flex flex-col items-end gap-1 text-right">
@@ -213,6 +224,15 @@ export default async function CryptoSymbolPage({params, searchParams}: PageProps
         symbol={entry.symbol}
         label={entry.nameKo ?? entry.name}
       />
+
+      {quote && (
+        <AlertNotice
+          class="crypto"
+          symbol={entry.symbol}
+          currentPrice={quote.price}
+          currency="KRW"
+        />
+      )}
 
       <D1FallbackBadge quote={quote} variant="banner" />
 

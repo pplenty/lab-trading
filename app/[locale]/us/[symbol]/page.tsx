@@ -10,6 +10,8 @@ import {usRegistry, getUsBySymbol} from "@/lib/symbols/registry";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {FinancialDelta} from "@/components/FinancialDelta";
 import {FavoriteButton} from "@/components/FavoriteButton";
+import {AlertButton} from "@/components/AlertButton";
+import {AlertNotice} from "@/components/AlertNotice";
 import {D1FallbackBadge} from "@/components/D1FallbackBadge";
 import {RecentTracker} from "@/components/RecentTracker";
 import {SymbolActions} from "@/components/panels/SymbolActions";
@@ -163,6 +165,15 @@ export default async function UsSymbolPage({params, searchParams}: PageProps) {
               <span className="text-fg-subtle">({entry.ticker})</span>
             </h1>
             <FavoriteButton class="us" symbol={entry.symbol} label={entry.nameKo ?? entry.name} />
+            {quote && (
+              <AlertButton
+                class="us"
+                symbol={entry.symbol}
+                label={entry.nameKo ?? entry.name}
+                currentPrice={quote.price}
+                currency="USD"
+              />
+            )}
           </div>
           <p className="text-xs text-fg-subtle">{entry.market}</p>
         </div>
@@ -186,6 +197,15 @@ export default async function UsSymbolPage({params, searchParams}: PageProps) {
         symbol={entry.symbol}
         label={entry.nameKo ?? entry.name}
       />
+
+      {quote && (
+        <AlertNotice
+          class="us"
+          symbol={entry.symbol}
+          currentPrice={quote.price}
+          currency="USD"
+        />
+      )}
 
       <D1FallbackBadge quote={quote} variant="banner" />
 
