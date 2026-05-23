@@ -187,6 +187,7 @@ export default async function PortfolioBacktestPage({
         </div>
       ) : (
         <PortfolioBacktestPanel
+          key={positions.map((p) => `${p.class}:${p.symbol}`).join(",")}
           initialPositions={positions}
           range={range}
         />
