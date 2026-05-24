@@ -6,6 +6,7 @@ import {runBacktest} from "@/lib/backtest/run";
 import {strategies, getStrategy} from "@/lib/backtest/strategies/registry";
 import type {Candle, AssetClass, IndicatorRow} from "@/lib/types";
 import {BacktestResultCard} from "./BacktestResultCard";
+import {ShareBacktestButton} from "./ShareBacktestButton";
 import {SaveStrategyButton} from "./SaveStrategyButton";
 import {CopyResultUrlButton} from "./CopyResultUrlButton";
 import {SymbolPicker} from "./SymbolPicker";
@@ -45,6 +46,11 @@ type Props = {
   symbolLabel?: string;
   /** server KV cache 에서 미리 받은 6 전략 비교 — null 면 client 가 useEffect 로 채움. */
   initialComparison?: Array<{id: string; nameKo: string; pct: number | null}>;
+  /** "1d" | "1w" | "1mo" — ShareBacktestButton 의 meta 에 포함. */
+  tf?: string;
+  /** 표시명 + ticker — share 시 다른 사람에게 보일 라벨. */
+  displayName?: string;
+  displayTicker?: string;
 };
 
 export function BacktestPanel({
@@ -57,6 +63,9 @@ export function BacktestPanel({
   initialParams,
   symbolLabel,
   initialComparison,
+  tf = "1d",
+  displayName,
+  displayTicker,
 }: Props) {
   const [strategyId, setStrategyId] = useState<string>(
     initialStrategyId ?? "buy-and-hold"
@@ -356,12 +365,27 @@ export function BacktestPanel({
       )}
 
       {result ? (
-        <BacktestResultCard
-          result={result}
-          initialCapital={INITIAL_CAPITAL}
-          currency={currency}
-          candles={candles}
-        />
+        <>
+          <ShareBacktestButton
+            asset={cls}
+            symbol={symbol}
+            displayName={displayName ?? symbolLabel ?? symbol.toUpperCase()}
+            displayTicker={displayTicker ?? symbol.toUpperCase()}
+            currency={currency}
+            strategyId={strategyId}
+            params={params}
+            tf={tf}
+            initialCapital={INITIAL_CAPITAL}
+            candles={candles}
+            result={result}
+          />
+          <BacktestResultCard
+            result={result}
+            initialCapital={INITIAL_CAPITAL}
+            currency={currency}
+            candles={candles}
+          />
+        </>
       ) : candles.length < 2 ? (
         <p className="rounded-md border border-line bg-surface p-4 text-sm text-fg-muted">
           데이터가 부족해 백테스트를 실행할 수 없습니다.

@@ -228,6 +228,9 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
           }
           symbolLabel={displayName}
           initialComparison={comparisonCache ?? undefined}
+          tf={tf}
+          displayName={displayName}
+          displayTicker={displayTicker}
         />
       ) : !fetchError ? (
         <p className="rounded-md border border-line bg-surface p-4 text-sm text-fg-muted">
