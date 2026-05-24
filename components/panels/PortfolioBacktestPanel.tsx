@@ -11,7 +11,8 @@ import {
   type RebalanceMode,
 } from "@/lib/backtest/portfolio";
 import {FinancialDelta} from "@/components/FinancialDelta";
-import {LineChart, type LineSeries} from "@/components/charts/LineChart";
+import {type LineSeries} from "@/components/charts/LineChart";
+import {ReplayLineChart} from "@/components/charts/ReplayLineChart";
 import type {AssetClass, Candle} from "@/lib/types";
 
 // 포트폴리오 백테스트 client panel — server 가 candles map prop 전달.
@@ -403,7 +404,7 @@ function PortfolioResultCard({
             </span>
           </div>
         </div>
-        <LineChart
+        <ReplayLineChart
           series={[portfolioSeries, equalSeries]}
           height={260}
           ariaLabel="Portfolio equity curve"

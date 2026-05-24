@@ -1,7 +1,8 @@
 import nextDynamic from "next/dynamic";
 import {TrendingUp, Zap, ArrowDownToLine, BarChart3, Target, Trophy, Repeat, Clock} from "lucide-react";
 import {FinancialDelta} from "@/components/FinancialDelta";
-import {LineChart, type LineSeries} from "@/components/charts/LineChart";
+import {type LineSeries} from "@/components/charts/LineChart";
+import {ReplayLineChart} from "@/components/charts/ReplayLineChart";
 import {DrawdownChart} from "@/components/charts/DrawdownChart";
 import {MonthlyReturnsHeatmap} from "@/components/charts/MonthlyReturnsHeatmap";
 import {TradesTable} from "./TradesTable";
@@ -219,7 +220,7 @@ export function BacktestResultCard({result, initialCapital, currency, candles}: 
             Final: {compactFmt.format(finalEquity)}
           </span>
         </div>
-        <LineChart
+        <ReplayLineChart
           series={[equitySeries, buyHoldSeries]}
           height={260}
           ariaLabel="Equity curve"
