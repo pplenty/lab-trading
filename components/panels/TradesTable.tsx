@@ -1,14 +1,19 @@
+"use client";
+
 import {FinancialDelta} from "@/components/FinancialDelta";
 import type {Trade} from "@/lib/backtest/types";
 
 // 백테스트 거래 목록 — 매수/매도 페어로 묶어 round-trip PnL 노출.
 // 매수만 있고 매도 없는 마지막 trade (open position) 도 표시 (PnL "—").
+// onRowHover: 부모 (InteractiveBacktestTrades) 가 차트 crosshair 연동.
 
 type Props = {
   trades: Trade[];
   currency: string;
   /** 표시할 최대 round-trip 수 (default 20). */
   maxRows?: number;
+  /** row hover 시 매수 봉 timestamp. leave 시 null. */
+  onRowHover?: (t: number | null) => void;
 };
 
 type RoundTrip = {
@@ -59,7 +64,7 @@ function priceFmt(currency: string): Intl.NumberFormat {
   });
 }
 
-export function TradesTable({trades, currency, maxRows = 20}: Props) {
+export function TradesTable({trades, currency, maxRows = 20, onRowHover}: Props) {
   const trips = pairRoundTrips(trades);
   if (trips.length === 0) {
     return (
@@ -105,7 +110,12 @@ export function TradesTable({trades, currency, maxRows = 20}: Props) {
                 <>
                   <tr
                     key={`${trip.buy.t}-${idx}`}
-                    className="border-t border-line tabular-nums"
+                    onMouseEnter={onRowHover ? () => onRowHover(trip.buy.t) : undefined}
+                    onMouseLeave={onRowHover ? () => onRowHover(null) : undefined}
+                    className={
+                      "border-t border-line tabular-nums" +
+                      (onRowHover ? " cursor-pointer transition-colors hover:bg-surface/50" : "")
+                    }
                   >
                     <td className="px-4 py-2 text-fg-subtle">{idx}</td>
                     <td className="px-4 py-2 text-fg-muted">

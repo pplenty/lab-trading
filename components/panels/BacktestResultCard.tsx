@@ -8,10 +8,10 @@ import {MonthlyReturnsHeatmap} from "@/components/charts/MonthlyReturnsHeatmap";
 import {TradesTable} from "./TradesTable";
 import type {BacktestResult} from "@/lib/backtest/types";
 import type {Candle} from "@/lib/types";
-import type {TradeMarker} from "@/components/charts/CandleChart";
 
-const CandleChart = nextDynamic(() =>
-  import("@/components/charts/CandleChart").then((m) => m.CandleChart)
+// 매매 시그널 + 거래 내역 (client + lightweight-charts 38KB) — 결과 표시 후에만 hydrate
+const InteractiveBacktestTrades = nextDynamic(() =>
+  import("./InteractiveBacktestTrades").then((m) => m.InteractiveBacktestTrades)
 );
 
 // 백테스트 결과 카드 — 메트릭스 8 항목 + equity curve + trades 표.
@@ -227,37 +227,6 @@ export function BacktestResultCard({result, initialCapital, currency, candles}: 
         />
       </section>
 
-      {/* 가격 차트 + 매수/매도 마커 — "왜 이 시점에 매매했는가" 시각화. */}
-      {candles && candles.length > 0 && result.trades.length > 0 && (
-        <section className="rounded-lg border border-line bg-surface/30 p-4">
-          <header className="mb-2 flex flex-wrap items-baseline justify-between gap-2 text-xs">
-            <h3 className="text-sm font-semibold text-fg">매매 시그널</h3>
-            <div className="flex items-center gap-3 text-fg-subtle">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="inline-block h-2 w-2 rounded-full bg-[var(--color-up)]" />
-                매수 {result.trades.filter((t) => t.side === "buy").length}회
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="inline-block h-2 w-2 rounded-full bg-[var(--color-down)]" />
-                매도 {result.trades.filter((t) => t.side === "sell").length}회
-              </span>
-            </div>
-          </header>
-          <CandleChart
-            candles={candles}
-            height={260}
-            trades={result.trades.map((t) => ({
-              t: t.t,
-              side: t.side,
-              text: t.reason,
-            })) as TradeMarker[]}
-          />
-          <p className="mt-2 text-[10px] text-fg-subtle">
-            ▲ 매수 시점 · ▼ 매도 시점 — 사유는 아래 거래 내역 참고
-          </p>
-        </section>
-      )}
-
       {/* Drawdown chart — equity peak 대비 underwater. MDD 지점 marker. */}
       {ddPoints.length > 1 && (
         <section className="rounded-lg border border-line bg-surface/30 p-4">
@@ -294,7 +263,16 @@ export function BacktestResultCard({result, initialCapital, currency, candles}: 
         initialCapital={initialCapital}
       />
 
-      <TradesTable trades={result.trades} currency={currency} maxRows={20} />
+      {/* 매매 시그널 차트 + 거래 내역 — table hover ↔ chart crosshair 연동 */}
+      {candles && candles.length > 0 && result.trades.length > 0 ? (
+        <InteractiveBacktestTrades
+          candles={candles}
+          trades={result.trades}
+          currency={currency}
+        />
+      ) : (
+        <TradesTable trades={result.trades} currency={currency} maxRows={20} />
+      )}
     </div>
   );
 }
