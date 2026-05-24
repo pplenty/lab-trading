@@ -11,6 +11,7 @@ import {toSymbol} from "@/lib/symbols/normalize";
 import {FinancialDelta} from "@/components/FinancialDelta";
 import {FavoriteButton} from "@/components/FavoriteButton";
 import {AlertButton} from "@/components/AlertButton";
+import {PaperTradeButton} from "@/components/PaperTradeButton";
 import {AlertNotice} from "@/components/AlertNotice";
 import {D1FallbackBadge} from "@/components/D1FallbackBadge";
 import {RecentTracker} from "@/components/RecentTracker";
@@ -179,6 +180,13 @@ export default async function UsSymbolPage({params, searchParams}: PageProps) {
                 currency="USD"
               />
             )}
+            <PaperTradeButton
+              class="us"
+              symbol={entry.symbol}
+              label={entry.nameKo ?? entry.name}
+              currentPrice={quote?.price}
+              currency="USD"
+            />
           </div>
           <p className="text-xs text-fg-subtle">{entry.market}</p>
         </div>

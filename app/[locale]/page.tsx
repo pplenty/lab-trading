@@ -217,6 +217,17 @@ export default async function HomePage({
               종목별 작성 메모 통합 관리
             </p>
           </Link>
+          <Link
+            href="/portfolio"
+            className="group rounded-lg border border-line bg-bg p-4 transition-colors hover:border-fg"
+          >
+            <p className="text-sm font-semibold text-fg group-hover:text-accent">
+              💼 가상 포트폴리오
+            </p>
+            <p className="mt-1 text-xs text-fg-muted">
+              paper trading · 보유 종목 PnL 추적
+            </p>
+          </Link>
         </div>
       </section>
 

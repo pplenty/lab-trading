@@ -37,6 +37,7 @@ const STATIC_PATHS = [
   "/market",
   "/alerts",
   "/notes",
+  "/portfolio",
   "/settings",
 ];
 
