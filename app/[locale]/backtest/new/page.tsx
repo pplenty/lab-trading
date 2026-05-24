@@ -10,7 +10,16 @@ import {
   getUsBySymbol,
 } from "@/lib/symbols/registry";
 import {BacktestPanel} from "@/components/panels/BacktestPanel";
-import type {AssetClass, Candle, CandleSeries} from "@/lib/types";
+import {
+  applyTimeframe,
+  parseTimeframeParam,
+  timeframeLabel,
+} from "@/lib/chart/timeframe";
+import {computeIndicators} from "@/lib/backfill/indicators-batch";
+import type {AssetClass, Candle, CandleSeries, IndicatorRow} from "@/lib/types";
+
+// 주봉/월봉 backtest 시 의미 있는 봉 수 확보 위해 일봉 fetch 윈도우 확장.
+const TF_FETCH_LIMIT = {"1d": 200, "1w": 1000, "1mo": 1500} as const;
 
 // 백테스트 작업장 — `/backtest/new?asset=crypto&symbol=btc` URL params 로 종목 prefill.
 // 활성: crypto (Upbit KRW 라이브) + us (Twelve Data) + kr (KIS). us / kr 은 키 미발급 시 demo GBM 자동 분기.
@@ -38,6 +47,8 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
   const assetParam = sp.asset;
   const assetClass: AssetClass =
     assetParam === "us" || assetParam === "kr" ? assetParam : "crypto";
+  const tf = parseTimeframeParam(sp.tf);
+  const fetchLimit = TF_FETCH_LIMIT[tf];
 
   const t = await getTranslations("home");
   const tDisc = await getTranslations("disclaimer");
@@ -45,7 +56,7 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
   // strategy + 파라미터 URL prefill (저장된 전략 로드 시).
   const initialStrategyId =
     typeof sp.strategy === "string" ? sp.strategy : undefined;
-  const RESERVED_KEYS = new Set(["asset", "symbol", "strategy"]);
+  const RESERVED_KEYS = new Set(["asset", "symbol", "strategy", "tf"]);
   const initialParams: Record<string, number> = {};
   for (const [k, v] of Object.entries(sp)) {
     if (RESERVED_KEYS.has(k)) continue;
@@ -84,7 +95,7 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
       series = await loadCandleSeries({
         asset: "crypto",
         symbol: entry.symbol,
-        limit: 200,
+        limit: fetchLimit,
       });
     } catch (err) {
       fetchError = err instanceof Error ? err.message : String(err);
@@ -99,7 +110,7 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
       series = await loadCandleSeries({
         asset: "us",
         symbol: entry.symbol,
-        limit: 200,
+        limit: fetchLimit,
       });
       isDemo = series.source.includes("demo");
       sourceLabel = isDemo ? "Twelve Data (demo)" : "Twelve Data";
@@ -118,7 +129,7 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
       series = await loadCandleSeries({
         asset: "kr",
         symbol: entry.symbol,
-        limit: 200,
+        limit: fetchLimit,
       });
       isDemo = series.source.includes("demo");
       sourceLabel = isDemo ? "KIS (demo)" : "한국투자증권 (KIS)";
@@ -128,10 +139,18 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
     }
   }
 
-  const candles: Candle[] = series?.candles ?? [];
+  const rawCandles: Candle[] = series?.candles ?? [];
+  // tf !== "1d" 면 일봉을 주/월봉으로 aggregate (ADR-0019 1w/1mo 옵션).
+  const candles: Candle[] = applyTimeframe(rawCandles, tf);
   const symbol = normalized;
-  // D1 사전계산 indicators — strategy 가 자체 계산 대신 D1 값 우선 사용 (ADR-0021).
-  const indicators = await loadIndicatorsForCandles(symbol, candles);
+  // tf === "1d": D1 사전계산 indicators 우선 (ADR-0021).
+  // tf !== "1d": aggregate 한 봉 기준으로 indicators 재계산 (D1 는 일봉만 저장).
+  let indicators: IndicatorRow[] | undefined;
+  if (tf === "1d") {
+    indicators = await loadIndicatorsForCandles(symbol, candles);
+  } else {
+    indicators = computeIndicators(candles);
+  }
 
   // 6 전략 비교 KV cache — hit 면 server-side 즉시 prop, miss 면 null (client 가 채움).
   // SSR cold start 의 6 backtest 비용 회피 (Worker CPU 한도 안전망).
@@ -149,11 +168,14 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
         </p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
           {displayName} <span className="text-fg-subtle">({displayTicker})</span>{" "}
-          · 일봉 백테스트
+          · {timeframeLabel(tf)} 백테스트
         </h1>
-        <p className="mt-1 text-sm text-fg-muted">
-          {sourceLabel} · 최근 {candles.length} 봉
-        </p>
+        <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-fg-muted">
+          <span>
+            {sourceLabel} · 최근 {candles.length} 봉
+          </span>
+          <TfNav locale={locale} sp={sp} currentTf={tf} />
+        </div>
         <details className="mt-3 rounded-md border border-line bg-surface/40 px-3 py-2 text-xs text-fg-muted">
           <summary className="cursor-pointer select-none text-fg-muted hover:text-fg">
             💡 백테스트 처음이라면 — 1분 가이드
@@ -222,6 +244,57 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
         </p>
       </footer>
     </main>
+  );
+}
+
+import {Link} from "@/i18n/navigation";
+import {TIMEFRAMES, type Timeframe} from "@/lib/chart/timeframe";
+
+// 백테스트 페이지의 timeframe segmented control — 다른 query 보존.
+function TfNav({
+  locale: _locale,
+  sp,
+  currentTf,
+}: {
+  locale: string;
+  sp: Record<string, string | string[] | undefined>;
+  currentTf: Timeframe;
+}) {
+  void _locale;
+  return (
+    <div
+      role="tablist"
+      aria-label="백테스트 timeframe"
+      className="flex items-center gap-0.5 rounded-md border border-line bg-surface/40 p-0.5"
+    >
+      {TIMEFRAMES.map((tfOpt) => {
+        const active = tfOpt === currentTf;
+        const params = new URLSearchParams();
+        for (const [k, v] of Object.entries(sp)) {
+          if (k === "tf") continue;
+          const s = Array.isArray(v) ? v[0] : v;
+          if (s !== undefined) params.set(k, s);
+        }
+        if (tfOpt !== "1d") params.set("tf", tfOpt);
+        const label = tfOpt === "1d" ? "일봉" : tfOpt === "1w" ? "주봉" : "월봉";
+        return (
+          <Link
+            key={tfOpt}
+            href={`/backtest/new?${params.toString()}`}
+            scroll={false}
+            role="tab"
+            aria-selected={active}
+            className={`min-w-[44px] rounded px-2 py-1 text-center text-[11px] font-medium tabular-nums transition-colors ${
+              active
+                ? "bg-fg text-bg"
+                : "text-fg-muted hover:bg-surface hover:text-fg"
+            }`}
+          >
+            {label}
+          </Link>
+        );
+      })}
+    </div>
   );
 }
 
