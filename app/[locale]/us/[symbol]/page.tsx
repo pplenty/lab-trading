@@ -21,7 +21,9 @@ import {SymbolRelatedNews} from "@/components/panels/SymbolRelatedNews";
 import {SymbolNotesPanel} from "@/components/panels/SymbolNotesPanel";
 import {IndicatorPanel} from "@/components/panels/IndicatorPanel";
 import {ChartRangeToggle} from "@/components/charts/ChartRangeToggle";
+import {TimeframeToggle} from "@/components/charts/TimeframeToggle";
 import {parseRangeParam, rangeBars} from "@/lib/chart/range";
+import {applyTimeframe, parseTimeframeParam, timeframeLabel} from "@/lib/chart/timeframe";
 import {VolatilityPanel} from "@/components/panels/VolatilityPanel";
 import {VolumePanel} from "@/components/panels/VolumePanel";
 import {PriceLevelsPanel} from "@/components/panels/PriceLevelsPanel";
@@ -87,12 +89,14 @@ export async function generateMetadata({
 
 type PageProps = {
   params: Promise<{locale: string; symbol: string}>;
-  searchParams: Promise<{range?: string | string[]}>;
+  searchParams: Promise<{range?: string | string[]; tf?: string | string[]}>;
 };
 
 export default async function UsSymbolPage({params, searchParams}: PageProps) {
   const {symbol: rawSymbol} = await params;
-  const range = parseRangeParam((await searchParams).range);
+  const sp = await searchParams;
+  const range = parseRangeParam(sp.range);
+  const tf = parseTimeframeParam(sp.tf);
   const bars = rangeBars(range);
   let normalized: string;
   try {
@@ -235,10 +239,16 @@ export default async function UsSymbolPage({params, searchParams}: PageProps) {
 
       {series && series.candles.length > 0 && (
         <section className="mb-6 rounded-lg border border-line bg-surface/30 p-3">
-          <div className="mb-2 flex justify-end">
-            <ChartRangeToggle basePath={`/us/${entry.symbol}`} current={range} />
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[10px] uppercase tracking-wider text-fg-subtle">
+              {timeframeLabel(tf)} 차트
+            </span>
+            <div className="flex items-center gap-2">
+              <TimeframeToggle basePath={`/us/${entry.symbol}`} current={tf} range={range} />
+              <ChartRangeToggle basePath={`/us/${entry.symbol}`} current={range} tf={tf} />
+            </div>
           </div>
-          <CandleChart candles={series.candles} height={420} showVolume />
+          <CandleChart candles={applyTimeframe(series.candles, tf)} height={420} showVolume />
         </section>
       )}
 

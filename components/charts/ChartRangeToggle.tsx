@@ -1,5 +1,6 @@
 import {Link} from "@/i18n/navigation";
 import {CHART_RANGES, type ChartRange, rangeLabel} from "@/lib/chart/range";
+import type {Timeframe} from "@/lib/chart/timeframe";
 
 // 차트 시간대 segmented control. URL ?range=... 로 RSC nav.
 // 5y 는 1250 봉 (~25KB JSON) — 라이트한 lightweight-charts 무리 없음.
@@ -7,9 +8,12 @@ import {CHART_RANGES, type ChartRange, rangeLabel} from "@/lib/chart/range";
 type Props = {
   basePath: string; // e.g. "/crypto/btc"
   current: ChartRange;
+  /** 함께 보존할 timeframe (1d 면 query 생략). */
+  tf?: Timeframe;
 };
 
-export function ChartRangeToggle({basePath, current}: Props) {
+export function ChartRangeToggle({basePath, current, tf}: Props) {
+  const tfQuery = tf && tf !== "1d" ? `&tf=${tf}` : "";
   return (
     <div
       role="tablist"
@@ -21,7 +25,7 @@ export function ChartRangeToggle({basePath, current}: Props) {
         return (
           <Link
             key={r}
-            href={`${basePath}?range=${r}`}
+            href={`${basePath}?range=${r}${tfQuery}`}
             scroll={false}
             role="tab"
             aria-selected={active}
