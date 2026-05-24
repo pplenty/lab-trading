@@ -228,6 +228,17 @@ export default async function HomePage({
               paper trading · 보유 종목 PnL 추적
             </p>
           </Link>
+          <Link
+            href="/favorites"
+            className="group rounded-lg border border-line bg-bg p-4 transition-colors hover:border-fg"
+          >
+            <p className="text-sm font-semibold text-fg group-hover:text-accent">
+              ⭐ 내 즐겨찾기
+            </p>
+            <p className="mt-1 text-xs text-fg-muted">
+              관심 종목 라벨링 + 분류
+            </p>
+          </Link>
         </div>
       </section>
 
