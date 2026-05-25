@@ -27,7 +27,7 @@ import {parseRangeParam, rangeBars} from "@/lib/chart/range";
 import {applyTimeframe, parseTimeframeParam, timeframeLabel} from "@/lib/chart/timeframe";
 import {loadIndicatorsForCandles} from "@/lib/data/indicators";
 import {computeIndicators} from "@/lib/backfill/indicators-batch";
-import {buildIndicatorOverlays} from "@/lib/chart/overlays";
+import {buildIndicatorOverlays, buildVwapOverlay} from "@/lib/chart/overlays";
 import {VolatilityPanel} from "@/components/panels/VolatilityPanel";
 import {VolumePanel} from "@/components/panels/VolumePanel";
 import {PriceLevelsPanel} from "@/components/panels/PriceLevelsPanel";
@@ -152,9 +152,10 @@ export default async function UsSymbolPage({params, searchParams}: PageProps) {
         ? await loadIndicatorsForCandles(entry.symbol, aggCandles)
         : computeIndicators(aggCandles)
       : undefined;
-  const chartOverlays = chartIndicators
-    ? buildIndicatorOverlays(chartIndicators)
-    : [];
+  const chartOverlays = [
+    ...(chartIndicators ? buildIndicatorOverlays(chartIndicators) : []),
+    ...(aggCandles.length > 0 ? [buildVwapOverlay(aggCandles)] : []),
+  ];
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10 sm:py-12">

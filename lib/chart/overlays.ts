@@ -1,8 +1,9 @@
-import type {IndicatorRow} from "@/lib/types";
+import type {Candle, IndicatorRow} from "@/lib/types";
 import type {ChartOverlay} from "@/components/charts/CandleChart";
 
 // IndicatorRow[] → ChartOverlay[] 변환.
-// 가능 overlays: SMA 20/50/200, EMA 12/26, Bollinger upper/lower (middle = SMA 20 과 중복 회피).
+// 가능 overlays: SMA 20/50/200, EMA 12/26, Bollinger upper/lower (middle = SMA 20 과 중복 회피),
+// + Anchored VWAP (view 시점 기준 누적 — D1 schema 영향 X).
 
 // 색상 팔레트 — 차트의 candle (up/down) 색과 충돌 회피, 서로 잘 구분.
 const COLORS = {
@@ -13,6 +14,7 @@ const COLORS = {
   ema26: "#ec4899", // pink
   bbUpper: "#94a3b8", // slate
   bbLower: "#94a3b8",
+  vwap: "#14b8a6", // teal
 };
 
 export function buildIndicatorOverlays(indicators: IndicatorRow[]): ChartOverlay[] {
@@ -64,4 +66,29 @@ export function buildIndicatorOverlays(indicators: IndicatorRow[]): ChartOverlay
       points: ts.map((t, i) => ({t, v: indicators[i].bb_lower})),
     },
   ];
+}
+
+/**
+ * Anchored VWAP — 현재 view 의 첫 봉부터 누적 (typical price × volume) / 누적 volume.
+ * D1 schema 영향 X (view-only). volume 가 0 이거나 결측이면 끊김.
+ *
+ * 일봉 anchored 의미: "이 기간 동안의 평균 진입가" — 현재가가 VWAP 위면 buy avg 위, 아래면 아래.
+ */
+export function buildVwapOverlay(candles: Candle[]): ChartOverlay {
+  let cumPV = 0;
+  let cumV = 0;
+  const points = candles.map((c) => {
+    const typical = (c.h + c.l + c.c) / 3;
+    if (Number.isFinite(c.v) && c.v > 0) {
+      cumPV += typical * c.v;
+      cumV += c.v;
+    }
+    return {t: c.t, v: cumV > 0 ? cumPV / cumV : undefined};
+  });
+  return {
+    id: "vwap",
+    label: "VWAP",
+    color: COLORS.vwap,
+    points,
+  };
 }
