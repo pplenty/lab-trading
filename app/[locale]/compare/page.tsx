@@ -250,7 +250,9 @@ export default async function ComparePage({params, searchParams}: Props) {
             <CompareMetricsTable
               series={series}
               colors={COLORS}
-              tickerOf={tickerFor}
+              tickers={series.map((s) =>
+                tickerFor(s.entry.class, s.entry.symbol)
+              )}
             />
           </section>
 

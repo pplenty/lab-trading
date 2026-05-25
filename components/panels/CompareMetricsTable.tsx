@@ -5,7 +5,6 @@ import {ChevronDown, ChevronUp, ChevronsUpDown} from "lucide-react";
 import {Link} from "@/i18n/navigation";
 import {FinancialDelta} from "@/components/FinancialDelta";
 import type {CompareSeries} from "@/lib/compare/normalize";
-import type {AssetClass} from "@/lib/types";
 
 // 비교 페이지의 메트릭 표 — sortable column.
 // 클릭 시 toggle (none → desc → asc → none).
@@ -13,7 +12,8 @@ import type {AssetClass} from "@/lib/types";
 type Props = {
   series: CompareSeries[];
   colors: string[];
-  tickerOf: (cls: AssetClass, symbol: string) => string;
+  /** series 와 1:1 — server 가 미리 계산한 ticker label (RSC → client function prop 금지). */
+  tickers: string[];
 };
 
 type SortKey = "return" | "mdd" | "vol" | "sharpe" | null;
@@ -24,7 +24,7 @@ function nullLast(v: number | null, dir: SortDir): number {
   return v;
 }
 
-export function CompareMetricsTable({series, colors, tickerOf}: Props) {
+export function CompareMetricsTable({series, colors, tickers}: Props) {
   const [sortKey, setSortKey] = useState<SortKey>(null);
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -109,9 +109,7 @@ export function CompareMetricsTable({series, colors, tickerOf}: Props) {
                 >
                   {s.entry.label}
                 </Link>
-                <span className="text-xs text-fg-subtle">
-                  {tickerOf(s.entry.class, s.entry.symbol)}
-                </span>
+                <span className="text-xs text-fg-subtle">{tickers[idx]}</span>
               </span>
             </td>
             <td className="px-4 py-2 text-right tabular-nums">
