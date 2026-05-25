@@ -24,6 +24,19 @@ export type TradeMarker = {
   text?: string;
 };
 
+export type ChartOverlay = {
+  /** unique id (e.g. "sma20"). 같은 id 는 update, 다르면 add/remove. */
+  id: string;
+  /** legend 표시명. */
+  label: string;
+  /** {t, v} — null/undefined 봉은 점선 끊김 처리. */
+  points: Array<{t: number; v: number | null | undefined}>;
+  /** hex 또는 CSS color. */
+  color: string;
+  /** 점선 (BB upper/lower 등). */
+  dashed?: boolean;
+};
+
 export type ChartHandle = {
   /** time 을 지정하면 해당 봉 close 위치에 crosshair 표시. null 이면 해제. */
   setHovered: (t: number | null) => void;
@@ -38,6 +51,8 @@ type Props = {
   visibleBars?: number;
   /** 매수/매도 마커 — 백테스트 결과에서 trades 전달 시 차트에 화살표 표시. */
   trades?: TradeMarker[];
+  /** indicator overlay 라인 (SMA/EMA/Bollinger 등) — 사용자 토글 결과만 전달. */
+  overlays?: ChartOverlay[];
 };
 
 function readCssVar(el: HTMLElement, name: string): string {
@@ -45,7 +60,7 @@ function readCssVar(el: HTMLElement, name: string): string {
 }
 
 export const CandleChart = forwardRef<ChartHandle, Props>(function CandleChart(
-  {candles, height = 360, showVolume = false, visibleBars, trades},
+  {candles, height = 360, showVolume = false, visibleBars, trades, overlays},
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -203,6 +218,25 @@ export const CandleChart = forwardRef<ChartHandle, Props>(function CandleChart(
         }
       }
 
+      // overlays — indicator lines (SMA/EMA/BB 등). lightweight-charts v5 의 whitespace
+      // 처리: value null/undefined 봉은 series 가 자동으로 line 끊김 처리.
+      if (overlays && overlays.length > 0) {
+        for (const ov of overlays) {
+          const lineSeries = chart.addSeries(lw.LineSeries, {
+            color: ov.color,
+            lineWidth: 1,
+            lineStyle: ov.dashed ? 2 : 0, // 2 = LineStyle.Dashed
+            priceLineVisible: false,
+            lastValueVisible: false,
+            crosshairMarkerVisible: false,
+          });
+          const data = ov.points
+            .filter((p) => p.v !== null && p.v !== undefined && Number.isFinite(p.v))
+            .map((p) => ({time: p.t as never, value: p.v as number}));
+          if (data.length > 0) lineSeries.setData(data);
+        }
+      }
+
       if (visibleBars && visibleBars > 0 && candles.length > visibleBars) {
         const total = candles.length;
         chart.timeScale().setVisibleLogicalRange({
@@ -237,7 +271,7 @@ export const CandleChart = forwardRef<ChartHandle, Props>(function CandleChart(
       closesRef.current = new Map();
       chart?.remove();
     };
-  }, [candles, height, showVolume, visibleBars, trades]);
+  }, [candles, height, showVolume, visibleBars, trades, overlays]);
 
   return <div ref={containerRef} className="w-full" style={{height}} />;
 });

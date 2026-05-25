@@ -28,6 +28,9 @@ import {ChartRangeToggle} from "@/components/charts/ChartRangeToggle";
 import {TimeframeToggle} from "@/components/charts/TimeframeToggle";
 import {parseRangeParam, rangeBars} from "@/lib/chart/range";
 import {applyTimeframe, parseTimeframeParam, timeframeLabel} from "@/lib/chart/timeframe";
+import {loadIndicatorsForCandles} from "@/lib/data/indicators";
+import {computeIndicators} from "@/lib/backfill/indicators-batch";
+import {buildIndicatorOverlays} from "@/lib/chart/overlays";
 import {VolatilityPanel} from "@/components/panels/VolatilityPanel";
 import {VolumePanel} from "@/components/panels/VolumePanel";
 import {PriceLevelsPanel} from "@/components/panels/PriceLevelsPanel";
@@ -36,8 +39,10 @@ import {assetJsonLd} from "@/lib/seo/asset-jsonld";
 import type {Quote, CandleSeries} from "@/lib/types";
 
 // 동적 차트는 ssr:false — lightweight-charts 가 window 의존이라 RSC 직 렌더 X.
-const CandleChart = nextDynamic(() =>
-  import("@/components/charts/CandleChart").then((m) => m.CandleChart)
+const InteractiveCandleChart = nextDynamic(() =>
+  import("@/components/charts/InteractiveCandleChart").then(
+    (m) => m.InteractiveCandleChart
+  )
 );
 
 // 첫 자산 점등 — `/ko/crypto/btc` 등. Upbit (KRW) 디폴트 어댑터.
@@ -164,6 +169,21 @@ export default async function CryptoSymbolPage({params, searchParams}: PageProps
     notation: "compact",
     maximumFractionDigits: 2,
   });
+
+  // 차트 overlay 용 — aggregated candles 기준 indicators 변환
+  const aggCandles =
+    series && series.candles.length > 0
+      ? applyTimeframe(series.candles, tf)
+      : [];
+  const chartIndicators =
+    aggCandles.length > 0
+      ? tf === "1d"
+        ? await loadIndicatorsForCandles(entry.symbol, aggCandles)
+        : computeIndicators(aggCandles)
+      : undefined;
+  const chartOverlays = chartIndicators
+    ? buildIndicatorOverlays(chartIndicators)
+    : [];
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10 sm:py-12">
@@ -310,7 +330,12 @@ export default async function CryptoSymbolPage({params, searchParams}: PageProps
               <ChartRangeToggle basePath={`/crypto/${entry.symbol}`} current={range} tf={tf} />
             </div>
           </div>
-          <CandleChart candles={applyTimeframe(series.candles, tf)} height={420} showVolume />
+          <InteractiveCandleChart
+            candles={aggCandles}
+            height={420}
+            showVolume
+            availableOverlays={chartOverlays}
+          />
         </section>
       )}
 
