@@ -1,17 +1,20 @@
 "use client";
 
-import {useMemo, useState} from "react";
-import {Bell, BellOff, Trash2, Check, Search} from "lucide-react";
+import {useEffect, useMemo, useState} from "react";
+import {Bell, BellOff, Trash2, Check, Search, RefreshCw} from "lucide-react";
 import {Link} from "@/i18n/navigation";
 import {useAlerts, type PriceAlert} from "@/lib/alerts";
 import {getAssetMeta} from "@/lib/symbols/registry";
-import type {AssetClass} from "@/lib/types";
+import type {AssetClass, Quote} from "@/lib/types";
 
 // 사용자 알림 일괄 관리 — /ko/alerts.
 // 활성 (acknowledged X) / 도달 (triggered) / 일반 list 탭 + 검색 + 자산군 필터.
 
 type Tab = "active" | "triggered" | "all";
 type AssetFilter = AssetClass | "all";
+type SortMode = "default" | "proximity";
+
+type QuotesMap = Record<string, Quote | null>;
 
 const ASSET_LABEL: Record<AssetClass, string> = {
   crypto: "코인",
@@ -31,6 +34,55 @@ export function AlertsPanel() {
   const [tab, setTab] = useState<Tab>("active");
   const [query, setQuery] = useState("");
   const [assetFilter, setAssetFilter] = useState<AssetFilter>("all");
+  const [sortMode, setSortMode] = useState<SortMode>("default");
+  const [quotes, setQuotes] = useState<QuotesMap>({});
+  const [quotesLoading, setQuotesLoading] = useState(false);
+
+  // batch fetch — active alert 의 종목들. acknowledged 알림은 가격 무관.
+  const activeSymbols = useMemo(() => {
+    const keys = new Set<string>();
+    for (const a of items) {
+      if (!a.acknowledged) keys.add(`${a.class}:${a.symbol}`);
+    }
+    return Array.from(keys);
+  }, [items]);
+
+  const symbolsKey = activeSymbols.join(",");
+
+  useEffect(() => {
+    if (symbolsKey === "") {
+      setQuotes({});
+      return;
+    }
+    let cancelled = false;
+    setQuotesLoading(true);
+    fetch(`/api/portfolio-quotes?symbols=${encodeURIComponent(symbolsKey)}`, {
+      cache: "no-store",
+    })
+      .then((res) => (res.ok ? res.json() : {quotes: {}}))
+      .then((data: {quotes: QuotesMap}) => {
+        if (!cancelled) setQuotes(data.quotes ?? {});
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setQuotesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [symbolsKey]);
+
+  function refreshQuotes() {
+    if (symbolsKey === "") return;
+    setQuotesLoading(true);
+    fetch(
+      `/api/portfolio-quotes?symbols=${encodeURIComponent(symbolsKey)}&_t=${Date.now()}`,
+      {cache: "no-store"}
+    )
+      .then((res) => (res.ok ? res.json() : {quotes: {}}))
+      .then((data: {quotes: QuotesMap}) => setQuotes(data.quotes ?? {}))
+      .finally(() => setQuotesLoading(false));
+  }
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -52,14 +104,28 @@ export function AlertsPanel() {
       });
     }
     return [...list].sort((a, b) => {
-      // 도달 우선, 그 다음 최신 생성
+      // 도달 우선
       if (a.triggeredAt && !b.triggeredAt) return -1;
       if (!a.triggeredAt && b.triggeredAt) return 1;
+      if (sortMode === "proximity") {
+        // 임박순 — gap % (abs) 작은 순
+        const ga = proximityGap(a, quotes);
+        const gb = proximityGap(b, quotes);
+        if (ga === null && gb === null) {
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+        }
+        if (ga === null) return 1;
+        if (gb === null) return -1;
+        return ga - gb;
+      }
+      // default — 최신 생성
       return (
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
     });
-  }, [items, tab, query, assetFilter]);
+  }, [items, tab, query, assetFilter, sortMode, quotes]);
 
   // 자산군별 카운트 (active 기준)
   const counts = useMemo(() => {
@@ -133,6 +199,15 @@ export function AlertsPanel() {
 
         <div className="flex items-center gap-2">
           <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value as SortMode)}
+            className="rounded-md border border-line bg-bg px-2 py-1 text-xs text-fg focus:border-fg focus:outline-none"
+            title="정렬"
+          >
+            <option value="default">최신순</option>
+            <option value="proximity">임박순</option>
+          </select>
+          <select
             value={assetFilter}
             onChange={(e) => setAssetFilter(e.target.value as AssetFilter)}
             className="rounded-md border border-line bg-bg px-2 py-1 text-xs text-fg focus:border-fg focus:outline-none"
@@ -156,6 +231,21 @@ export function AlertsPanel() {
               className="w-44 rounded-md border border-line bg-bg py-1 pl-7 pr-2 text-xs text-fg placeholder:text-fg-subtle focus:border-fg focus:outline-none"
             />
           </div>
+          {activeSymbols.length > 0 && (
+            <button
+              type="button"
+              onClick={refreshQuotes}
+              disabled={quotesLoading}
+              aria-label="현재가 새로고침"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-line bg-bg text-fg-subtle transition-colors hover:border-fg hover:text-fg disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw
+                size={11}
+                aria-hidden="true"
+                className={quotesLoading ? "animate-spin" : ""}
+              />
+            </button>
+          )}
         </div>
       </div>
 
@@ -170,6 +260,7 @@ export function AlertsPanel() {
             <AlertRow
               key={a.id}
               alert={a}
+              currentPrice={quotes[`${a.class}:${a.symbol}`]?.price}
               onRemove={() => remove(a.id)}
               onAcknowledge={() => acknowledge(a.id)}
             />
@@ -180,12 +271,24 @@ export function AlertsPanel() {
   );
 }
 
+/** 현재가 vs 알림가 — gap % (signed). null 이면 quote 없음. */
+function proximityGap(a: PriceAlert, quotes: QuotesMap): number | null {
+  const q = quotes[`${a.class}:${a.symbol}`];
+  if (!q || q.price <= 0) return null;
+  // gte: 도달까지 +X% 필요. 현재가 < 알림가 → 양수.
+  // lte: 도달까지 -X% 필요. 현재가 > 알림가 → 양수.
+  const diff = a.op === "gte" ? a.price - q.price : q.price - a.price;
+  return (diff / q.price) * 100;
+}
+
 function AlertRow({
   alert,
+  currentPrice,
   onRemove,
   onAcknowledge,
 }: {
   alert: PriceAlert;
+  currentPrice: number | undefined;
   onRemove: () => void;
   onAcknowledge: () => void;
 }) {
@@ -195,8 +298,24 @@ function AlertRow({
   const displayName = meta?.nameKo ?? meta?.name ?? alert.label;
   const ticker = meta?.ticker ?? alert.symbol.toUpperCase();
 
+  // 임박도 — active 알림에만 의미. gap=0 이면 도달, +면 멀어짐, -면 이미 넘어감.
+  let gapPct: number | null = null;
+  if (active && currentPrice !== undefined && currentPrice > 0) {
+    const diff =
+      alert.op === "gte" ? alert.price - currentPrice : currentPrice - alert.price;
+    gapPct = (diff / currentPrice) * 100;
+  }
+  // imminent — 5% 이내
+  const imminent = gapPct !== null && Math.abs(gapPct) < 5 && gapPct > 0;
+  // 이미 도달 조건 충족 (cron 으로 trigger 아직 안 됨)
+  const reached = gapPct !== null && gapPct <= 0;
+
   const borderClass = triggered && active
     ? "border-[var(--color-up)]/40 bg-[var(--color-up)]/5"
+    : reached
+    ? "border-[var(--color-up)]/40 bg-[var(--color-up)]/5"
+    : imminent
+    ? "border-amber-500/40 bg-amber-500/5"
     : !active
     ? "border-line bg-bg opacity-60"
     : "border-line bg-bg";
@@ -239,6 +358,29 @@ function AlertRow({
             {fmtPrice(alert.price, alert.class)}
           </span>
         </span>
+        {active && currentPrice !== undefined && (
+          <span className="tabular-nums text-fg-subtle">
+            현재{" "}
+            <span className="text-fg-muted">
+              {fmtPrice(currentPrice, alert.class)}
+            </span>
+            {gapPct !== null && (
+              <span
+                className={
+                  "ml-1 " +
+                  (reached
+                    ? "text-[var(--color-up)] font-semibold"
+                    : imminent
+                    ? "text-amber-500 font-semibold"
+                    : "text-fg-subtle")
+                }
+              >
+                ({gapPct > 0 ? "+" : ""}
+                {gapPct.toFixed(2)}%)
+              </span>
+            )}
+          </span>
+        )}
         {triggered ? (
           active ? (
             <span className="rounded-full bg-[var(--color-up)]/15 px-2 py-0.5 text-[10px] font-medium text-[var(--color-up)]">
