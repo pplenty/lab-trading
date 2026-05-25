@@ -13,9 +13,15 @@ import {
   usRegistry,
 } from "@/lib/symbols/registry";
 import {parseRangeParam, rangeBars, rangeLabel} from "@/lib/chart/range";
-import {parseCompareToken, normalizeForCompare, type CompareEntry} from "@/lib/compare/normalize";
+import {
+  parseCompareToken,
+  normalizeForCompare,
+  correlationMatrix,
+  type CompareEntry,
+} from "@/lib/compare/normalize";
 import {ChartRangeToggle} from "@/components/charts/ChartRangeToggle";
-import {FinancialDelta} from "@/components/FinancialDelta";
+import {CompareMetricsTable} from "@/components/panels/CompareMetricsTable";
+import {CorrelationMatrix} from "@/components/panels/CorrelationMatrix";
 import type {AssetClass} from "@/lib/types";
 
 const MultiSeriesChart = nextDynamic(() =>
@@ -218,66 +224,48 @@ export default async function ComparePage({params, searchParams}: Props) {
             </p>
           </section>
 
-          {/* 메트릭 비교 표 */}
+          {/* Drawdown overlay */}
+          <section className="mb-6 rounded-lg border border-line bg-surface/30 p-3">
+            <header className="mb-2 flex items-baseline justify-between gap-2 text-xs">
+              <h2 className="text-sm font-semibold text-fg">Drawdown 추이</h2>
+              <span className="text-[10px] text-fg-subtle">
+                normalized peak 대비 손실 % (음수)
+              </span>
+            </header>
+            <MultiSeriesChart
+              height={200}
+              lines={series.map((s, i) => ({
+                label: s.entry.label,
+                points: s.drawdownPoints,
+                color: COLORS[i % COLORS.length],
+              }))}
+            />
+          </section>
+
+          {/* 메트릭 비교 표 (sortable) */}
           <section className="mb-6 overflow-hidden rounded-lg border border-line">
             <div className="border-b border-line bg-surface px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
-              기간 메트릭 비교
+              기간 메트릭 비교 — column 클릭으로 정렬
             </div>
-            <table className="w-full text-sm">
-              <thead className="text-[10px] uppercase tracking-wider text-fg-subtle">
-                <tr>
-                  <th className="px-4 py-2 text-left font-medium">종목</th>
-                  <th className="px-4 py-2 text-right font-medium">
-                    총 수익률
-                  </th>
-                  <th className="px-4 py-2 text-right font-medium">MDD</th>
-                  <th className="px-4 py-2 text-right font-medium">봉 수</th>
-                </tr>
-              </thead>
-              <tbody>
-                {series.map((s, i) => (
-                  <tr
-                    key={`${s.entry.class}:${s.entry.symbol}`}
-                    className="border-t border-line"
-                  >
-                    <td className="px-4 py-2">
-                      <span className="inline-flex items-center gap-2">
-                        <span
-                          aria-hidden="true"
-                          className="inline-block h-2 w-2 rounded-full"
-                          style={{background: COLORS[i % COLORS.length]}}
-                        />
-                        <Link
-                          href={`/${s.entry.class}/${s.entry.symbol}`}
-                          className="font-medium text-fg hover:text-accent"
-                        >
-                          {s.entry.label}
-                        </Link>
-                        <span className="text-xs text-fg-subtle">
-                          {tickerFor(s.entry.class, s.entry.symbol)}
-                        </span>
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums">
-                      {s.totalReturnPct === null ? (
-                        "—"
-                      ) : (
-                        <FinancialDelta changePct={s.totalReturnPct} digits={2} />
-                      )}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-fg-muted">
-                      {s.mddPct === null
-                        ? "—"
-                        : `-${s.mddPct.toFixed(2)}%`}
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums text-fg-subtle">
-                      {s.entry.candles.length}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <CompareMetricsTable
+              series={series}
+              colors={COLORS}
+              tickerOf={tickerFor}
+            />
           </section>
+
+          {/* Correlation matrix */}
+          {series.length >= 2 && (
+            <section className="mb-6">
+              <CorrelationMatrix
+                labels={series.map((s) =>
+                  tickerFor(s.entry.class, s.entry.symbol)
+                )}
+                matrix={correlationMatrix(series)}
+                rangeLabel={rangeLabel(range)}
+              />
+            </section>
+          )}
 
           {/* 추가 비교 suggestion */}
           <section className="mb-6">
