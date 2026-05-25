@@ -239,6 +239,17 @@ export default async function HomePage({
               관심 종목 라벨링 + 분류
             </p>
           </Link>
+          <Link
+            href="/me"
+            className="group rounded-lg border border-line bg-bg p-4 transition-colors hover:border-fg"
+          >
+            <p className="text-sm font-semibold text-fg group-hover:text-accent">
+              🧭 내 활동
+            </p>
+            <p className="mt-1 text-xs text-fg-muted">
+              모든 사용자 자산 한 화면 통합
+            </p>
+          </Link>
         </div>
       </section>
 

@@ -39,6 +39,7 @@ const STATIC_PATHS = [
   "/notes",
   "/portfolio",
   "/favorites",
+  "/me",
   "/settings",
 ];
 
