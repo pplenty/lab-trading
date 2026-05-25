@@ -21,6 +21,7 @@ import {
 } from "@/lib/compare/normalize";
 import {ChartRangeToggle} from "@/components/charts/ChartRangeToggle";
 import {CompareMetricsTable} from "@/components/panels/CompareMetricsTable";
+import {CompareSymbolBar} from "@/components/panels/CompareSymbolBar";
 import {CorrelationMatrix} from "@/components/panels/CorrelationMatrix";
 import type {AssetClass} from "@/lib/types";
 
@@ -177,31 +178,18 @@ export default async function ComparePage({params, searchParams}: Props) {
         </section>
       ) : (
         <>
-          {/* 범례 + range toggle */}
+          {/* 인터랙티브 picker + range toggle */}
           <section className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3 text-xs">
-              {series.map((s, i) => (
-                <span
-                  key={`${s.entry.class}:${s.entry.symbol}`}
-                  className="inline-flex items-center gap-1.5 text-fg-muted"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="inline-block h-0.5 w-4"
-                    style={{background: COLORS[i % COLORS.length]}}
-                  />
-                  <Link
-                    href={`/${s.entry.class}/${s.entry.symbol}`}
-                    className="font-medium text-fg hover:text-accent"
-                  >
-                    {s.entry.label}
-                  </Link>
-                  <span className="text-fg-subtle">
-                    {tickerFor(s.entry.class, s.entry.symbol)}
-                  </span>
-                </span>
-              ))}
-            </div>
+            <CompareSymbolBar
+              tokens={series.map((s, i) => ({
+                class: s.entry.class,
+                symbol: s.entry.symbol,
+                label: s.entry.label,
+                ticker: tickerFor(s.entry.class, s.entry.symbol),
+                color: COLORS[i % COLORS.length],
+              }))}
+              range={range}
+            />
             <ChartRangeToggle
               basePath={`/compare?symbols=${rawSymbols}`}
               current={range}
