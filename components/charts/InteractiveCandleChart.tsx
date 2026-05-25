@@ -15,6 +15,10 @@ type Props = {
   availableOverlays: ChartOverlay[];
   /** localStorage 키 — 사용자 선택 persistent. */
   storageKey?: string;
+  /** info bar 표시 통화 (KRW / USD). */
+  currency?: string;
+  /** info bar 소수점 자릿수. */
+  priceDigits?: number;
 };
 
 const DEFAULT_STORAGE_KEY = "lab-trading-chart-overlays";
@@ -25,6 +29,8 @@ export function InteractiveCandleChart({
   showVolume,
   availableOverlays,
   storageKey = DEFAULT_STORAGE_KEY,
+  currency,
+  priceDigits,
 }: Props) {
   // 선택된 overlay id Set — localStorage 동기.
   const [visible, setVisible] = useState<Set<string>>(new Set());
@@ -73,6 +79,8 @@ export function InteractiveCandleChart({
         height={height}
         showVolume={showVolume}
         overlays={selectedOverlays}
+        currency={currency}
+        priceDigits={priceDigits}
       />
 
       {availableOverlays.length > 0 && (

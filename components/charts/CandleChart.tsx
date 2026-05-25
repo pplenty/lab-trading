@@ -5,6 +5,7 @@ import {
   useEffect,
   useImperativeHandle,
   useRef,
+  useState,
 } from "react";
 import type {IChartApi, ISeriesApi} from "lightweight-charts";
 import type {Candle} from "@/lib/types";
@@ -53,20 +54,52 @@ type Props = {
   trades?: TradeMarker[];
   /** indicator overlay 라인 (SMA/EMA/Bollinger 등) — 사용자 토글 결과만 전달. */
   overlays?: ChartOverlay[];
+  /** 차트 우상단 OHLC + 변동률 info bar (TradingView 스타일). default true. */
+  showInfoBar?: boolean;
+  /** 가격 포맷 — currency 기반 (KRW: 0 digit / USD: 2 digit). default 2. */
+  priceDigits?: number;
+  /** 통화 — info bar 표시. */
+  currency?: string;
 };
+
+function formatBarPrice(v: number, digits: number, currency?: string): string {
+  const s = v.toLocaleString(undefined, {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+  if (currency === "KRW") return `₩${s}`;
+  if (currency === "USD") return `$${s}`;
+  return s;
+}
 
 function readCssVar(el: HTMLElement, name: string): string {
   return getComputedStyle(el).getPropertyValue(name).trim();
 }
 
 export const CandleChart = forwardRef<ChartHandle, Props>(function CandleChart(
-  {candles, height = 360, showVolume = false, visibleBars, trades, overlays},
+  {
+    candles,
+    height = 360,
+    showVolume = false,
+    visibleBars,
+    trades,
+    overlays,
+    showInfoBar = true,
+    priceDigits = 2,
+    currency,
+  },
   ref
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
   const closesRef = useRef<Map<number, number>>(new Map());
+  const candlesRef = useRef<Candle[]>(candles);
+  candlesRef.current = candles;
+
+  // info bar — 마지막 봉 default + hover 시 hovered 봉으로 갱신
+  const lastCandle = candles.length > 0 ? candles[candles.length - 1] : null;
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   useImperativeHandle(
     ref,
@@ -246,6 +279,30 @@ export const CandleChart = forwardRef<ChartHandle, Props>(function CandleChart(
       } else {
         chart.timeScale().fitContent();
       }
+
+      // crosshair subscribe — hover 봉의 idx 추적 → info bar 갱신
+      chart.subscribeCrosshairMove((param) => {
+        if (!param.time) {
+          setHoveredIdx(null);
+          return;
+        }
+        const tNum = param.time as unknown as number;
+        const cs = candlesRef.current;
+        // 이진 탐색 — candles 가 t 정렬됨
+        let lo = 0;
+        let hi = cs.length - 1;
+        while (lo <= hi) {
+          const mid = (lo + hi) >>> 1;
+          const mt = cs[mid].t;
+          if (mt === tNum) {
+            setHoveredIdx(mid);
+            return;
+          }
+          if (mt < tNum) lo = mid + 1;
+          else hi = mid - 1;
+        }
+        setHoveredIdx(null);
+      });
     })();
 
     const onResize = () => {
@@ -273,5 +330,140 @@ export const CandleChart = forwardRef<ChartHandle, Props>(function CandleChart(
     };
   }, [candles, height, showVolume, visibleBars, trades, overlays]);
 
-  return <div ref={containerRef} className="w-full" style={{height}} />;
+  const displayedCandle =
+    hoveredIdx !== null && candles[hoveredIdx] ? candles[hoveredIdx] : lastCandle;
+  const prevCandle =
+    displayedCandle && candles.length > 1
+      ? hoveredIdx !== null && hoveredIdx > 0
+        ? candles[hoveredIdx - 1]
+        : candles.indexOf(displayedCandle) > 0
+        ? candles[candles.indexOf(displayedCandle) - 1]
+        : null
+      : null;
+
+  return (
+    <div className="relative">
+      <div ref={containerRef} className="w-full" style={{height}} />
+      {showInfoBar && displayedCandle && (
+        <InfoBar
+          candle={displayedCandle}
+          prevClose={prevCandle?.c}
+          priceDigits={priceDigits}
+          currency={currency}
+          isHovering={hoveredIdx !== null}
+        />
+      )}
+    </div>
+  );
 });
+
+function InfoBar({
+  candle,
+  prevClose,
+  priceDigits,
+  currency,
+  isHovering,
+}: {
+  candle: Candle;
+  prevClose: number | undefined;
+  priceDigits: number;
+  currency?: string;
+  isHovering: boolean;
+}) {
+  const changeAbs =
+    prevClose !== undefined ? candle.c - prevClose : undefined;
+  const changePct =
+    prevClose !== undefined && prevClose !== 0
+      ? ((candle.c - prevClose) / prevClose) * 100
+      : undefined;
+  const upBar = candle.c >= candle.o;
+  const tone = changeAbs === undefined ? "neutral" : changeAbs > 0 ? "up" : changeAbs < 0 ? "down" : "neutral";
+  const date = new Date(candle.t * 1000);
+  // KST yyyy-MM-dd
+  const dateStr = date.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return (
+    <div
+      className="pointer-events-none absolute right-2 top-2 inline-flex max-w-[calc(100%-1rem)] flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-md border border-line bg-bg/85 px-2.5 py-1.5 text-[10px] backdrop-blur tabular-nums"
+      aria-live="polite"
+    >
+      <span className="text-fg-subtle">{dateStr}</span>
+      <span className="inline-flex items-baseline gap-1.5">
+        <Stat label="O" v={candle.o} digits={priceDigits} currency={currency} />
+        <Stat
+          label="H"
+          v={candle.h}
+          digits={priceDigits}
+          currency={currency}
+          tone={upBar ? "up" : undefined}
+        />
+        <Stat
+          label="L"
+          v={candle.l}
+          digits={priceDigits}
+          currency={currency}
+          tone={upBar ? undefined : "down"}
+        />
+        <Stat
+          label="C"
+          v={candle.c}
+          digits={priceDigits}
+          currency={currency}
+          tone={upBar ? "up" : "down"}
+        />
+      </span>
+      {changePct !== undefined && (
+        <span
+          className={
+            "font-semibold " +
+            (tone === "up"
+              ? "text-[var(--color-up)]"
+              : tone === "down"
+              ? "text-[var(--color-down)]"
+              : "text-fg-muted")
+          }
+        >
+          {changePct > 0 ? "+" : ""}
+          {changePct.toFixed(2)}%
+        </span>
+      )}
+      {!isHovering && (
+        <span className="text-[9px] text-fg-subtle/80">최신</span>
+      )}
+    </div>
+  );
+}
+
+function Stat({
+  label,
+  v,
+  digits,
+  currency,
+  tone,
+}: {
+  label: string;
+  v: number;
+  digits: number;
+  currency?: string;
+  tone?: "up" | "down";
+}) {
+  return (
+    <span>
+      <span className="text-fg-subtle">{label} </span>
+      <span
+        className={
+          tone === "up"
+            ? "text-[var(--color-up)]"
+            : tone === "down"
+            ? "text-[var(--color-down)]"
+            : "text-fg"
+        }
+      >
+        {formatBarPrice(v, digits, currency)}
+      </span>
+    </span>
+  );
+}

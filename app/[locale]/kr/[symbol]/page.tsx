@@ -281,6 +281,8 @@ export default async function KrSymbolPage({params, searchParams}: PageProps) {
             height={420}
             showVolume
             availableOverlays={chartOverlays}
+            currency="KRW"
+            priceDigits={0}
           />
         </section>
       )}

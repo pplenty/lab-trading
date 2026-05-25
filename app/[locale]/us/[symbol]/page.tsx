@@ -281,6 +281,8 @@ export default async function UsSymbolPage({params, searchParams}: PageProps) {
             height={420}
             showVolume
             availableOverlays={chartOverlays}
+            currency="USD"
+            priceDigits={2}
           />
         </section>
       )}

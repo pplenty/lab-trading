@@ -335,6 +335,8 @@ export default async function CryptoSymbolPage({params, searchParams}: PageProps
             height={420}
             showVolume
             availableOverlays={chartOverlays}
+            currency="KRW"
+            priceDigits={0}
           />
         </section>
       )}
