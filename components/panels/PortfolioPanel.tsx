@@ -1,10 +1,12 @@
 "use client";
 
 import {useEffect, useMemo, useState} from "react";
-import {Briefcase, Trash2, ExternalLink, RefreshCw} from "lucide-react";
+import {Briefcase, Trash2, ExternalLink, RefreshCw, LineChart as LineIcon} from "lucide-react";
 import {Link} from "@/i18n/navigation";
 import {useTrades, type PaperPosition} from "@/lib/paper";
+import {useSnapshots} from "@/lib/portfolio-snapshots";
 import {FinancialDelta} from "@/components/FinancialDelta";
+import {LineChart, type LineSeries} from "@/components/charts/LineChart";
 import type {Quote} from "@/lib/types";
 
 // 가상 포트폴리오 통합 페이지 — 보유 종목 + per-symbol PnL + 거래 이력.
@@ -21,6 +23,7 @@ function fmtPrice(p: number, currency: string): string {
 
 export function PortfolioPanel() {
   const {positions, items, remove} = useTrades();
+  const {snapshots, record, clear: clearSnapshots} = useSnapshots();
   const [quotes, setQuotes] = useState<QuotesMap>({});
   const [loading, setLoading] = useState(false);
 
@@ -76,6 +79,24 @@ export function PortfolioPanel() {
     return t;
   }, [positions, quotes]);
 
+  // quotes 가 fetched 되면 (or holding 변경) 일별 snapshot 기록.
+  // dedup: 같은 day 면 덮어쓰기 (intraday 최신화).
+  const holdingCount = useMemo(() => positions.filter((p) => p.units > 0).length, [positions]);
+  const totalsSig = useMemo(() => JSON.stringify(totals), [totals]);
+  useEffect(() => {
+    // quotes 가 아직 안 왔으면 (loading) skip — invested 만 있는 stale snapshot 회피.
+    // 단, holdings 0 인 경우는 realized 만 있어도 기록 OK.
+    if (holdingCount > 0 && Object.keys(quotes).length === 0) return;
+    const valueByCurrency: Record<string, number> = {};
+    const realizedByCurrency: Record<string, number> = {};
+    for (const [curr, t] of Object.entries(totals)) {
+      valueByCurrency[curr] = t.current;
+      realizedByCurrency[curr] = t.realized;
+    }
+    record({valueByCurrency, realizedByCurrency, holdingCount});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalsSig, holdingCount]);
+
   if (items.length === 0) {
     return (
       <section className="rounded-lg border border-line bg-surface/40 p-8 text-center">
@@ -104,6 +125,11 @@ export function PortfolioPanel() {
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Timeline — 일별 snapshot 추적 */}
+      {snapshots.length >= 2 && (
+        <SnapshotTimeline snapshots={snapshots} onClear={clearSnapshots} />
+      )}
+
       {/* 통화별 요약 */}
       <section className="rounded-lg border border-line bg-surface/30 p-4">
         <header className="mb-3 flex items-baseline justify-between gap-2">
@@ -421,5 +447,114 @@ function Cell({label, value, subtle}: {label: string; value: string; subtle?: bo
         {value}
       </div>
     </div>
+  );
+}
+
+// 통화별 색상 — 최대 4종.
+const CURRENCY_COLOR: Record<string, string> = {
+  KRW: "#2563eb", // blue
+  USD: "#16a34a", // green
+  JPY: "#ca8a04", // amber
+  EUR: "#a855f7", // purple
+};
+
+function SnapshotTimeline({
+  snapshots,
+  onClear,
+}: {
+  snapshots: ReturnType<typeof useSnapshots>["snapshots"];
+  onClear: () => void;
+}) {
+  // 통화별 시계열 분리
+  const currencies = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of snapshots) {
+      for (const c of Object.keys(s.valueByCurrency)) set.add(c);
+    }
+    return Array.from(set);
+  }, [snapshots]);
+
+  const series = useMemo<LineSeries[]>(() => {
+    return currencies.map((curr) => {
+      // value + realized 합 = 총 자산 (현금 + 미실현 + 확정)
+      // 단순화: value (현재 평가액) 만 사용 — 시간 흐름이 핵심.
+      const points = snapshots
+        .map((s) => {
+          const value = s.valueByCurrency[curr] ?? 0;
+          const realized = s.realizedByCurrency[curr] ?? 0;
+          return {
+            t: Math.floor(new Date(`${s.day}T00:00:00Z`).getTime() / 1000),
+            v: value + realized,
+          };
+        })
+        .filter((p) => Number.isFinite(p.v));
+      return {
+        label: `${curr} 총 자산`,
+        points,
+        color: CURRENCY_COLOR[curr] ?? "#94a3b8",
+      };
+    });
+  }, [currencies, snapshots]);
+
+  const first = snapshots[0];
+  const last = snapshots[snapshots.length - 1];
+  const daySpan =
+    Math.floor(
+      (new Date(`${last.day}T00:00:00Z`).getTime() -
+        new Date(`${first.day}T00:00:00Z`).getTime()) /
+        (86400 * 1000)
+    ) + 1;
+
+  return (
+    <section className="rounded-lg border border-line bg-surface/30 p-4">
+      <header className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-fg">
+          <LineIcon size={14} aria-hidden="true" className="text-fg-muted" />
+          포트폴리오 추이
+        </h2>
+        <div className="flex items-baseline gap-3 text-[11px] text-fg-subtle">
+          <span>
+            {first.day} → {last.day} ({snapshots.length}일 / {daySpan}일 범위)
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm("저장된 일별 snapshot 을 모두 삭제할까요?")) {
+                onClear();
+              }
+            }}
+            className="text-[10px] text-fg-subtle hover:text-[var(--color-down)]"
+          >
+            기록 초기화
+          </button>
+        </div>
+      </header>
+
+      <LineChart series={series} height={180} ariaLabel="포트폴리오 일별 추이" />
+
+      <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-fg-muted">
+        {currencies.map((curr) => {
+          const points = series.find((s) => s.label.startsWith(curr))?.points ?? [];
+          if (points.length < 2) return null;
+          const f = points[0].v;
+          const l = points[points.length - 1].v;
+          const pct = f > 0 ? ((l - f) / f) * 100 : 0;
+          return (
+            <span key={curr} className="inline-flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className="inline-block h-0.5 w-4"
+                style={{background: CURRENCY_COLOR[curr] ?? "#94a3b8"}}
+              />
+              <span className="text-fg-muted">{curr}</span>
+              <span className="tabular-nums">
+                <FinancialDelta changePct={pct} digits={2} />
+              </span>
+            </span>
+          );
+        })}
+        <span className="ml-auto text-fg-subtle">총 자산 = 평가액 + 확정 PnL</span>
+      </div>
+    </section>
   );
 }
