@@ -1,5 +1,6 @@
 import {getTranslations} from "next-intl/server";
 import {notFound, redirect} from "next/navigation";
+import {Link} from "@/i18n/navigation";
 import {loadCandleSeries} from "@/lib/data/candles";
 import {loadComparisonFromCache, type ComparisonRow} from "@/lib/data/backtest-cache";
 import {loadIndicatorsForCandles} from "@/lib/data/indicators";
@@ -199,6 +200,16 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
             </p>
           </div>
         </details>
+        <div className="mt-2 text-[11px] text-fg-subtle">
+          기성 6 preset 이 모자라면 →{" "}
+          <Link
+            href={`/backtest/custom?asset=${assetClass}&symbol=${symbol}`}
+            className="font-medium text-fg-muted underline hover:text-fg"
+          >
+            🧪 커스텀 조건 빌더
+          </Link>
+          {" "}로 AND/OR 직접 정의
+        </div>
       </header>
 
       {isDemo && (
@@ -250,7 +261,6 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
   );
 }
 
-import {Link} from "@/i18n/navigation";
 import {TIMEFRAMES, type Timeframe} from "@/lib/chart/timeframe";
 
 // 백테스트 페이지의 timeframe segmented control — 다른 query 보존.
