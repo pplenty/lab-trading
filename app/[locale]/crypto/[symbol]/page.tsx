@@ -31,6 +31,8 @@ import {applyTimeframe, parseTimeframeParam, timeframeLabel} from "@/lib/chart/t
 import {loadIndicatorsForCandles} from "@/lib/data/indicators";
 import {computeIndicators} from "@/lib/backfill/indicators-batch";
 import {buildIndicatorOverlays, buildVwapOverlay} from "@/lib/chart/overlays";
+import {getSector} from "@/lib/symbols/sectors";
+import {SectorBadge} from "@/components/SectorBadge";
 import {VolatilityPanel} from "@/components/panels/VolatilityPanel";
 import {VolumePanel} from "@/components/panels/VolumePanel";
 import {PriceLevelsPanel} from "@/components/panels/PriceLevelsPanel";
@@ -215,28 +217,38 @@ export default async function CryptoSymbolPage({params, searchParams}: PageProps
       />
 
       <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
-            {entry.nameKo ?? entry.name}{" "}
-            <span className="text-fg-subtle">({entry.symbol.toUpperCase()})</span>
-          </h1>
-          <FavoriteButton class="crypto" symbol={entry.symbol} label={entry.nameKo ?? entry.name} />
-          {quote && (
-            <AlertButton
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
+              {entry.nameKo ?? entry.name}{" "}
+              <span className="text-fg-subtle">({entry.symbol.toUpperCase()})</span>
+            </h1>
+            <FavoriteButton class="crypto" symbol={entry.symbol} label={entry.nameKo ?? entry.name} />
+            {quote && (
+              <AlertButton
+                class="crypto"
+                symbol={entry.symbol}
+                label={entry.nameKo ?? entry.name}
+                currentPrice={quote.price}
+                currency="KRW"
+              />
+            )}
+            <PaperTradeButton
               class="crypto"
               symbol={entry.symbol}
               label={entry.nameKo ?? entry.name}
-              currentPrice={quote.price}
+              currentPrice={quote?.price}
               currency="KRW"
             />
-          )}
-          <PaperTradeButton
-            class="crypto"
-            symbol={entry.symbol}
-            label={entry.nameKo ?? entry.name}
-            currentPrice={quote?.price}
-            currency="KRW"
-          />
+          </div>
+          {(() => {
+            const s = getSector("crypto", entry.symbol);
+            return s ? (
+              <p className="flex items-baseline gap-2 text-xs text-fg-subtle">
+                <SectorBadge sector={s} />
+              </p>
+            ) : null;
+          })()}
         </div>
         {quote && (
           <div className="flex flex-col items-end gap-1 text-right">

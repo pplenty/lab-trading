@@ -28,6 +28,8 @@ import {applyTimeframe, parseTimeframeParam, timeframeLabel} from "@/lib/chart/t
 import {loadIndicatorsForCandles} from "@/lib/data/indicators";
 import {computeIndicators} from "@/lib/backfill/indicators-batch";
 import {buildIndicatorOverlays, buildVwapOverlay} from "@/lib/chart/overlays";
+import {getSector} from "@/lib/symbols/sectors";
+import {SectorBadge} from "@/components/SectorBadge";
 import {VolatilityPanel} from "@/components/panels/VolatilityPanel";
 import {VolumePanel} from "@/components/panels/VolumePanel";
 import {PriceLevelsPanel} from "@/components/panels/PriceLevelsPanel";
@@ -209,7 +211,13 @@ export default async function UsSymbolPage({params, searchParams}: PageProps) {
               currency="USD"
             />
           </div>
-          <p className="text-xs text-fg-subtle">{entry.market}</p>
+          <p className="flex items-baseline gap-2 text-xs text-fg-subtle">
+            <span>{entry.market}</span>
+            {(() => {
+              const s = getSector("us", entry.symbol);
+              return s ? <SectorBadge sector={s} /> : null;
+            })()}
+          </p>
         </div>
         {quote && (
           <div className="flex flex-col items-end gap-1 text-right">
