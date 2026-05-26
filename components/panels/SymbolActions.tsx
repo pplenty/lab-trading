@@ -28,6 +28,12 @@ export function SymbolActions({class: cls, symbol, label}: Props) {
         <span aria-hidden="true">⚡</span>
         <span>이 종목으로 백테스트</span>
       </Link>
+      <Link
+        href={`/backtest/custom?asset=${cls}&symbol=${symbol}`}
+        className="inline-flex items-center gap-1 rounded-md border border-line bg-bg px-3 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:border-fg hover:text-fg"
+      >
+        🧪 커스텀 빌더
+      </Link>
       <SymbolPicker
         currentLabel={label ? `${label} · ${symbol.toUpperCase()}` : symbol.toUpperCase()}
         destination={(e) => `/${e.class}/${e.symbol}`}

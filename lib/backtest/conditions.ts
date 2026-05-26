@@ -166,3 +166,44 @@ function formatCmp(c: Comparator): string {
       return "↘ cross";
   }
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// URL serialization — share 가능한 short form. base64 (URL-safe).
+// 형식: encodeURIComponent(btoa(JSON.stringify(config))) 단순화 패턴.
+
+export function serializeConfig(cfg: CustomConfig): string {
+  const json = JSON.stringify(cfg);
+  // URL-safe base64 (+ → -, / → _, padding 제거)
+  if (typeof btoa !== "undefined") {
+    return btoa(unescape(encodeURIComponent(json)))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+  }
+  // node-side fallback (server 측 — direct buffer)
+  return Buffer.from(json, "utf-8")
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+export function deserializeConfig(s: string): CustomConfig | null {
+  try {
+    let normalized = s.replace(/-/g, "+").replace(/_/g, "/");
+    // padding 복원
+    while (normalized.length % 4 !== 0) normalized += "=";
+    let json: string;
+    if (typeof atob !== "undefined") {
+      json = decodeURIComponent(escape(atob(normalized)));
+    } else {
+      json = Buffer.from(normalized, "base64").toString("utf-8");
+    }
+    const parsed = JSON.parse(json);
+    if (!parsed || typeof parsed !== "object") return null;
+    if (!parsed.buy || !parsed.sell) return null;
+    return parsed as CustomConfig;
+  } catch {
+    return null;
+  }
+}

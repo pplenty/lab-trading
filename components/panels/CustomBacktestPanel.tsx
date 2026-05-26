@@ -1,16 +1,17 @@
 "use client";
 
 import {useEffect, useMemo, useState} from "react";
-import {Plus, X, Play} from "lucide-react";
+import {Plus, X, Play, Copy, Check, Share2, RotateCcw} from "lucide-react";
 import {BacktestResultCard} from "./BacktestResultCard";
 import {runCustomBacktest} from "@/lib/backtest/run-custom";
-import type {
-  Comparator,
-  Condition,
-  ConditionGroup,
-  CustomConfig,
-  GroupOp,
-  Operand,
+import {
+  serializeConfig,
+  type Comparator,
+  type Condition,
+  type ConditionGroup,
+  type CustomConfig,
+  type GroupOp,
+  type Operand,
 } from "@/lib/backtest/conditions";
 import type {AssetClass, Candle, IndicatorRow} from "@/lib/types";
 import type {BacktestResult} from "@/lib/backtest/types";
@@ -96,6 +97,8 @@ function parseOperandValue(v: string, fallbackConstant = 0): Operand {
 }
 
 export function CustomBacktestPanel({
+  class: cls,
+  symbol,
   candles,
   indicators,
   currency,
@@ -104,6 +107,35 @@ export function CustomBacktestPanel({
   const [config, setConfig] = useState<CustomConfig>(initialConfig);
   const [result, setResult] = useState<BacktestResult | null>(null);
   const [running, setRunning] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // 현재 config → 공유 URL
+  const shareUrl = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    const cfg = serializeConfig(config);
+    const params = new URLSearchParams();
+    params.set("asset", cls);
+    params.set("symbol", symbol);
+    params.set("cfg", cfg);
+    return `${window.location.origin}/ko/backtest/custom?${params.toString()}`;
+  }, [config, cls, symbol]);
+
+  async function copyShare() {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  function reset() {
+    if (window.confirm("기본 조건 (RSI 단순 평균회귀) 으로 초기화할까요?")) {
+      setConfig(initialConfig);
+    }
+  }
 
   // 자동 실행 — config 변경 시 client-side 백테스트.
   useEffect(() => {
@@ -136,6 +168,50 @@ export function CustomBacktestPanel({
 
   return (
     <div className="flex flex-col gap-6">
+      {/* Share + Reset toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface/30 p-3 text-xs">
+        <div className="flex flex-1 items-center gap-2 min-w-0">
+          <Share2 size={12} aria-hidden="true" className="shrink-0 text-fg-subtle" />
+          <input
+            type="text"
+            readOnly
+            value={shareUrl}
+            onFocus={(e) => e.currentTarget.select()}
+            className="flex-1 min-w-0 rounded-md border border-line bg-bg px-2 py-1 text-[11px] tabular-nums text-fg-muted focus:border-fg focus:outline-none"
+            aria-label="공유 URL"
+          />
+          <button
+            type="button"
+            onClick={copyShare}
+            disabled={!shareUrl}
+            className={
+              "inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] font-medium text-bg transition-opacity " +
+              (copied
+                ? "bg-[var(--color-up)]"
+                : "bg-fg hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50")
+            }
+          >
+            {copied ? (
+              <>
+                <Check size={11} aria-hidden="true" /> 복사됨
+              </>
+            ) : (
+              <>
+                <Copy size={11} aria-hidden="true" /> 복사
+              </>
+            )}
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={reset}
+          className="inline-flex h-7 items-center gap-1 rounded-md border border-line bg-bg px-2 text-[11px] text-fg-subtle transition-colors hover:border-fg hover:text-fg"
+        >
+          <RotateCcw size={11} aria-hidden="true" />
+          기본값
+        </button>
+      </div>
+
       <div className="grid gap-4 lg:grid-cols-2">
         <GroupEditor
           title="매수 조건"

@@ -19,7 +19,7 @@ import {
   getUsBySymbol,
 } from "@/lib/symbols/registry";
 import {CustomBacktestPanel} from "@/components/panels/CustomBacktestPanel";
-import type {CustomConfig} from "@/lib/backtest/conditions";
+import {deserializeConfig, type CustomConfig} from "@/lib/backtest/conditions";
 import type {AssetClass, Candle, IndicatorRow} from "@/lib/types";
 
 // 사용자 정의 백테스트 — indicator + AND/OR 조합으로 매수/매도 조건 직접 빌드.
@@ -77,6 +77,11 @@ export default async function CustomBacktestPage({params, searchParams}: Props) 
   if (sp.asset === undefined && sp.symbol === undefined) {
     redirect(`/${locale}/backtest/custom?asset=us&symbol=aapl`);
   }
+
+  // ?cfg=<base64> 우선, 없으면 default RSI 평균회귀.
+  const cfgParam = typeof sp.cfg === "string" ? sp.cfg : undefined;
+  const initialConfig: CustomConfig =
+    (cfgParam ? deserializeConfig(cfgParam) : null) ?? DEFAULT_CONFIG;
 
   const t = await getTranslations("home");
   const tDisc = await getTranslations("disclaimer");
@@ -225,7 +230,7 @@ export default async function CustomBacktestPage({params, searchParams}: Props) 
           currency={currency}
           candles={candles}
           indicators={indicators}
-          initialConfig={DEFAULT_CONFIG}
+          initialConfig={initialConfig}
         />
       ) : !fetchError ? (
         <p className="rounded-md border border-line bg-surface p-4 text-sm text-fg-muted">

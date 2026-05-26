@@ -137,6 +137,48 @@ describe("evaluateGroup", () => {
   });
 });
 
+describe("URL serialization", () => {
+  it("serialize → deserialize round-trip", async () => {
+    const {serializeConfig, deserializeConfig} = await import("./conditions");
+    const cfg = {
+      buy: {
+        op: "AND" as const,
+        conditions: [
+          {
+            left: {kind: "indicator" as const, field: "rsi_14" as const},
+            cmp: "lt" as const,
+            right: {kind: "constant" as const, value: 30},
+          },
+        ],
+      },
+      sell: {
+        op: "OR" as const,
+        conditions: [
+          {
+            left: {kind: "indicator" as const, field: "rsi_14" as const},
+            cmp: "gt" as const,
+            right: {kind: "constant" as const, value: 70},
+          },
+        ],
+      },
+    };
+    const s = serializeConfig(cfg);
+    expect(typeof s).toBe("string");
+    expect(s.length).toBeLessThan(500); // short enough for URL
+    // base64 URL-safe — no +/=
+    expect(s).not.toMatch(/[+/=]/);
+    const back = deserializeConfig(s);
+    expect(back).toEqual(cfg);
+  });
+
+  it("deserialize invalid → null", async () => {
+    const {deserializeConfig} = await import("./conditions");
+    expect(deserializeConfig("not-base64!@#")).toBeNull();
+    expect(deserializeConfig("aGVsbG8")).toBeNull(); // valid base64 but not config
+    expect(deserializeConfig("")).toBeNull();
+  });
+});
+
 describe("format helpers", () => {
   it("formatCondition", () => {
     expect(
