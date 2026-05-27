@@ -4,6 +4,8 @@ export const revalidate = 300;
 import {loadQuotesList, loadSparklineCloses} from "@/lib/data/quotes";
 import {krRegistry} from "@/lib/symbols/registry";
 import {QuoteTable} from "@/components/panels/QuoteTable";
+import {SectorChips} from "@/components/panels/SectorChips";
+import {getSymbolsBySector} from "@/lib/symbols/sectors";
 import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
 import type {Quote} from "@/lib/types";
 
@@ -12,10 +14,14 @@ import type {Quote} from "@/lib/types";
 
 type Props = {
   params: Promise<{locale: string}>;
+  searchParams: Promise<{sector?: string | string[]}>;
 };
 
-export default async function KrIndexPage({params}: Props) {
+export default async function KrIndexPage({params, searchParams}: Props) {
   const {locale} = await params;
+  const sp = await searchParams;
+  const sectorFilter = typeof sp.sector === "string" ? sp.sector : undefined;
+
   const t = await getTranslations("home");
   const tDisc = await getTranslations("disclaimer");
   const tSidebar = await getTranslations("sidebar.items");
@@ -23,12 +29,19 @@ export default async function KrIndexPage({params}: Props) {
   let quotes: Quote[] = [];
   let fetchError: string | null = null;
 
+  const targetSymbols = sectorFilter
+    ? new Set(getSymbolsBySector("kr", sectorFilter))
+    : null;
+
   try {
     quotes = await loadQuotesList({
       asset: "kr",
       symbols: krRegistry.map((e) => e.symbol),
       listOpts: {limit: 50},
     });
+    if (targetSymbols) {
+      quotes = quotes.filter((q) => targetSymbols.has(q.symbol));
+    }
     quotes.sort((a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0));
   } catch (err) {
     fetchError = err instanceof Error ? err.message : String(err);
@@ -65,6 +78,10 @@ export default async function KrIndexPage({params}: Props) {
           <span className="text-fg-subtle tabular-nums">{quotes.length} assets</span>
         </div>
       </header>
+
+      <section className="mb-5">
+        <SectorChips class="kr" current={sectorFilter} />
+      </section>
 
       {fetchError && (
         <div className="mb-6 rounded-lg border border-line bg-surface p-4 text-sm text-fg-muted">

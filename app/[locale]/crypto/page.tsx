@@ -4,6 +4,8 @@ export const revalidate = 300;
 import {loadQuotesList, loadSparklineCloses} from "@/lib/data/quotes";
 import {cryptoRegistry} from "@/lib/symbols/registry";
 import {QuoteTable} from "@/components/panels/QuoteTable";
+import {SectorChips} from "@/components/panels/SectorChips";
+import {getSymbolsBySector} from "@/lib/symbols/sectors";
 import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
 import type {Quote} from "@/lib/types";
 
@@ -12,10 +14,14 @@ import type {Quote} from "@/lib/types";
 
 type Props = {
   params: Promise<{locale: string}>;
+  searchParams: Promise<{sector?: string | string[]}>;
 };
 
-export default async function CryptoIndexPage({params}: Props) {
+export default async function CryptoIndexPage({params, searchParams}: Props) {
   const {locale} = await params;
+  const sp = await searchParams;
+  const sectorFilter = typeof sp.sector === "string" ? sp.sector : undefined;
+
   const t = await getTranslations("home");
   const tDisc = await getTranslations("disclaimer");
   const tSidebar = await getTranslations("sidebar.items");
@@ -23,12 +29,19 @@ export default async function CryptoIndexPage({params}: Props) {
   let quotes: Quote[] = [];
   let fetchError: string | null = null;
 
+  const targetSymbols = sectorFilter
+    ? new Set(getSymbolsBySector("crypto", sectorFilter))
+    : null;
+
   try {
     quotes = await loadQuotesList({
       asset: "crypto",
       symbols: cryptoRegistry.filter((e) => e.upbitMarket).map((e) => e.symbol),
       listOpts: {limit: 50},
     });
+    if (targetSymbols) {
+      quotes = quotes.filter((q) => targetSymbols.has(q.symbol));
+    }
     // 시가총액 순위는 Upbit 에서 제공 X — 거래대금 기준 정렬로 폴백.
     quotes.sort((a, b) => (b.volume24h ?? 0) - (a.volume24h ?? 0));
   } catch (err) {
@@ -58,6 +71,10 @@ export default async function CryptoIndexPage({params}: Props) {
           {quotes.length} assets
         </div>
       </header>
+
+      <section className="mb-5">
+        <SectorChips class="crypto" current={sectorFilter} />
+      </section>
 
       {fetchError && (
         <div className="mb-6 rounded-lg border border-line bg-surface p-4 text-sm text-fg-muted">

@@ -224,8 +224,19 @@ export function PortfolioPanel() {
 
       {/* 보유 종목 */}
       <section className="rounded-lg border border-line">
-        <header className="border-b border-line bg-surface px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
-          보유 중 ({holdingSymbols.length})
+        <header className="flex items-center justify-between border-b border-line bg-surface px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
+          <span>보유 중 ({holdingSymbols.length})</span>
+          {holdingSymbols.length >= 2 && (
+            <Link
+              href={`/compare?symbols=${holdingSymbols
+                .slice(0, 4)
+                .map((p) => `${p.class}:${p.symbol}`)
+                .join(",")}&range=1y`}
+              className="inline-flex items-center gap-1 rounded-md border border-line bg-bg px-2 py-0.5 text-[10px] font-medium normal-case tracking-normal text-fg-muted transition-colors hover:border-fg hover:text-fg"
+            >
+              ⇆ 비교 ({Math.min(holdingSymbols.length, 4)} 종목)
+            </Link>
+          )}
         </header>
         {holdingSymbols.length === 0 ? (
           <p className="px-4 py-6 text-center text-xs text-fg-muted">
