@@ -5,6 +5,7 @@ import {LocaleSwitcher} from "@/components/LocaleSwitcher";
 import {ColorSemanticSwitcher} from "@/components/ColorSemanticSwitcher";
 import {ShortcutsTrigger} from "@/components/ShortcutsTrigger";
 import {UserDataReset} from "@/components/panels/UserDataReset";
+import {BackupRestorePanel} from "@/components/panels/BackupRestorePanel";
 
 // 설정 페이지 — 모든 사이트 환경설정을 한 곳에 모음 (yutils 동일 정책).
 export const dynamic = "force-static";
@@ -48,9 +49,19 @@ export default async function SettingsPage() {
           <ShortcutsTrigger label={tFooter("shortcuts")} variant="primary" />
         </section>
 
+        <section className="border-t border-line pt-6">
+          <div className="mb-3">
+            <p className="text-sm font-medium text-fg-muted">백업 & 복원</p>
+            <p className="mt-0.5 text-[11px] text-fg-subtle">
+              모든 사용자 자산을 JSON 한 파일로 저장 / 복원. 디바이스 변경 시 활용.
+            </p>
+          </div>
+          <BackupRestorePanel />
+        </section>
+
         <section className="flex flex-col gap-2 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm text-fg-muted">사용자 자산 (localStorage)</p>
+            <p className="text-sm text-fg-muted">초기화 (localStorage)</p>
             <p className="mt-0.5 text-[11px] text-fg-subtle">
               즐겨찾기 · 최근 본 종목 · 저장된 백테스트 전략. ADR-0016 — 계정 없이 디바이스별 보관.
             </p>
