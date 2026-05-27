@@ -3,7 +3,7 @@ import {getTranslations} from "next-intl/server";
 import {Search} from "lucide-react";
 import {Link} from "@/i18n/navigation";
 import {absoluteUrl} from "@/lib/site";
-import {searchAssets} from "@/lib/search";
+import {searchAssets, searchPages} from "@/lib/search";
 import {loadQuotesFromD1, loadSparklineCloses} from "@/lib/data/quotes";
 import {FinancialDelta} from "@/components/FinancialDelta";
 import {Sparkline} from "@/components/charts/Sparkline";
@@ -63,6 +63,7 @@ export default async function SearchPage({params, searchParams}: Props) {
 
   const tDisc = await getTranslations("disclaimer");
   const results = q.trim().length > 0 ? searchAssets(q, 50) : [];
+  const pageResults = q.trim().length > 0 ? searchPages(q, 6) : [];
 
   // 자산군별 quote + sparkline batch fetch — D1 우선, 비용 최소
   const byClass = new Map<AssetClass, string[]>();
@@ -138,13 +139,49 @@ export default async function SearchPage({params, searchParams}: Props) {
         )}
       </header>
 
-      {q && results.length === 0 && (
+      {q && results.length === 0 && pageResults.length === 0 && (
         <div className="rounded-lg border border-line bg-surface/40 p-6 text-center">
           <p className="text-sm font-medium text-fg">검색 결과 없음</p>
           <p className="mt-2 text-xs text-fg-muted">
-            정적 인덱스 80 종목 기준. 한글명·영문명·티커·6자리 코드·한글 초성·영문 두벌식 모두 매칭.
+            정적 인덱스 80 종목 + 기능 페이지 기준. 한글명·영문명·티커·6자리 코드·한글 초성·영문 두벌식 모두 매칭.
           </p>
         </div>
+      )}
+
+      {/* 기능 / 페이지 — 종목 결과 위에 */}
+      {pageResults.length > 0 && (
+        <section className="mt-6">
+          <header className="mb-3 flex items-baseline justify-between border-b border-line pb-2">
+            <h2 className="text-sm font-semibold text-fg">
+              기능 · 페이지
+              <span className="ml-2 text-xs text-fg-subtle tabular-nums">
+                {pageResults.length}
+              </span>
+            </h2>
+          </header>
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {pageResults.map((p) => (
+              <li key={p.href}>
+                <Link
+                  href={p.href}
+                  className="flex items-start gap-2.5 rounded-lg border border-line bg-bg p-3 transition-colors hover:border-fg"
+                >
+                  <span aria-hidden="true" className="text-base leading-none">
+                    {p.icon}
+                  </span>
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate text-sm font-medium text-fg">
+                      {p.titleKo}
+                    </span>
+                    <span className="truncate text-[11px] text-fg-muted">
+                      {p.descKo}
+                    </span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {groups.map((group) => (

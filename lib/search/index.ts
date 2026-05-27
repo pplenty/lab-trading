@@ -141,3 +141,6 @@ export function searchAssets(query: string, limit: number = 8): SearchEntry[] {
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, limit).map((s) => s.entry);
 }
+
+// 기능 페이지 검색 re-export — 종목 검색과 함께 사용.
+export {searchPages, pageIndex, type PageEntry} from "./pages";
