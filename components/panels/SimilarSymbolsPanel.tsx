@@ -96,7 +96,7 @@ function SimilarColumn({
                     {meta?.ticker ?? it.symbol.toUpperCase()}
                   </span>
                   {sector && (
-                    <span className="rounded-full border border-line bg-bg px-1 py-0.5 text-[9px] text-fg-subtle">
+                    <span className="rounded-full border border-line bg-bg px-1 py-0.5 text-[10px] text-fg-muted">
                       {sector}
                     </span>
                   )}

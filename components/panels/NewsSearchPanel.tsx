@@ -163,7 +163,6 @@ export function NewsSearchPanel({articles, locale, assetLabels}: Props) {
             label="전체 매체"
             active={sourceFilter === "all"}
             onClick={() => setSourceFilter("all")}
-            muted
           />
           {sources.map(({source, count}) => (
             <FilterChip
@@ -173,7 +172,6 @@ export function NewsSearchPanel({articles, locale, assetLabels}: Props) {
               onClick={() =>
                 setSourceFilter(sourceFilter === source ? "all" : source)
               }
-              muted
             />
           ))}
           <span className="ml-auto text-[11px] tabular-nums text-fg-subtle">
@@ -240,12 +238,10 @@ function FilterChip({
   label,
   active,
   onClick,
-  muted,
 }: {
   label: string;
   active: boolean;
   onClick: () => void;
-  muted?: boolean;
 }) {
   return (
     <button
@@ -256,8 +252,6 @@ function FilterChip({
         "rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors " +
         (active
           ? "border-fg bg-fg text-bg"
-          : muted
-          ? "border-line bg-bg text-fg-subtle hover:text-fg"
           : "border-line bg-bg text-fg-muted hover:border-fg-subtle hover:text-fg")
       }
     >

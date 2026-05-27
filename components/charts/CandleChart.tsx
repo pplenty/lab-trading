@@ -390,7 +390,7 @@ function InfoBar({
       className="pointer-events-none absolute right-2 top-2 inline-flex max-w-[calc(100%-1rem)] flex-wrap items-baseline gap-x-3 gap-y-0.5 rounded-md border border-line bg-bg/85 px-2.5 py-1.5 text-[10px] backdrop-blur tabular-nums"
       aria-live="polite"
     >
-      <span className="text-fg-subtle">{dateStr}</span>
+      <span className="text-fg-muted">{dateStr}</span>
       <span className="inline-flex items-baseline gap-1.5">
         <Stat label="O" v={candle.o} digits={priceDigits} currency={currency} />
         <Stat
@@ -452,7 +452,7 @@ function Stat({
 }) {
   return (
     <span>
-      <span className="text-fg-subtle">{label} </span>
+      <span className="text-fg-muted">{label} </span>
       <span
         className={
           tone === "up"

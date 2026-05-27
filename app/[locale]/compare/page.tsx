@@ -36,7 +36,9 @@ const MultiSeriesChart = nextDynamic(() =>
 export const revalidate = 300;
 
 // 시각 가독성 위한 4종 색 — 자산군 무관, 순서 fixed.
-const COLORS = ["#2563eb", "#dc2626", "#16a34a", "#ca8a04"]; // blue / red / green / amber
+// 비-시맨틱 팔레트 — up/down (red/green) 과 충돌 회피 + 색맹 robust + 다크 AA.
+// red/green 제외 (시맨틱 오해), 4색 서로 구분.
+const COLORS = ["#3b82f6", "#a855f7", "#14b8a6", "#f59e0b"]; // blue / violet / teal / amber
 
 function labelFor(cls: AssetClass, symbol: string, locale: string): string | null {
   if (cls === "crypto") {

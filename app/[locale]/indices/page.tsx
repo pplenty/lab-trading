@@ -41,11 +41,19 @@ const ASSET_LABEL = {
   kr: "국내주식",
 } as const;
 
+// 다크 모드 AA (>=4.5:1 on near-black) + 색맹 robust 팔레트.
+// us 는 dash 병행 (색맹 시 색만으로 amber/red 합쳐지는 문제 — dash 로 식별).
 const ASSET_COLOR = {
-  crypto: "#f59e0b", // amber
-  us: "#2563eb",     // blue
-  kr: "#dc2626",     // red
+  crypto: "#f59e0b", // amber — 8.93:1
+  us: "#3b82f6",     // blue (light #2563eb → dark-adjusted) — 5.21:1
+  kr: "#a855f7",     // violet (red 회피 — 색맹 + 한국식 상승색 오해 방지) — 5.5:1
 } as const;
+
+const ASSET_DASHED: Record<"crypto" | "us" | "kr", boolean> = {
+  crypto: false,
+  us: true, // dash — 색맹 시 색 외 추가 식별 채널
+  kr: false,
+};
 
 export default async function IndicesPage({searchParams}: Props) {
   const sp = await searchParams;
@@ -64,16 +72,19 @@ export default async function IndicesPage({searchParams}: Props) {
       label: `${ASSET_LABEL.crypto} (${crypto.barCount}봉)`,
       points: crypto.points.map((p) => ({t: p.t, v: p.v})),
       color: ASSET_COLOR.crypto,
+      dashed: ASSET_DASHED.crypto,
     },
     {
       label: `${ASSET_LABEL.us} (${us.barCount}봉)`,
       points: us.points.map((p) => ({t: p.t, v: p.v})),
       color: ASSET_COLOR.us,
+      dashed: ASSET_DASHED.us,
     },
     {
       label: `${ASSET_LABEL.kr} (${kr.barCount}봉)`,
       points: kr.points.map((p) => ({t: p.t, v: p.v})),
       color: ASSET_COLOR.kr,
+      dashed: ASSET_DASHED.kr,
     },
   ];
 

@@ -281,7 +281,7 @@ export default async function KrSymbolPage({params, searchParams}: PageProps) {
             <span className="text-[10px] uppercase tracking-wider text-fg-subtle">
               {timeframeLabel(tf)} 차트
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <TimeframeToggle basePath={`/kr/${entry.symbol}`} current={tf} range={range} />
               <ChartRangeToggle basePath={`/kr/${entry.symbol}`} current={range} tf={tf} />
             </div>

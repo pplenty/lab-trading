@@ -64,3 +64,4 @@ next-env.d.ts
 
 # bundle size history (ADR-0022 차용, yutils 패턴)
 # .bundle-size-history.json은 커밋 (github-actions bot이 append)
+.gstack/

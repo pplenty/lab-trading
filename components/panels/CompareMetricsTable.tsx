@@ -57,7 +57,8 @@ export function CompareMetricsTable({series, colors, tickers}: Props) {
   }
 
   return (
-    <table className="w-full text-sm">
+    <div className="overflow-x-auto">
+    <table className="w-full min-w-[480px] text-sm">
       <thead className="text-[10px] uppercase tracking-wider text-fg-subtle">
         <tr>
           <th className="px-4 py-2 text-left font-medium">종목</th>
@@ -137,6 +138,7 @@ export function CompareMetricsTable({series, colors, tickers}: Props) {
         ))}
       </tbody>
     </table>
+    </div>
   );
 }
 
