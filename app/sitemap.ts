@@ -32,6 +32,7 @@ const STATIC_PATHS = [
   "/kr/news",
   "/backtest/new",
   "/backtest/custom",
+  "/backtest/vs",
   "/backtest/portfolio",
   "/backtest/saved",
   "/compare",

@@ -34,6 +34,12 @@ export function SymbolActions({class: cls, symbol, label}: Props) {
       >
         🧪 커스텀 빌더
       </Link>
+      <Link
+        href={`/backtest/vs?asset=${cls}&symbol=${symbol}`}
+        className="inline-flex items-center gap-1 rounded-md border border-line bg-bg px-3 py-1.5 text-xs font-medium text-fg-muted transition-colors hover:border-fg hover:text-fg"
+      >
+        ⚔️ 전략 비교
+      </Link>
       <SymbolPicker
         currentLabel={label ? `${label} · ${symbol.toUpperCase()}` : symbol.toUpperCase()}
         destination={(e) => `/${e.class}/${e.symbol}`}

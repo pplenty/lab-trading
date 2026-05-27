@@ -44,6 +44,14 @@ export const pageIndex: PageEntry[] = [
     icon: "💼",
   },
   {
+    title: "Strategy Compare (A vs B)",
+    titleKo: "전략 비교",
+    href: "/backtest/vs",
+    keywords: ["vs", "비교", "compare", "전략 비교", "두 전략"],
+    descKo: "같은 종목에 두 전략 동시 백테스트 비교",
+    icon: "⚔️",
+  },
+  {
     title: "Saved Strategies",
     titleKo: "저장된 전략",
     href: "/backtest/saved",
