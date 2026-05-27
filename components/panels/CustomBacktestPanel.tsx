@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect, useMemo, useState} from "react";
-import {Plus, X, Play, Copy, Check, Share2, RotateCcw} from "lucide-react";
+import {Plus, X, Play, Copy, Check, Share2, RotateCcw, Bookmark} from "lucide-react";
 import {BacktestResultCard} from "./BacktestResultCard";
 import {runCustomBacktest} from "@/lib/backtest/run-custom";
 import {
@@ -13,6 +13,7 @@ import {
   type GroupOp,
   type Operand,
 } from "@/lib/backtest/conditions";
+import {useSavedStrategies} from "@/lib/strategies/saved";
 import type {AssetClass, Candle, IndicatorRow} from "@/lib/types";
 import type {BacktestResult} from "@/lib/backtest/types";
 
@@ -137,6 +138,32 @@ export function CustomBacktestPanel({
     }
   }
 
+  // 저장
+  const {save} = useSavedStrategies();
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  function submitSave() {
+    const name = saveName.trim();
+    if (!name) return;
+    save({
+      kind: "custom",
+      strategyId: "custom",
+      name,
+      params: {},
+      defaultClass: cls,
+      defaultSymbol: symbol,
+      customConfig: config,
+    });
+    setSaved(true);
+    setTimeout(() => {
+      setSaveOpen(false);
+      setSaved(false);
+      setSaveName("");
+    }, 1200);
+  }
+
   // 자동 실행 — config 변경 시 client-side 백테스트.
   useEffect(() => {
     if (candles.length < 2) {
@@ -204,6 +231,14 @@ export function CustomBacktestPanel({
         </div>
         <button
           type="button"
+          onClick={() => setSaveOpen(true)}
+          className="inline-flex h-7 items-center gap-1 rounded-md border border-line bg-bg px-2 text-[11px] text-fg-muted transition-colors hover:border-fg hover:text-fg"
+        >
+          <Bookmark size={11} aria-hidden="true" />
+          전략 저장
+        </button>
+        <button
+          type="button"
           onClick={reset}
           className="inline-flex h-7 items-center gap-1 rounded-md border border-line bg-bg px-2 text-[11px] text-fg-subtle transition-colors hover:border-fg hover:text-fg"
         >
@@ -211,6 +246,58 @@ export function CustomBacktestPanel({
           기본값
         </button>
       </div>
+
+      {/* 저장 모달 (간단) */}
+      {saveOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        >
+          <div className="w-full max-w-sm rounded-lg border border-line bg-bg p-5 shadow-xl">
+            <h3 className="text-sm font-semibold text-fg">전략 저장</h3>
+            <p className="mt-1 text-xs text-fg-muted">
+              현재 조건을 이름 붙여 저장합니다. /backtest/saved 에서 다시 불러올 수
+              있습니다.
+            </p>
+            <input
+              type="text"
+              autoFocus
+              value={saveName}
+              onChange={(e) => setSaveName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") submitSave();
+                if (e.key === "Escape") setSaveOpen(false);
+              }}
+              placeholder="예: 강세 안에서 RSI dip"
+              maxLength={60}
+              className="mt-3 w-full rounded-md border border-line bg-bg px-3 py-2 text-sm text-fg placeholder:text-fg-subtle focus:border-fg focus:outline-none"
+            />
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setSaveOpen(false)}
+                className="rounded-md border border-line bg-bg px-3 py-1 text-xs text-fg-muted hover:text-fg"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={submitSave}
+                disabled={!saveName.trim() || saved}
+                className={
+                  "rounded-md px-3 py-1 text-xs font-medium text-bg transition-opacity " +
+                  (saved
+                    ? "bg-[var(--color-up)]"
+                    : "bg-fg hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50")
+                }
+              >
+                {saved ? "저장됨 ✓" : "저장"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <GroupEditor

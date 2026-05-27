@@ -3,19 +3,25 @@
 import {useCallback, useMemo} from "react";
 import type {AssetClass} from "@/lib/types";
 import {useLocalStorageString} from "@/lib/storage";
+import type {CustomConfig} from "@/lib/backtest/conditions";
 
 // 사용자 저장 전략 — localStorage `lab-trading-saved-strategies` JSON array.
 // ADR-0020 SavedStrategy 인터페이스. id 는 timestamp + random base36.
+// kind: "preset" | "custom"  — backward compat 위해 미존재 시 "preset" 으로 해석.
 
 const SAVED_STRATEGIES_KEY = "lab-trading-saved-strategies";
 
 export type SavedStrategy = {
   id: string;
+  /** "preset" → strategyId 가 registry 키. "custom" → customConfig 필수. */
+  kind?: "preset" | "custom";
   strategyId: string;
   name: string;
   params: Record<string, number>;
   defaultClass: AssetClass;
   defaultSymbol: string;
+  /** kind === "custom" 일 때만 사용. */
+  customConfig?: CustomConfig;
   createdAt: string;
   updatedAt: string;
 };

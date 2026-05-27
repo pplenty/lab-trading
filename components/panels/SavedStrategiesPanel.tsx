@@ -7,6 +7,7 @@ import {Link} from "@/i18n/navigation";
 import {useSavedStrategies, type SavedStrategy} from "@/lib/strategies/saved";
 import {getStrategy} from "@/lib/backtest/strategies/registry";
 import {getAssetMeta} from "@/lib/symbols/registry";
+import {serializeConfig, formatGroup} from "@/lib/backtest/conditions";
 
 // 사용자 저장 전략 페이지 — 정렬 + 검색 + rename inline.
 // 카드 클릭 → /backtest/new?... URL prefill.
@@ -21,6 +22,15 @@ const SORT_LABELS: Record<SortKey, string> = {
 };
 
 function buildBacktestHref(s: SavedStrategy): string {
+  // custom 전략 → /backtest/custom?cfg=...
+  if (s.kind === "custom" && s.customConfig) {
+    const params = new URLSearchParams({
+      asset: s.defaultClass,
+      symbol: s.defaultSymbol,
+      cfg: serializeConfig(s.customConfig),
+    });
+    return `/backtest/custom?${params.toString()}`;
+  }
   const params = new URLSearchParams({
     asset: s.defaultClass,
     symbol: s.defaultSymbol,
@@ -215,16 +225,33 @@ export function SavedStrategiesPanel() {
                   className="flex flex-col gap-1"
                 >
                   <p className="text-xs text-fg-muted">
-                    {meta?.nameKo ?? meta?.name ?? s.strategyId} · {symbolLabel}{" "}
+                    {s.kind === "custom" ? (
+                      <span className="inline-flex items-center gap-1">
+                        <span className="rounded-full bg-fg/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-fg-muted">
+                          🧪 커스텀
+                        </span>
+                      </span>
+                    ) : (
+                      <>{meta?.nameKo ?? meta?.name ?? s.strategyId}</>
+                    )}{" "}
+                    · {symbolLabel}{" "}
                     <span className="text-fg-subtle">
                       ({asset?.ticker ?? s.defaultSymbol.toUpperCase()})
                     </span>
                   </p>
-                  {paramKeys.length > 0 && (
+                  {s.kind === "custom" && s.customConfig ? (
+                    <p className="text-[11px] text-fg-subtle">
+                      <span className="text-[var(--color-up)]">매수:</span>{" "}
+                      {formatGroup(s.customConfig.buy)}
+                      <br />
+                      <span className="text-[var(--color-down)]">매도:</span>{" "}
+                      {formatGroup(s.customConfig.sell)}
+                    </p>
+                  ) : paramKeys.length > 0 ? (
                     <p className="text-[11px] text-fg-subtle">
                       {paramKeys.map((k) => `${k}=${s.params[k]}`).join(" · ")}
                     </p>
-                  )}
+                  ) : null}
                   <p className="mt-1 text-[10px] text-fg-subtle">
                     저장: {new Date(s.createdAt).toLocaleDateString("ko-KR")}
                     {s.updatedAt !== s.createdAt && (
