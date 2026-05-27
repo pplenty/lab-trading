@@ -7,9 +7,10 @@ import {
   usRegistry,
 } from "@/lib/symbols/registry";
 
-// 활성 라우트 + 35 종목 상세를 sitemap 에 포함.
-// stub (news / kospi-only / kosdaq-only) noindex.
-// /search 는 generateMetadata 에서 robots noindex (검색 결과 페이지 관행).
+// sitemap 에는 **검색 색인 대상 (index 가능) 공개 페이지만** 포함한다.
+// robots:{index:false} 인 사용자 자산 페이지 (alerts/notes/portfolio/favorites/me/
+// backtest-custom/vs/portfolio/saved/settings) 와 빈 진입 noindex (/compare) 는 제외 —
+// sitemap 에 noindex URL 등재 시 GSC "Submitted URL marked noindex" 에러 + sitemap 신뢰도 하락.
 const STATIC_PATHS = [
   "",
   "/news",
@@ -31,20 +32,33 @@ const STATIC_PATHS = [
   "/kr/volume",
   "/kr/news",
   "/backtest/new",
-  "/backtest/custom",
-  "/backtest/vs",
-  "/backtest/portfolio",
-  "/backtest/saved",
-  "/compare",
   "/market",
   "/indices",
-  "/alerts",
-  "/notes",
-  "/portfolio",
-  "/favorites",
-  "/me",
-  "/settings",
 ];
+
+// 일별 갱신 (시세/뉴스 변동) — changeFrequency daily, priority 0.8.
+const DAILY_PATHS = new Set([
+  "/news",
+  "/crypto",
+  "/crypto/gainers",
+  "/crypto/losers",
+  "/crypto/volume",
+  "/crypto/news",
+  "/us",
+  "/us/gainers",
+  "/us/losers",
+  "/us/volume",
+  "/us/news",
+  "/kr",
+  "/kr/kospi",
+  "/kr/kosdaq",
+  "/kr/gainers",
+  "/kr/losers",
+  "/kr/volume",
+  "/kr/news",
+  "/indices",
+  "/market",
+]);
 
 function symbolPaths(): string[] {
   const paths: string[] = [];
@@ -65,10 +79,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const symbolPath = symbolPaths();
   for (const locale of locales) {
     for (const path of STATIC_PATHS) {
+      const isDaily = path === "" || DAILY_PATHS.has(path);
       entries.push({
         url: absoluteUrl(`/${locale}${path}`),
-        changeFrequency: path === "" ? "daily" : "weekly",
-        priority: path === "" ? 1.0 : 0.7,
+        changeFrequency: isDaily ? "daily" : "weekly",
+        priority: path === "" ? 1.0 : DAILY_PATHS.has(path) ? 0.8 : 0.6,
       });
     }
     // 종목 상세 — daily 갱신 (시세 변동), priority 0.8 (랭킹 0.7 보다 약간 높게)

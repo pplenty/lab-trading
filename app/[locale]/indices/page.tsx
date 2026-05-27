@@ -1,6 +1,7 @@
 import type {Metadata} from "next";
 import {getTranslations} from "next-intl/server";
 import {Link} from "@/i18n/navigation";
+import {absoluteUrl} from "@/lib/site";
 import {
   loadCompositeIndex,
   parseCompositeRange,
@@ -27,6 +28,7 @@ export async function generateMetadata({
     title: `자체 지수 — 코인 · 해외주식 · 국내주식 ${compositeRangeLabel(range)}`,
     description:
       "사이트 80 종목 equal-weight composite — 자산군별 시계열 추이. 한 화면에서 시장 분위기 비교.",
+    alternates: {canonical: absoluteUrl("/ko/indices")},
   };
 }
 
@@ -90,6 +92,27 @@ export default async function IndicesPage({searchParams}: Props) {
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Dataset",
+            name: "lab-trading 자체 합성 지수 (코인 · 해외주식 · 국내주식)",
+            description:
+              "사이트 80 종목 equal-weight composite index — 자산군별 일별 시계열. 각 종목 첫 종가를 100 으로 정규화 후 자산군 내 평균.",
+            url: absoluteUrl("/ko/indices"),
+            creator: {"@type": "Organization", name: "trading.jdgrid.com"},
+            variableMeasured: [
+              "코인 composite index",
+              "해외주식 composite index",
+              "국내주식 composite index",
+            ],
+            temporalCoverage: `${compositeRangeLabel(range)}`,
+            license: "https://trading.jdgrid.com/ko",
+          }),
+        }}
+      />
       <header className="mb-6">
         <p className="text-xs uppercase tracking-wider text-fg-subtle">시장 지수</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-fg sm:text-3xl">

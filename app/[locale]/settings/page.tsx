@@ -1,3 +1,4 @@
+import type {Metadata} from "next";
 import {getTranslations} from "next-intl/server";
 import {ThemeSwitcher} from "@/components/ThemeSwitcher";
 import {ModeSwitcher} from "@/components/ModeSwitcher";
@@ -9,6 +10,11 @@ import {BackupRestorePanel} from "@/components/panels/BackupRestorePanel";
 
 // 설정 페이지 — 모든 사이트 환경설정을 한 곳에 모음 (yutils 동일 정책).
 export const dynamic = "force-static";
+
+// 환경 설정 — 검색 색인 불필요.
+export const metadata: Metadata = {
+  robots: {index: false},
+};
 
 export default async function SettingsPage() {
   const t = await getTranslations("settings");

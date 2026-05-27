@@ -1,7 +1,15 @@
+import type {Metadata} from "next";
 import {getTranslations} from "next-intl/server";
 import {SavedStrategiesPanel} from "@/components/panels/SavedStrategiesPanel";
 
 export const dynamic = "force-static";
+
+// localStorage 기반 사용자 자산 페이지 — 검색 색인 제외 (다른 사용자 자산 페이지와 정합).
+export const metadata: Metadata = {
+  title: "저장된 전략",
+  description: "백테스트 작업장에서 저장한 전략 + 파라미터 + 종목 조합 (localStorage).",
+  robots: {index: false},
+};
 
 export default async function BacktestSavedPage() {
   const t = await getTranslations("home");

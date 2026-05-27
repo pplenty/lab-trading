@@ -21,6 +21,11 @@ export async function generateMetadata({
   const {locale} = await params;
   const t = await getTranslations({locale, namespace: "meta"});
 
+  // canonical 은 layout 에 박지 않는다 — Next.js metadata 의 alternates 는 자식이
+  // 재정의하지 않으면 부모 값을 그대로 상속해서, 모든 공개 페이지가 홈(/ko) canonical 을
+  // 물려받아 "홈 중복"으로 색인 드롭되는 사고가 난다 (SEO P0). 페이지별로 박거나,
+  // 미정의 시 self-canonical (URL 자체) 로 두는 게 안전.
+  // hreflang(languages) 도 ADR-0004 (ko 단독, en 잠금) 정합 위해 ko 만.
   return {
     title: {
       default: t("siteTitle"),
@@ -28,10 +33,7 @@ export async function generateMetadata({
     },
     description: t("siteDescription"),
     alternates: {
-      canonical: absoluteUrl(`/${locale}`),
-      languages: Object.fromEntries(
-        routing.locales.map((l) => [l, absoluteUrl(`/${l}`)])
-      ),
+      languages: {ko: absoluteUrl("/ko")},
     },
   };
 }
