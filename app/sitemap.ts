@@ -36,6 +36,7 @@ const STATIC_PATHS = [
   "/backtest/saved",
   "/compare",
   "/market",
+  "/indices",
   "/alerts",
   "/notes",
   "/portfolio",

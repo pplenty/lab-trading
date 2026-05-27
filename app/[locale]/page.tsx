@@ -250,6 +250,17 @@ export default async function HomePage({
               모든 사용자 자산 한 화면 통합
             </p>
           </Link>
+          <Link
+            href="/indices"
+            className="group rounded-lg border border-line bg-bg p-4 transition-colors hover:border-fg"
+          >
+            <p className="text-sm font-semibold text-fg group-hover:text-accent">
+              📈 자체 지수
+            </p>
+            <p className="mt-1 text-xs text-fg-muted">
+              80 종목 equal-weight composite — 자산군 시계열 비교
+            </p>
+          </Link>
         </div>
       </section>
 
