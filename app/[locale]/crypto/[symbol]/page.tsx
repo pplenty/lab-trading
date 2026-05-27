@@ -20,6 +20,7 @@ import {D1FallbackBadge} from "@/components/D1FallbackBadge";
 import {RecentTracker} from "@/components/RecentTracker";
 import {SymbolActions} from "@/components/panels/SymbolActions";
 import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
+import {SimilarSymbolsPanel} from "@/components/panels/SimilarSymbolsPanel";
 import {SymbolBacktestPreview} from "@/components/panels/SymbolBacktestPreview";
 import {SymbolNotesPanel} from "@/components/panels/SymbolNotesPanel";
 import {SymbolRelatedNews} from "@/components/panels/SymbolRelatedNews";
@@ -381,6 +382,8 @@ export default async function CryptoSymbolPage({params, searchParams}: PageProps
         currentPrice={quote?.price}
         currency="KRW"
       />
+
+      <SimilarSymbolsPanel class="crypto" symbol={entry.symbol} locale="ko" />
 
       <RelatedSymbolChips
         class="crypto"

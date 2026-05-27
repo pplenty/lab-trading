@@ -17,6 +17,7 @@ import {D1FallbackBadge} from "@/components/D1FallbackBadge";
 import {RecentTracker} from "@/components/RecentTracker";
 import {SymbolActions} from "@/components/panels/SymbolActions";
 import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
+import {SimilarSymbolsPanel} from "@/components/panels/SimilarSymbolsPanel";
 import {SymbolBacktestPreview} from "@/components/panels/SymbolBacktestPreview";
 import {SymbolRelatedNews} from "@/components/panels/SymbolRelatedNews";
 import {SymbolNotesPanel} from "@/components/panels/SymbolNotesPanel";
@@ -323,6 +324,8 @@ export default async function UsSymbolPage({params, searchParams}: PageProps) {
         currentPrice={quote?.price}
         currency="USD"
       />
+
+      <SimilarSymbolsPanel class="us" symbol={entry.symbol} locale="ko" />
 
       <RelatedSymbolChips
         class="us"
