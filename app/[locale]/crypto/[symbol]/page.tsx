@@ -85,9 +85,22 @@ export async function generateMetadata({
   if (!entry) return {};
   const name = locale === "ko" ? entry.nameKo ?? entry.name : entry.name;
   const url = absoluteUrl(`/${locale}/crypto/${entry.symbol}`);
-  const description = `${name} (${entry.symbol.toUpperCase()}) 실시간 시세 · 일봉 차트 · 일봉 백테스트. Upbit KRW + CoinGecko 글로벌 데이터.`;
+  const ticker = entry.symbol.toUpperCase();
+  let priceFrag = "";
+  try {
+    const q = await loadQuote("crypto", entry.symbol);
+    if (q && Number.isFinite(q.price)) {
+      const priceStr = `₩${q.price.toLocaleString("ko-KR")}`;
+      const chg = q.changePct24h;
+      const sign = chg > 0 ? "+" : "";
+      priceFrag = ` 현재가 ${priceStr}${Number.isFinite(chg) ? ` (${sign}${chg.toFixed(2)}%)` : ""}.`;
+    }
+  } catch {
+    /* quote 실패 시 정적 */
+  }
+  const description = `${name} (${ticker})${priceFrag} 일봉 차트 · 26 지표 · 백테스트. Upbit KRW + CoinGecko.`;
   return {
-    title: `${name} (${entry.symbol.toUpperCase()}) 시세 · 차트`,
+    title: `${name} (${ticker}) 시세 · 차트 · 백테스트`,
     description,
     openGraph: {
       title: `${name} (${entry.symbol.toUpperCase()})`,

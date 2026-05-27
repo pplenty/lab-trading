@@ -64,9 +64,22 @@ export async function generateMetadata({
   if (!entry) return {};
   const name = locale === "ko" ? entry.nameKo ?? entry.name : entry.name;
   const url = absoluteUrl(`/${locale}/us/${entry.symbol}`);
-  const description = `${name} (${entry.ticker}) 실시간 시세 · 일봉 차트 · 일봉 백테스트. ${entry.market} 상장.`;
+  // 동적 가격/변동률 — 검색 스니펫 정보 밀도 (컨벤션 D). loadQuote 는 cache() 라 page body 와 dedup.
+  let priceFrag = "";
+  try {
+    const q = await loadQuote("us", entry.symbol);
+    if (q && Number.isFinite(q.price)) {
+      const priceStr = `$${q.price.toLocaleString(undefined, {maximumFractionDigits: 2})}`;
+      const chg = q.changePct24h;
+      const sign = chg > 0 ? "+" : "";
+      priceFrag = ` 현재가 ${priceStr}${Number.isFinite(chg) ? ` (${sign}${chg.toFixed(2)}%)` : ""}.`;
+    }
+  } catch {
+    /* quote 실패 시 정적 description */
+  }
+  const description = `${name} (${entry.ticker})${priceFrag} 일봉 차트 · 26 지표 · 백테스트. ${entry.market} 상장.`;
   return {
-    title: `${name} (${entry.ticker}) 시세 · 차트`,
+    title: `${name} (${entry.ticker}) 시세 · 차트 · 백테스트`,
     description,
     openGraph: {
       title: `${name} (${entry.ticker})`,

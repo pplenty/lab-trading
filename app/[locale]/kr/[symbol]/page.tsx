@@ -63,9 +63,21 @@ export async function generateMetadata({
   if (!entry) return {};
   const name = locale === "ko" ? entry.nameKo : entry.name;
   const url = absoluteUrl(`/${locale}/kr/${entry.symbol}`);
-  const description = `${name} (${entry.ticker}) 일봉 시세 · 차트 · 백테스트. ${entry.market} 상장.`;
+  let priceFrag = "";
+  try {
+    const q = await loadQuote("kr", entry.symbol);
+    if (q && Number.isFinite(q.price)) {
+      const priceStr = `₩${q.price.toLocaleString("ko-KR")}`;
+      const chg = q.changePct24h;
+      const sign = chg > 0 ? "+" : "";
+      priceFrag = ` 현재가 ${priceStr}${Number.isFinite(chg) ? ` (${sign}${chg.toFixed(2)}%)` : ""}.`;
+    }
+  } catch {
+    /* quote 실패 시 정적 */
+  }
+  const description = `${name} (${entry.ticker})${priceFrag} 일봉 차트 · 26 지표 · 백테스트. ${entry.market} 상장.`;
   return {
-    title: `${name} (${entry.ticker}) 시세 · 차트`,
+    title: `${name} (${entry.ticker}) 시세 · 차트 · 백테스트`,
     description,
     openGraph: {
       title: `${name} (${entry.ticker})`,
