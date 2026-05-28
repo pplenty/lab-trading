@@ -1,3 +1,4 @@
+import type {Metadata} from "next";
 import {getTranslations} from "next-intl/server";
 
 export const revalidate = 300;
@@ -7,10 +8,18 @@ import {QuoteTable} from "@/components/panels/QuoteTable";
 import {SectorChips} from "@/components/panels/SectorChips";
 import {getSymbolsBySector} from "@/lib/symbols/sectors";
 import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
+import {absoluteUrl} from "@/lib/site";
 import type {Quote} from "@/lib/types";
 
 // 해외주식 자산군 인덱스 — Twelve Data (키 발급 시 실제 API, 미발급 시 GBM 더미).
 // USD 가격 + 24h 변동률. KRW 환산은 Phase 1.5+ (ADR-0024).
+
+export const metadata: Metadata = {
+  title: "해외주식 시세 · 차트",
+  description:
+    "애플 · 엔비디아 · 테슬라 등 미국 증시 30 종목 실시간 시세 · 24h 변동률 · 7일 추세. 일봉 차트 · 백테스트.",
+  alternates: {canonical: absoluteUrl("/ko/us")},
+};
 
 type Props = {
   params: Promise<{locale: string}>;

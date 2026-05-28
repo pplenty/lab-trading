@@ -10,6 +10,7 @@ import {
 } from "@/lib/symbols/registry";
 import {loadSentiment, type SentimentSnapshot} from "@/lib/market/sentiment";
 import {FinancialDelta} from "@/components/FinancialDelta";
+import {absoluteUrl} from "@/lib/site";
 import type {AssetClass} from "@/lib/types";
 
 // 시장 sentiment dashboard — 자산군 × 80 종목 24h 변동 통계.
@@ -21,6 +22,7 @@ export const metadata: Metadata = {
   title: "시장 sentiment — 코인 · 해외주식 · 국내주식",
   description:
     "코인 · 해외주식 · 국내주식 시장의 24h 변동 분포 · 상승/하락 종목 수 · 거래대금 · 최대 상승/하락 종목.",
+  alternates: {canonical: absoluteUrl("/ko/market")},
 };
 
 const ASSET_LABEL_KO: Record<AssetClass, string> = {

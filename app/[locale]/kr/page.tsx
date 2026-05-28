@@ -1,3 +1,4 @@
+import type {Metadata} from "next";
 import {getTranslations} from "next-intl/server";
 
 export const revalidate = 300;
@@ -7,10 +8,18 @@ import {QuoteTable} from "@/components/panels/QuoteTable";
 import {SectorChips} from "@/components/panels/SectorChips";
 import {getSymbolsBySector} from "@/lib/symbols/sectors";
 import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
+import {absoluteUrl} from "@/lib/site";
 import type {Quote} from "@/lib/types";
 
 // 국내주식 자산군 인덱스 — KOSPI + KOSDAQ 통합. KIS 키 발급 전이라 demo GBM.
 // 시장별 (/kr/kospi · /kr/kosdaq) 분리 인덱스는 후속 PR (메뉴 stub 유지).
+
+export const metadata: Metadata = {
+  title: "국내주식 시세 · 차트",
+  description:
+    "삼성전자 · SK하이닉스 등 KOSPI · KOSDAQ 24 종목 실시간 시세 · 24h 변동률 · 7일 추세. 일봉 차트 · 백테스트.",
+  alternates: {canonical: absoluteUrl("/ko/kr")},
+};
 
 type Props = {
   params: Promise<{locale: string}>;

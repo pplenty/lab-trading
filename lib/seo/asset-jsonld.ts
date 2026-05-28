@@ -2,8 +2,9 @@ import type {AssetClass, Quote} from "@/lib/types";
 import {absoluteUrl} from "@/lib/site";
 
 // 종목 상세 페이지 JSON-LD 스키마 (ADR-0015 D 컨벤션).
-// schema.org `FinancialProduct` — 검색 엔진의 rich snippet / Knowledge Panel 인식.
-// 코인도 동일 schema (Product 폴백 대신 FinancialProduct 가 PriceSpecification 표현에 적합).
+// schema.org — 주식은 `FinancialProduct`, 코인은 `Product` (컨벤션 D 정합).
+// FinancialProduct 는 증권/투자상품 의미가 강해 암호화폐엔 Product 가 더 적합.
+// 둘 다 offers (Offer) 로 가격 표현 가능.
 
 type Params = {
   class: AssetClass;
@@ -31,7 +32,7 @@ export function assetJsonLd({
 
   const data: Record<string, unknown> = {
     "@context": "https://schema.org",
-    "@type": "FinancialProduct",
+    "@type": cls === "crypto" ? "Product" : "FinancialProduct",
     name: displayName,
     alternateName: name !== displayName ? name : undefined,
     identifier: ticker,
