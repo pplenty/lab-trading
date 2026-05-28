@@ -28,7 +28,7 @@ import {parseRangeParam, rangeBars} from "@/lib/chart/range";
 import {applyTimeframe, parseTimeframeParam, timeframeLabel} from "@/lib/chart/timeframe";
 import {loadIndicatorsForCandles} from "@/lib/data/indicators";
 import {computeIndicators} from "@/lib/backfill/indicators-batch";
-import {buildIndicatorOverlays, buildVwapOverlay} from "@/lib/chart/overlays";
+import {buildIndicatorOverlays, buildVwapOverlay, buildSupertrendOverlays} from "@/lib/chart/overlays";
 import {getSector} from "@/lib/symbols/sectors";
 import {SectorBadge} from "@/components/SectorBadge";
 import {VolatilityPanel} from "@/components/panels/VolatilityPanel";
@@ -171,6 +171,9 @@ export default async function UsSymbolPage({params, searchParams}: PageProps) {
   const chartOverlays = [
     ...(chartIndicators ? buildIndicatorOverlays(chartIndicators) : []),
     ...(aggCandles.length > 0 ? [buildVwapOverlay(aggCandles)] : []),
+    ...(chartIndicators && aggCandles.length > 0
+      ? buildSupertrendOverlays(aggCandles, chartIndicators)
+      : []),
   ];
 
   return (

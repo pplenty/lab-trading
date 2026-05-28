@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
-import type {Candle} from "@/lib/types";
-import {buildVwapOverlay} from "./overlays";
+import type {Candle, IndicatorRow} from "@/lib/types";
+import {buildVwapOverlay, buildSupertrendOverlays} from "./overlays";
 
 const DAY = 86400;
 
@@ -57,5 +57,63 @@ describe("buildVwapOverlay (anchored)", () => {
     const ov = buildVwapOverlay(candles);
     // typical = (120+80+100)/3 = 100
     expect(ov.points[0].v).toBeCloseTo(100, 5);
+  });
+});
+
+describe("buildSupertrendOverlays", () => {
+  const row = (atr: number): IndicatorRow =>
+    ({t: 0, computed_version: 2, atr_14: atr}) as IndicatorRow;
+
+  it("두 series (up/down) 반환, 각 봉은 한쪽만 값 보유", () => {
+    const candles: Candle[] = Array.from({length: 10}, (_, i) => ({
+      t: i * DAY,
+      o: 100 + i,
+      h: 102 + i,
+      l: 98 + i,
+      c: 100 + i,
+      v: 1,
+    }));
+    const inds = candles.map(() => row(2));
+    const [up, dn] = buildSupertrendOverlays(candles, inds);
+    expect(up.id).toBe("supertrend-up");
+    expect(dn.id).toBe("supertrend-dn");
+    expect(up.points.length).toBe(10);
+    // 각 봉은 up 또는 dn 한쪽만 값 (양쪽 동시 값 X)
+    for (let i = 0; i < 10; i++) {
+      const hasUp = up.points[i].v !== undefined;
+      const hasDn = dn.points[i].v !== undefined;
+      expect(hasUp && hasDn).toBe(false);
+    }
+  });
+
+  it("상승 추세 — up series 에 값", () => {
+    // 꾸준한 상승 → up trend
+    const candles: Candle[] = Array.from({length: 15}, (_, i) => ({
+      t: i * DAY,
+      o: 100 + i * 2,
+      h: 103 + i * 2,
+      l: 98 + i * 2,
+      c: 101 + i * 2,
+      v: 1,
+    }));
+    const inds = candles.map(() => row(1.5));
+    const [up] = buildSupertrendOverlays(candles, inds);
+    // 후반부 up 값 존재
+    const lastFew = up.points.slice(-5).filter((p) => p.v !== undefined);
+    expect(lastFew.length).toBeGreaterThan(0);
+  });
+
+  it("ATR 없으면 양쪽 모두 undefined (라인 끊김)", () => {
+    const candles: Candle[] = [
+      {t: 0, o: 100, h: 102, l: 98, c: 100, v: 1},
+    ];
+    const inds = [{t: 0, computed_version: 2} as IndicatorRow]; // atr 없음
+    const [up, dn] = buildSupertrendOverlays(candles, inds);
+    expect(up.points[0].v).toBeUndefined();
+    expect(dn.points[0].v).toBeUndefined();
+  });
+
+  it("빈 입력 → []", () => {
+    expect(buildSupertrendOverlays([], [])).toEqual([]);
   });
 });

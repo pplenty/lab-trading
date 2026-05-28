@@ -92,3 +92,81 @@ export function buildVwapOverlay(candles: Candle[]): ChartOverlay {
     points,
   };
 }
+
+/**
+ * Supertrend overlay — supertrend.ts 전략과 동일 로직. ATR (D1 atr_14) 기반 추세선.
+ * 추세 up/down 으로 색이 달라지므로 두 ChartOverlay 로 분리 (up=green / down=red).
+ * 각 series 는 자기 추세 구간만 값 보유, 반대 구간은 undefined (라인 끊김).
+ *
+ * candles 와 indicators (atr_14) 는 length 1:1 가정 (종목 상세 page 가 보장).
+ * multiplier default 3 (전략 default 와 동일).
+ */
+export function buildSupertrendOverlays(
+  candles: Candle[],
+  indicators: IndicatorRow[],
+  multiplier = 3,
+  upColor = "#16a34a",
+  downColor = "#dc2626"
+): ChartOverlay[] {
+  const n = Math.min(candles.length, indicators.length);
+  if (n === 0) return [];
+
+  const upPoints: Array<{t: number; v: number | undefined}> = [];
+  const downPoints: Array<{t: number; v: number | undefined}> = [];
+
+  let prevFinalUpper: number | undefined;
+  let prevFinalLower: number | undefined;
+  let prevClose: number | undefined;
+  let prevTrend: "up" | "down" | undefined;
+
+  for (let i = 0; i < n; i++) {
+    const c = candles[i];
+    const atr = indicators[i]?.atr_14;
+    if (atr === undefined || atr <= 0) {
+      upPoints.push({t: c.t, v: undefined});
+      downPoints.push({t: c.t, v: undefined});
+      prevClose = c.c;
+      continue;
+    }
+    const hl2 = (c.h + c.l) / 2;
+    const basicUpper = hl2 + multiplier * atr;
+    const basicLower = hl2 - multiplier * atr;
+
+    const finalUpper =
+      prevFinalUpper === undefined ||
+      basicUpper < prevFinalUpper ||
+      (prevClose !== undefined && prevClose > prevFinalUpper)
+        ? basicUpper
+        : prevFinalUpper;
+    const finalLower =
+      prevFinalLower === undefined ||
+      basicLower > prevFinalLower ||
+      (prevClose !== undefined && prevClose < prevFinalLower)
+        ? basicLower
+        : prevFinalLower;
+
+    let trend: "up" | "down";
+    if (prevTrend === undefined) {
+      trend = c.c >= finalUpper ? "up" : "down";
+    } else if (prevTrend === "up") {
+      trend = c.c < finalLower ? "down" : "up";
+    } else {
+      trend = c.c > finalUpper ? "up" : "down";
+    }
+
+    // 추세선 = up 이면 finalLower (하단 지지), down 이면 finalUpper (상단 저항)
+    const lineVal = trend === "up" ? finalLower : finalUpper;
+    upPoints.push({t: c.t, v: trend === "up" ? lineVal : undefined});
+    downPoints.push({t: c.t, v: trend === "down" ? lineVal : undefined});
+
+    prevFinalUpper = finalUpper;
+    prevFinalLower = finalLower;
+    prevClose = c.c;
+    prevTrend = trend;
+  }
+
+  return [
+    {id: "supertrend-up", label: "Supertrend ↑", color: upColor, points: upPoints},
+    {id: "supertrend-dn", label: "Supertrend ↓", color: downColor, points: downPoints},
+  ];
+}
