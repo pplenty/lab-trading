@@ -6,6 +6,9 @@ import {rsiReversion} from "./rsi-reversion";
 import {donchianBreakout} from "./donchian-breakout";
 import {macdCross} from "./macd-cross";
 import {bollingerReversion} from "./bollinger-reversion";
+import {trendRsi} from "./trend-rsi";
+import {supertrend} from "./supertrend";
+import type {IndicatorRow} from "@/lib/types";
 import {normalizeSignal, type Signal, type SignalAction} from "../types";
 
 const mkCandle = (i: number, c: number): Candle => ({
@@ -293,5 +296,118 @@ describe("bollingerReversion", () => {
     expect(
       bollingerReversion.validateParams?.({period: 20, stdDev: 5})
     ).toMatch(/out of range/);
+  });
+});
+
+function mkRow(p: Partial<IndicatorRow>): IndicatorRow {
+  return {t: 0, computed_version: 2, ...p} as IndicatorRow;
+}
+
+describe("trendRsi (추세 필터 RSI)", () => {
+  it("강세장 (close > SMA200) + RSI 과매도 → buy", () => {
+    const state = trendRsi.init({oversold: 35, overbought: 65});
+    const sig = trendRsi.onBar(
+      mkCandle(0, 110), // close 110 > sma200 100
+      mkRow({rsi_14: 30, sma_200: 100}),
+      state,
+      0
+    );
+    expect(act(sig)).toBe("buy");
+  });
+
+  it("하락장 (close < SMA200) RSI 과매도 → hold (필터 — 칼날 잡기 차단)", () => {
+    const state = trendRsi.init({oversold: 35, overbought: 65});
+    const sig = trendRsi.onBar(
+      mkCandle(0, 90), // close 90 < sma200 100
+      mkRow({rsi_14: 25, sma_200: 100}),
+      state,
+      0
+    );
+    expect(act(sig)).toBe("hold");
+  });
+
+  it("보유 중 RSI 과매수 → sell (차익)", () => {
+    const state = trendRsi.init({oversold: 35, overbought: 65});
+    const sig = trendRsi.onBar(
+      mkCandle(0, 120),
+      mkRow({rsi_14: 70, sma_200: 100}),
+      state,
+      1
+    );
+    expect(act(sig)).toBe("sell");
+  });
+
+  it("보유 중 추세 이탈 (close < SMA200) → sell (손절)", () => {
+    const state = trendRsi.init({oversold: 35, overbought: 65});
+    const sig = trendRsi.onBar(
+      mkCandle(0, 95), // close 95 < sma200 100
+      mkRow({rsi_14: 50, sma_200: 100}),
+      state,
+      1
+    );
+    expect(act(sig)).toBe("sell");
+  });
+
+  it("indicator 미충족 (sma_200 undefined) → hold", () => {
+    const state = trendRsi.init({oversold: 35, overbought: 65});
+    expect(
+      act(trendRsi.onBar(mkCandle(0, 110), mkRow({rsi_14: 30}), state, 0))
+    ).toBe("hold");
+  });
+
+  it("requiredIndicators = rsi_14 + sma_200", () => {
+    expect(trendRsi.requiredIndicators({})).toEqual(["rsi_14", "sma_200"]);
+  });
+
+  it("validateParams rejects oversold >= overbought", () => {
+    expect(trendRsi.validateParams?.({oversold: 70, overbought: 65})).toMatch(
+      /less than/
+    );
+  });
+});
+
+describe("supertrend (ATR 추세추종)", () => {
+  // h/l 다른 candle 빌더 — ATR 의미 위해
+  const hlc = (h: number, l: number, c: number): Candle => ({
+    t: 0,
+    o: c,
+    h,
+    l,
+    c,
+    v: 1,
+  });
+
+  it("ATR 미충족 → hold", () => {
+    const state = supertrend.init({multiplier: 3});
+    expect(act(supertrend.onBar(hlc(110, 90, 100), mkRow({}), state, 0))).toBe(
+      "hold"
+    );
+  });
+
+  it("추세 상승 전환 시 buy (하락 → 상승)", () => {
+    const state = supertrend.init({multiplier: 2});
+    // 1봉: 낮은 종가로 down trend seed
+    supertrend.onBar(hlc(50, 40, 42), mkRow({atr_14: 5}), state, 0);
+    // 2봉: 종가 급등 → finalUpper 상향 돌파 → up 전환
+    let buy = false;
+    for (let i = 0; i < 5; i++) {
+      const sig = supertrend.onBar(
+        hlc(120 + i, 110 + i, 118 + i),
+        mkRow({atr_14: 5}),
+        state,
+        0
+      );
+      if (act(sig) === "buy") buy = true;
+    }
+    expect(buy).toBe(true);
+  });
+
+  it("requiredIndicators = atr_14", () => {
+    expect(supertrend.requiredIndicators({})).toEqual(["atr_14"]);
+  });
+
+  it("validateParams rejects non-positive multiplier", () => {
+    expect(supertrend.validateParams?.({multiplier: 0})).toMatch(/positive/);
+    expect(supertrend.validateParams?.({multiplier: 3})).toBeNull();
   });
 });
