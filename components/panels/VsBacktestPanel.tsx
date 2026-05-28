@@ -361,6 +361,20 @@ function VsResult({
               best={a.metrics.winRatePct > b.metrics.winRatePct ? "a" : a.metrics.winRatePct < b.metrics.winRatePct ? "b" : "tie"}
             />
             <MetricRow
+              label="Profit Factor"
+              a={a.metrics.profitFactor >= 999 ? "∞" : a.metrics.profitFactor.toFixed(2)}
+              b={b.metrics.profitFactor >= 999 ? "∞" : b.metrics.profitFactor.toFixed(2)}
+              bh="—"
+              best={a.metrics.profitFactor > b.metrics.profitFactor ? "a" : a.metrics.profitFactor < b.metrics.profitFactor ? "b" : "tie"}
+            />
+            <MetricRow
+              label="손익비"
+              a={a.metrics.payoffRatio.toFixed(2)}
+              b={b.metrics.payoffRatio.toFixed(2)}
+              bh="—"
+              best={a.metrics.payoffRatio > b.metrics.payoffRatio ? "a" : a.metrics.payoffRatio < b.metrics.payoffRatio ? "b" : "tie"}
+            />
+            <MetricRow
               label="최종 자산"
               a={currencyFmt.format(
                 a.equityCurve.length ? a.equityCurve[a.equityCurve.length - 1].v : 0

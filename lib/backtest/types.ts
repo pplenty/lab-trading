@@ -58,6 +58,12 @@ export interface BacktestMetrics {
   winRatePct: number;
   tradeCount: number;
   avgHoldDays: number;
+  /** 총이익/|총손실| — winRate 보완 (>1 이익 우세). */
+  profitFactor: number;
+  /** 손익비 |avgWin/avgLoss|. */
+  payoffRatio: number;
+  /** 최대 연속 손실 횟수. */
+  maxConsecutiveLosses: number;
 }
 
 export interface BacktestResult {

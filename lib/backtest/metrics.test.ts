@@ -8,6 +8,7 @@ import {
   sortino,
   totalReturnPct,
   tradeCount,
+  tradeQuality,
   winRatePct,
 } from "./metrics";
 import type {Trade} from "./types";
@@ -122,5 +123,54 @@ describe("winRatePct / tradeCount / avgHoldDays", () => {
     ];
     expect(tradeCount(trades)).toBe(1);
     expect(winRatePct(trades)).toBe(100);
+  });
+});
+
+describe("tradeQuality", () => {
+  it("2 wins (+10%, +14.3%) + 1 loss (-4.5%) → profitFactor > 1", () => {
+    // equity: 1000→1100 (+10%), 1100→1050 (-4.5%), 1050→1200 (+14.3%)
+    const trades: Trade[] = [
+      mkTrade("buy", 0, 1000),
+      mkTrade("sell", 1 * DAY, 1100),
+      mkTrade("buy", 2 * DAY, 1100),
+      mkTrade("sell", 4 * DAY, 1050),
+      mkTrade("buy", 5 * DAY, 1050),
+      mkTrade("sell", 10 * DAY, 1200),
+    ];
+    const q = tradeQuality(trades);
+    // grossWin ≈ 10 + 14.29 = 24.29, grossLoss ≈ 4.545 → PF ≈ 5.34
+    expect(q.profitFactor).toBeGreaterThan(1);
+    expect(q.avgWinPct).toBeGreaterThan(0);
+    expect(q.avgLossPct).toBeLessThan(0);
+    expect(q.payoffRatio).toBeGreaterThan(0);
+    expect(q.maxConsecutiveLosses).toBe(1);
+  });
+
+  it("손실 0 → profitFactor 999 cap", () => {
+    const trades: Trade[] = [
+      mkTrade("buy", 0, 1000),
+      mkTrade("sell", 1 * DAY, 1100),
+    ];
+    expect(tradeQuality(trades).profitFactor).toBe(999);
+  });
+
+  it("연속 손실 3회 → maxConsecutiveLosses 3", () => {
+    const trades: Trade[] = [
+      mkTrade("buy", 0, 1000),
+      mkTrade("sell", 1 * DAY, 950), // -5%
+      mkTrade("buy", 2 * DAY, 950),
+      mkTrade("sell", 3 * DAY, 900), // loss
+      mkTrade("buy", 4 * DAY, 900),
+      mkTrade("sell", 5 * DAY, 880), // loss
+      mkTrade("buy", 6 * DAY, 880),
+      mkTrade("sell", 7 * DAY, 1000), // win — 연속 끊김
+    ];
+    expect(tradeQuality(trades).maxConsecutiveLosses).toBe(3);
+  });
+
+  it("거래 없음 → 모두 0", () => {
+    const q = tradeQuality([]);
+    expect(q.profitFactor).toBe(0);
+    expect(q.maxConsecutiveLosses).toBe(0);
   });
 });

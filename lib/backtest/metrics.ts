@@ -147,3 +147,81 @@ export function tradeCount(trades: Trade[]): number {
   }
   return count;
 }
+
+export type TradeQuality = {
+  /** 총 이익 / |총 손실| — 1 초과면 이익 우세. winRate 보다 신뢰. Infinity (손실 0) → 999 cap. */
+  profitFactor: number;
+  /** 평균 이익 거래 수익률 % (round-trip). */
+  avgWinPct: number;
+  /** 평균 손실 거래 수익률 % (음수). */
+  avgLossPct: number;
+  /** 손익비 = |avgWin / avgLoss| (payoff ratio). */
+  payoffRatio: number;
+  /** 최대 연속 손실 횟수. */
+  maxConsecutiveLosses: number;
+};
+
+/**
+ * round-trip PnL 기반 품질 메트릭. winRate 단독의 함정 (작은 이익 자주 + 큰 손실 가끔)
+ * 을 profitFactor / payoffRatio 로 보완.
+ */
+export function tradeQuality(trades: Trade[]): TradeQuality {
+  // round-trip PnL % 수집
+  const pnlPcts: number[] = [];
+  let lastBuy: Trade | undefined;
+  for (const tr of trades) {
+    if (tr.side === "buy") {
+      lastBuy = tr;
+    } else if (tr.side === "sell" && lastBuy) {
+      const pct = lastBuy.equity > 0 ? ((tr.equity - lastBuy.equity) / lastBuy.equity) * 100 : 0;
+      pnlPcts.push(pct);
+      lastBuy = undefined;
+    }
+  }
+
+  if (pnlPcts.length === 0) {
+    return {
+      profitFactor: 0,
+      avgWinPct: 0,
+      avgLossPct: 0,
+      payoffRatio: 0,
+      maxConsecutiveLosses: 0,
+    };
+  }
+
+  const wins = pnlPcts.filter((p) => p > 0);
+  const losses = pnlPcts.filter((p) => p < 0);
+  const grossWin = wins.reduce((s, p) => s + p, 0);
+  const grossLoss = Math.abs(losses.reduce((s, p) => s + p, 0));
+
+  const profitFactor =
+    grossLoss === 0
+      ? grossWin > 0
+        ? 999 // 손실 0 — cap (Infinity 표시 회피)
+        : 0
+      : grossWin / grossLoss;
+
+  const avgWinPct = wins.length > 0 ? grossWin / wins.length : 0;
+  const avgLossPct = losses.length > 0 ? -grossLoss / losses.length : 0;
+  const payoffRatio = avgLossPct !== 0 ? Math.abs(avgWinPct / avgLossPct) : 0;
+
+  // 최대 연속 손실
+  let maxConsec = 0;
+  let cur = 0;
+  for (const p of pnlPcts) {
+    if (p < 0) {
+      cur++;
+      if (cur > maxConsec) maxConsec = cur;
+    } else {
+      cur = 0;
+    }
+  }
+
+  return {
+    profitFactor,
+    avgWinPct,
+    avgLossPct,
+    payoffRatio,
+    maxConsecutiveLosses: maxConsec,
+  };
+}

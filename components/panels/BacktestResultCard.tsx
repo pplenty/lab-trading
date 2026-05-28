@@ -184,6 +184,43 @@ export function BacktestResultCard({result, initialCapital, currency, candles}: 
           hint="포지션 지속 일수"
           value={`${m.avgHoldDays.toFixed(1)}일`}
         />
+        <Stat
+          Icon={Trophy}
+          label="Profit Factor"
+          hint="총이익 / |총손실| — 승률 보완. >1 이익 우세"
+          value={
+            m.tradeCount === 0
+              ? "—"
+              : m.profitFactor >= 999
+              ? "∞"
+              : m.profitFactor.toFixed(2)
+          }
+          tone={
+            m.tradeCount === 0
+              ? "neutral"
+              : m.profitFactor >= 1.5
+              ? "up"
+              : m.profitFactor < 1
+              ? "down"
+              : "neutral"
+          }
+        />
+        <Stat
+          Icon={Target}
+          label="손익비"
+          hint="평균 이익 / |평균 손실| (payoff ratio)"
+          value={m.tradeCount === 0 ? "—" : m.payoffRatio.toFixed(2)}
+          tone={
+            m.tradeCount === 0 ? "neutral" : m.payoffRatio >= 1.5 ? "up" : "neutral"
+          }
+        />
+        <Stat
+          Icon={ArrowDownToLine}
+          label="최대 연속 손실"
+          hint="연속으로 손실 본 거래 최대 횟수"
+          value={m.tradeCount === 0 ? "—" : `${m.maxConsecutiveLosses}회`}
+          tone={m.maxConsecutiveLosses >= 5 ? "down" : "neutral"}
+        />
       </section>
 
       <section className="rounded-lg border border-line bg-surface/30 p-4">

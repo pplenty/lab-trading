@@ -8,6 +8,7 @@ import {
   sortino,
   totalReturnPct,
   tradeCount,
+  tradeQuality,
   winRatePct,
 } from "./metrics";
 import type {
@@ -165,6 +166,7 @@ export function runCustomBacktest(
       ? (candles[candles.length - 1].t - candles[0].t) / 86400
       : 1;
 
+  const quality = tradeQuality(trades);
   return {
     trades,
     equityCurve,
@@ -178,6 +180,9 @@ export function runCustomBacktest(
       winRatePct: winRatePct(trades),
       tradeCount: tradeCount(trades),
       avgHoldDays: avgHoldDays(trades),
+      profitFactor: quality.profitFactor,
+      payoffRatio: quality.payoffRatio,
+      maxConsecutiveLosses: quality.maxConsecutiveLosses,
     },
   };
 }
@@ -209,6 +214,9 @@ function emptyResult(): BacktestResult {
       winRatePct: 0,
       tradeCount: 0,
       avgHoldDays: 0,
+      profitFactor: 0,
+      payoffRatio: 0,
+      maxConsecutiveLosses: 0,
     },
   };
 }
