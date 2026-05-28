@@ -1,6 +1,6 @@
 "use client";
 
-import {Bitcoin, Clock, Globe, Landmark, FlaskConical, BarChart3, Star} from "lucide-react";
+import {Bitcoin, Clock, Globe, Landmark, FlaskConical, BarChart3, Star, TrendingUp, Wallet} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import {Link, usePathname} from "@/i18n/navigation";
 import {ChevronLeftIcon} from "@/components/icons";
@@ -20,7 +20,7 @@ type Item = {
 };
 
 type Group = {
-  id: "crypto" | "us" | "kr" | "backtest";
+  id: "crypto" | "us" | "kr" | "backtest" | "market" | "tools";
   Icon: typeof Bitcoin;
   items: Item[];
 };
@@ -66,8 +66,31 @@ const GROUPS: Group[] = [
     Icon: FlaskConical,
     items: [
       {href: "/backtest/new", labelKey: "backtest-new"},
+      {href: "/backtest/custom", labelKey: "backtest-custom"},
+      {href: "/backtest/vs", labelKey: "backtest-vs"},
       {href: "/backtest/portfolio", labelKey: "backtest-portfolio"},
       {href: "/backtest/saved", labelKey: "backtest-saved"},
+    ],
+  },
+  {
+    id: "market",
+    Icon: TrendingUp,
+    items: [
+      {href: "/market", labelKey: "market-sentiment"},
+      {href: "/indices", labelKey: "indices"},
+      {href: "/compare", labelKey: "compare"},
+      {href: "/news", labelKey: "news-all"},
+    ],
+  },
+  {
+    id: "tools",
+    Icon: Wallet,
+    items: [
+      {href: "/me", labelKey: "me"},
+      {href: "/portfolio", labelKey: "portfolio-paper"},
+      {href: "/favorites", labelKey: "favorites"},
+      {href: "/alerts", labelKey: "alerts"},
+      {href: "/notes", labelKey: "notes"},
     ],
   },
 ];

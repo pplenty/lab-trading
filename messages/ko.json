@@ -35,7 +35,9 @@
       "crypto": "코인",
       "us": "해외주식",
       "kr": "국내주식",
-      "backtest": "백테스트"
+      "backtest": "백테스트",
+      "market": "시장",
+      "tools": "내 정보"
     },
     "items": {
       "quotes": "시세",
@@ -47,7 +49,18 @@
       "kosdaq": "코스닥",
       "backtest-new": "새 전략",
       "backtest-portfolio": "포트폴리오",
-      "backtest-saved": "내 전략"
+      "backtest-saved": "내 전략",
+      "backtest-custom": "커스텀 빌더",
+      "backtest-vs": "전략 비교",
+      "market-sentiment": "시장 분위기",
+      "indices": "자체 지수",
+      "compare": "비교 차트",
+      "news-all": "통합 뉴스",
+      "me": "내 활동",
+      "portfolio-paper": "가상 포트폴리오",
+      "favorites": "즐겨찾기",
+      "alerts": "가격 알림",
+      "notes": "메모"
     }
   },
   "search": {

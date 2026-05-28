@@ -35,7 +35,9 @@
       "crypto": "Crypto",
       "us": "US stocks",
       "kr": "KR stocks",
-      "backtest": "Backtest"
+      "backtest": "Backtest",
+      "market": "Market",
+      "tools": "My"
     },
     "items": {
       "quotes": "Quotes",
@@ -47,7 +49,18 @@
       "kosdaq": "KOSDAQ",
       "backtest-new": "New strategy",
       "backtest-portfolio": "Portfolio",
-      "backtest-saved": "My strategies"
+      "backtest-saved": "My strategies",
+      "backtest-custom": "Custom Builder",
+      "backtest-vs": "Strategy Compare",
+      "market-sentiment": "Sentiment",
+      "indices": "Indices",
+      "compare": "Compare",
+      "news-all": "All News",
+      "me": "Activity",
+      "portfolio-paper": "Paper Portfolio",
+      "favorites": "Favorites",
+      "alerts": "Alerts",
+      "notes": "Notes"
     }
   },
   "search": {
