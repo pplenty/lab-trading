@@ -142,8 +142,8 @@ export function buildOgSvg(
     changePct > 0 ? upColor : changePct < 0 ? downColor : neutral;
   const changeText = `${changePct > 0 ? "▲ " : changePct < 0 ? "▼ " : ""}${changePct.toFixed(2)}%`;
 
-  // resvg PNG 변환 시 Pretendard (한글+Latin) 매칭. 브라우저 SVG fallback 은 sans-serif.
-  const fontStack = "Pretendard, sans-serif";
+  // resvg-wasm 호환을 위해 generic system stack — 실제 PNG 렌더는 resvg 의 fallback font 사용.
+  const fontStack = "sans-serif";
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}" width="${OG_WIDTH}" height="${OG_HEIGHT}">
   <rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="${bg}"/>
