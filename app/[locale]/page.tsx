@@ -13,6 +13,7 @@ import {AssetClassCard} from "@/components/panels/AssetClassCard";
 import {BacktestQuickLinks} from "@/components/panels/BacktestQuickLinks";
 import {Link} from "@/i18n/navigation";
 import {BrandMark} from "@/components/BrandMark";
+import {OnboardingBanner} from "@/components/OnboardingBanner";
 import {siteJsonLd} from "@/lib/seo/site-jsonld";
 import type {Quote} from "@/lib/types";
 
@@ -98,13 +99,15 @@ export default async function HomePage({
         dangerouslySetInnerHTML={{__html: siteJsonLd(locale)}}
       />
 
-      <header className="mb-10 flex flex-col gap-3">
+      <header className="mb-6 flex flex-col gap-3">
         <h1 className="flex items-center gap-3 text-3xl font-semibold tracking-tight text-fg sm:text-4xl">
           <BrandMark size={32} className="shrink-0 text-fg-muted" />
           <span>{t("title")}</span>
         </h1>
         <p className="max-w-2xl text-base text-fg-muted">{t("subtitle")}</p>
       </header>
+
+      <OnboardingBanner />
 
       <section className="mb-10">
         <div className="mb-3 flex items-center justify-between">
