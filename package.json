@@ -17,6 +17,7 @@
     "db:migrate": "wrangler d1 migrations apply lab-trading-db"
   },
   "dependencies": {
+    "@resvg/resvg-wasm": "^2.6.2",
     "drizzle-orm": "^0.36.4",
     "fast-xml-parser": "^5.8.0",
     "lightweight-charts": "^5.0.7",
