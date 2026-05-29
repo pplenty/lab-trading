@@ -19,6 +19,27 @@ export const metadata: Metadata = {
   description:
     "비트코인 · 이더리움 · 솔라나 등 26 종목 Upbit KRW 실시간 시세 · 24h 변동률 · 7일 추세. 일봉 차트 · 백테스트.",
   alternates: {canonical: absoluteUrl("/ko/crypto")},
+  openGraph: {
+    title: "코인 시세 · 차트",
+    description:
+      "비트코인 · 이더리움 등 27 종목 Upbit KRW 시세 · 24h 변동률 · 일봉 차트 · 백테스트.",
+    url: absoluteUrl("/ko/crypto"),
+    siteName: "trading",
+    locale: "ko",
+    type: "website",
+    images: [
+      {
+        url: absoluteUrl("/og/crypto.png"),
+        width: 1200,
+        height: 630,
+        alt: "코인 시세 · 차트",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: [absoluteUrl("/og/crypto.png")],
+  },
 };
 
 type Props = {

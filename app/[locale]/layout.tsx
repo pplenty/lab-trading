@@ -35,6 +35,25 @@ export async function generateMetadata({
     alternates: {
       languages: {ko: absoluteUrl("/ko")},
     },
+    // 기본 OG (홈 + openGraph 미정의 페이지 fallback). 자식이 openGraph 를
+    // 정의하면 그쪽 images 가 우선. 정적 PNG (scripts/gen-og.ts → /og/*.png).
+    openGraph: {
+      siteName: t("siteName"),
+      locale,
+      type: "website",
+      images: [
+        {
+          url: absoluteUrl("/og/home.png"),
+          width: 1200,
+          height: 630,
+          alt: t("siteTitle"),
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      images: [absoluteUrl("/og/home.png")],
+    },
   };
 }
 

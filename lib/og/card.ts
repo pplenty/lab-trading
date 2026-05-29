@@ -278,3 +278,50 @@ export function buildStaticOgSvg(
   </text>
 </svg>`;
 }
+
+/**
+ * 랜딩 페이지(홈 · 자산군 인덱스 · 백테스트) 정적 OG 카드.
+ * 종목 카드와 동일 비주얼 언어 (accent bar + 장식 캔들 + 브랜드 푸터), 종목명 대신 페이지 카피.
+ */
+export function buildPageOgSvg(opts: {
+  kicker: string;
+  title: string;
+  subtitle: string;
+  tagline: string;
+  seed: string;
+}): string {
+  const {kicker, title, subtitle, tagline, seed} = opts;
+  // 한글 타이틀 길이에 따라 폰트 축소 (텍스트 영역 x 60..660 ≈ 600px).
+  const titleSize = title.length > 13 ? 52 : title.length > 10 ? 60 : 68;
+  const decor = buildDecorCandles(seed, 690, 150, 450, 300);
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}" width="${OG_WIDTH}" height="${OG_HEIGHT}">
+  <rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="${BG}"/>
+  <rect x="0" y="0" width="8" height="${OG_HEIGHT}" fill="${ACCENT}"/>
+
+  ${decor}
+
+  <text x="60" y="135" font-family="${FONT_FAMILY}" font-size="26" font-weight="600" fill="${ACCENT}" letter-spacing="2">
+    ${svgEscape(kicker)}
+  </text>
+  <text x="60" y="245" font-family="${FONT_FAMILY}" font-size="${titleSize}" font-weight="700" fill="${FG}">
+    ${svgEscape(title)}
+  </text>
+  <text x="60" y="305" font-family="${FONT_FAMILY}" font-size="32" font-weight="500" fill="${FG_MUTED}">
+    ${svgEscape(subtitle)}
+  </text>
+
+  <rect x="60" y="430" width="14" height="14" rx="3" fill="${ACCENT}"/>
+  <text x="86" y="443" font-family="${FONT_FAMILY}" font-size="26" font-weight="500" fill="${FG}">
+    ${svgEscape(tagline)}
+  </text>
+
+  <line x1="60" y1="540" x2="${OG_WIDTH - 60}" y2="540" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="60" y="585" font-family="${FONT_FAMILY}" font-size="22" font-weight="600" fill="${ACCENT}">
+    trading.jdgrid.com
+  </text>
+  <text x="${OG_WIDTH - 60}" y="585" font-family="${FONT_FAMILY}" font-size="20" fill="${FG_MUTED}" text-anchor="end">
+    코인 · 해외주식 · 국내주식 + 일봉 백테스트
+  </text>
+</svg>`;
+}

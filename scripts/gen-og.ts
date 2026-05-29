@@ -14,7 +14,7 @@ import {Resvg} from "@resvg/resvg-js";
 import {existsSync, mkdirSync, writeFileSync} from "node:fs";
 import {dirname, join} from "node:path";
 import {fileURLToPath} from "node:url";
-import {buildStaticOgSvg, getOgMeta} from "@/lib/og/card";
+import {buildPageOgSvg, buildStaticOgSvg, getOgMeta} from "@/lib/og/card";
 import {
   cryptoRegistry,
   krRegistry,
@@ -56,6 +56,65 @@ const jobs: Job[] = [
   ...krRegistry.map((e) => ({asset: "kr" as const, symbol: e.symbol})),
 ];
 
+function renderPng(svg: string): Buffer {
+  const resvg = new Resvg(svg, {
+    fitTo: {mode: "width", value: 1200},
+    font: {
+      fontFiles: FONT_FILES,
+      loadSystemFonts: false,
+      defaultFontFamily: "Pretendard",
+    },
+  });
+  return resvg.render().asPng();
+}
+
+// 랜딩 페이지 카드 (홈 · 자산군 인덱스 · 백테스트) — 가장 많이 공유되는 URL.
+const PAGE_CARDS = [
+  {
+    name: "home",
+    kicker: "TRADING LAB",
+    title: "코인 · 해외주식 · 국내주식",
+    subtitle: "한 화면에서 시세부터 일봉 백테스트까지",
+    tagline: "80 종목 · 26 지표 · 백테스트 6 전략 · 통합 검색",
+  },
+  {
+    name: "crypto",
+    kicker: "코인",
+    title: "코인 시세 · 차트",
+    subtitle: "비트코인 · 이더리움 등 27 종목 · Upbit KRW",
+    tagline: "일봉 차트 · 26 지표 · 백테스트",
+  },
+  {
+    name: "us",
+    kicker: "해외주식",
+    title: "미국주식 시세 · 차트",
+    subtitle: "애플 · 엔비디아 등 30 종목 · NASDAQ · NYSE",
+    tagline: "일봉 차트 · 26 지표 · 백테스트",
+  },
+  {
+    name: "kr",
+    kicker: "국내주식",
+    title: "국내주식 시세 · 차트",
+    subtitle: "삼성전자 · SK하이닉스 등 24 종목 · KOSPI · KOSDAQ",
+    tagline: "일봉 차트 · 26 지표 · 백테스트",
+  },
+  {
+    name: "backtest",
+    kicker: "백테스트 랩",
+    title: "일봉 백테스트",
+    subtitle: "전략을 일봉으로 검증 — 수익률 · MDD · Sharpe",
+    tagline: "6 프리셋 + 커스텀 AND/OR 조건",
+  },
+];
+
+mkdirSync(OUT_DIR, {recursive: true});
+let pageOk = 0;
+for (const card of PAGE_CARDS) {
+  const svg = buildPageOgSvg({...card, seed: `page:${card.name}`});
+  writeFileSync(join(OUT_DIR, `${card.name}.png`), renderPng(svg));
+  pageOk++;
+}
+
 let ok = 0;
 let skipped = 0;
 
@@ -67,21 +126,12 @@ for (const {asset, symbol} of jobs) {
     continue;
   }
   const svg = buildStaticOgSvg(meta, {assetLabel: ASSET_LABEL[asset]});
-  const resvg = new Resvg(svg, {
-    fitTo: {mode: "width", value: 1200},
-    font: {
-      fontFiles: FONT_FILES,
-      loadSystemFonts: false,
-      defaultFontFamily: "Pretendard",
-    },
-  });
-  const png = resvg.render().asPng();
   const dir = join(OUT_DIR, asset);
   mkdirSync(dir, {recursive: true});
-  writeFileSync(join(dir, `${symbol}.png`), png);
+  writeFileSync(join(dir, `${symbol}.png`), renderPng(svg));
   ok++;
 }
 
 console.log(
-  `✓ OG PNG ${ok} 생성 (skip ${skipped}) → public/og/{crypto,us,kr}/*.png`
+  `✓ OG PNG: 페이지 ${pageOk} + 종목 ${ok} (skip ${skipped}) → public/og/`
 );

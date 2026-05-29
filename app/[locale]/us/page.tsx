@@ -19,6 +19,27 @@ export const metadata: Metadata = {
   description:
     "애플 · 엔비디아 · 테슬라 등 미국 증시 30 종목 실시간 시세 · 24h 변동률 · 7일 추세. 일봉 차트 · 백테스트.",
   alternates: {canonical: absoluteUrl("/ko/us")},
+  openGraph: {
+    title: "미국주식 시세 · 차트",
+    description:
+      "애플 · 엔비디아 등 미국 증시 30 종목 시세 · 24h 변동률 · 일봉 차트 · 백테스트.",
+    url: absoluteUrl("/ko/us"),
+    siteName: "trading",
+    locale: "ko",
+    type: "website",
+    images: [
+      {
+        url: absoluteUrl("/og/us.png"),
+        width: 1200,
+        height: 630,
+        alt: "미국주식 시세 · 차트",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: [absoluteUrl("/og/us.png")],
+  },
 };
 
 type Props = {

@@ -1,6 +1,8 @@
+import type {Metadata} from "next";
 import {getTranslations} from "next-intl/server";
 import {notFound, redirect} from "next/navigation";
 import {Link} from "@/i18n/navigation";
+import {absoluteUrl} from "@/lib/site";
 import {loadCandleSeries} from "@/lib/data/candles";
 import {loadComparisonFromCache, type ComparisonRow} from "@/lib/data/backtest-cache";
 import {loadIndicatorsForCandles} from "@/lib/data/indicators";
@@ -25,6 +27,35 @@ const TF_FETCH_LIMIT = {"1d": 200, "1w": 1000, "1mo": 1500} as const;
 // 백테스트 작업장 — `/backtest/new?asset=crypto&symbol=btc` URL params 로 종목 prefill.
 // 활성: crypto (Upbit KRW 라이브) + us (Twelve Data) + kr (KIS). us / kr 은 키 미발급 시 demo GBM 자동 분기.
 // candles 는 server (RSC) 가 fetch 해 BacktestPanel client 컴포넌트로 전달 (ADR-0019).
+
+// canonical 은 params 무관 bare URL — ?asset=&symbol= 변형이 중복 색인되지 않도록.
+export const metadata: Metadata = {
+  title: "일봉 백테스트",
+  description:
+    "전략을 일봉으로 검증 — 수익률 · MDD · Sharpe · Profit Factor. 6 프리셋 + 커스텀 AND/OR 조건.",
+  alternates: {canonical: absoluteUrl("/ko/backtest/new")},
+  openGraph: {
+    title: "일봉 백테스트",
+    description:
+      "전략을 일봉으로 검증 — 수익률 · MDD · Sharpe. 6 프리셋 + 커스텀 AND/OR 조건.",
+    url: absoluteUrl("/ko/backtest/new"),
+    siteName: "trading",
+    locale: "ko",
+    type: "website",
+    images: [
+      {
+        url: absoluteUrl("/og/backtest.png"),
+        width: 1200,
+        height: 630,
+        alt: "일봉 백테스트",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: [absoluteUrl("/og/backtest.png")],
+  },
+};
 
 // 60s ISR — searchParams 분기 dynamic SSR + 실패 캐시 빠른 회복 (CF Workers cold start 안전망).
 export const revalidate = 60;
