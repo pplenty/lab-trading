@@ -105,6 +105,13 @@ const PAGE_CARDS = [
     subtitle: "전략을 일봉으로 검증 — 수익률 · MDD · Sharpe",
     tagline: "6 프리셋 + 커스텀 AND/OR 조건",
   },
+  {
+    name: "news",
+    kicker: "뉴스",
+    title: "통합 뉴스",
+    subtitle: "코인 · 해외주식 · 국내주식 최신 헤드라인",
+    tagline: "6 매체 RSS · 종목별 관련 뉴스 · 검색",
+  },
 ];
 
 mkdirSync(OUT_DIR, {recursive: true});

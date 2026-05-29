@@ -32,6 +32,19 @@ export async function generateMetadata({
       siteName: "trading",
       locale,
       type: "website",
+      // 자체 openGraph 정의 시 layout 기본 images 가 상속되지 않으므로 명시 필수.
+      images: [
+        {
+          url: absoluteUrl("/og/news.png"),
+          width: 1200,
+          height: 630,
+          alt: "통합 뉴스",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      images: [absoluteUrl("/og/news.png")],
     },
   };
 }
