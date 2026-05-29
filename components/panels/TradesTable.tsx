@@ -1,7 +1,10 @@
 "use client";
 
+import {Download} from "lucide-react";
 import {FinancialDelta} from "@/components/FinancialDelta";
 import type {Trade} from "@/lib/backtest/types";
+import {pairRoundTrips} from "@/lib/backtest/round-trips";
+import {tradesToCsv} from "@/lib/backtest/trades-csv";
 
 // 백테스트 거래 목록 — 매수/매도 페어로 묶어 round-trip PnL 노출.
 // 매수만 있고 매도 없는 마지막 trade (open position) 도 표시 (PnL "—").
@@ -14,40 +17,9 @@ type Props = {
   maxRows?: number;
   /** row hover 시 매수 봉 timestamp. leave 시 null. */
   onRowHover?: (t: number | null) => void;
+  /** CSV 파일명 prefix (예: "btc-sma-cross"). default "backtest". */
+  exportName?: string;
 };
-
-type RoundTrip = {
-  buy: Trade;
-  sell: Trade | null;
-  pnl: number | null;
-  pnlPct: number | null;
-  holdDays: number | null;
-};
-
-function pairRoundTrips(trades: Trade[]): RoundTrip[] {
-  const trips: RoundTrip[] = [];
-  let lastBuy: Trade | null = null;
-  for (const tr of trades) {
-    if (tr.side === "buy") {
-      if (lastBuy) {
-        // 직전 buy 가 unclose 였다면 round-trip 으로 카운트 X (이론상 단일 포지션 모델에선 발생 X)
-        trips.push({buy: lastBuy, sell: null, pnl: null, pnlPct: null, holdDays: null});
-      }
-      lastBuy = tr;
-    } else if (tr.side === "sell" && lastBuy) {
-      const pnl = tr.equity - lastBuy.equity;
-      const pnlPct = lastBuy.equity > 0 ? (pnl / lastBuy.equity) * 100 : 0;
-      const holdDays = (tr.t - lastBuy.t) / 86400;
-      trips.push({buy: lastBuy, sell: tr, pnl, pnlPct, holdDays});
-      lastBuy = null;
-    }
-  }
-  // 미체결 마지막 buy
-  if (lastBuy) {
-    trips.push({buy: lastBuy, sell: null, pnl: null, pnlPct: null, holdDays: null});
-  }
-  return trips;
-}
 
 const dateFmt = new Intl.DateTimeFormat("ko-KR", {
   year: "2-digit",
@@ -64,8 +36,31 @@ function priceFmt(currency: string): Intl.NumberFormat {
   });
 }
 
-export function TradesTable({trades, currency, maxRows = 20, onRowHover}: Props) {
+export function TradesTable({
+  trades,
+  currency,
+  maxRows = 20,
+  onRowHover,
+  exportName = "backtest",
+}: Props) {
   const trips = pairRoundTrips(trades);
+
+  function handleExport() {
+    const csv = tradesToCsv(trades);
+    // BOM (﻿) 선두 — Excel 이 UTF-8 한글 사유 컬럼 정상 인식.
+    const blob = new Blob(["﻿" + csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${exportName}-trades.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   if (trips.length === 0) {
     return (
       <section className="rounded-lg border border-line bg-surface/30 p-4 text-sm text-fg-muted">
@@ -82,8 +77,19 @@ export function TradesTable({trades, currency, maxRows = 20, onRowHover}: Props)
 
   return (
     <section className="rounded-lg border border-line">
-      <div className="border-b border-line bg-surface px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
-        거래 내역 ({trips.length} round-trip · 최근 {visible.length}건)
+      <div className="flex items-center justify-between gap-2 border-b border-line bg-surface px-4 py-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-fg-muted">
+          거래 내역 ({trips.length} round-trip · 최근 {visible.length}건)
+        </span>
+        <button
+          type="button"
+          onClick={handleExport}
+          aria-label="거래 내역 전체 CSV 내보내기"
+          className="inline-flex shrink-0 items-center gap-1 rounded-md border border-line px-2 py-1 text-[11px] font-medium text-fg-muted transition-colors hover:bg-surface-hover hover:text-fg"
+        >
+          <Download size={12} aria-hidden="true" />
+          CSV
+        </button>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
