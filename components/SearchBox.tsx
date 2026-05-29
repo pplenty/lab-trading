@@ -1,10 +1,11 @@
 "use client";
 
 import {useEffect, useId, useMemo, useRef, useState} from "react";
-import {ArrowRight, Clock, Star} from "lucide-react";
+import {ArrowRight, Clock, Compass, Star} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import {Link, useRouter} from "@/i18n/navigation";
 import {getEntry, searchAssets, type SearchEntry} from "@/lib/search";
+import {searchPages, type PageEntry} from "@/lib/search/pages";
 import {useRecents} from "@/lib/recents";
 import {useFavorites} from "@/lib/favorites";
 import {parseFavoriteId} from "@/lib/favorites";
@@ -117,14 +118,22 @@ export function SearchBox() {
     return out;
   }, [trimmedQuery, mounted, recents, favorites, t]);
 
-  // flat entries — 키보드 nav index 계산용
+  // 기능 페이지 결과 (백테스트 / 설정 / 알림 등) — localStorage 무관, 순수 인덱스.
+  const hasQuery = trimmedQuery.length > 0;
+  const pageResults = useMemo<PageEntry[]>(
+    () => (hasQuery ? searchPages(trimmedQuery, 5) : []),
+    [hasQuery, trimmedQuery]
+  );
+
+  // flat nav 순서: 종목(asset) → 페이지 → 전체 결과 보기. 키보드 index 계산용.
   const flatEntries = useMemo(
     () => sections.flatMap((s) => s.entries),
     [sections]
   );
-  const hasQuery = trimmedQuery.length > 0;
-  const viewAllIndex = hasQuery ? flatEntries.length : -1; // 빈 query 일 땐 fallthrough 없음
-  const totalOptions = flatEntries.length + (hasQuery ? 1 : 0);
+  const assetCount = flatEntries.length;
+  const pageCount = pageResults.length;
+  const viewAllIndex = hasQuery ? assetCount + pageCount : -1; // 빈 query 일 땐 fallthrough 없음
+  const totalOptions = assetCount + pageCount + (hasQuery ? 1 : 0);
 
   // 글로벌 / · ⌘K → 인풋 focus.
   useEffect(() => {
@@ -194,10 +203,16 @@ export function SearchBox() {
       e.preventDefault();
       if (activeIndex === viewAllIndex && hasQuery) {
         goToSearchPage();
-      } else {
+      } else if (activeIndex < assetCount) {
         const selected = flatEntries[activeIndex];
         if (selected) {
           router.push(`/${selected.class}/${selected.symbol}`);
+          handleSelect();
+        }
+      } else if (activeIndex < assetCount + pageCount) {
+        const page = pageResults[activeIndex - assetCount];
+        if (page) {
+          router.push(page.href);
           handleSelect();
         }
       }
@@ -213,13 +228,19 @@ export function SearchBox() {
   // dropdown 노출 조건:
   // - query 있으면 항상 (결과 0 도 noResults)
   // - query 없으면 sections 있을 때만 (mounted + recents/favorites 비어 있지 않음)
-  const showDropdown = open && (hasQuery || sections.length > 0);
+  const showDropdown =
+    open && (hasQuery || sections.length > 0);
   const activeOptionId = (() => {
     if (!showDropdown) return undefined;
     if (activeIndex === viewAllIndex && hasQuery)
       return `${listboxId}-view-all`;
-    const e = flatEntries[activeIndex];
-    return e ? `${listboxId}-${e.class}-${e.symbol}` : undefined;
+    if (activeIndex < assetCount) {
+      const e = flatEntries[activeIndex];
+      return e ? `${listboxId}-${e.class}-${e.symbol}` : undefined;
+    }
+    if (activeIndex < assetCount + pageCount)
+      return `${listboxId}-page-${activeIndex - assetCount}`;
+    return undefined;
   })();
 
   return (
@@ -260,7 +281,7 @@ export function SearchBox() {
           role="listbox"
           className="absolute right-0 top-full z-20 mt-2 w-80 overflow-hidden rounded-lg border border-line bg-bg shadow-lg"
         >
-          {sections.length === 0 && hasQuery && (
+          {sections.length === 0 && pageResults.length === 0 && hasQuery && (
             <div className="px-4 py-3 text-xs text-fg-muted">{t("noResults")}</div>
           )}
 
@@ -328,6 +349,56 @@ export function SearchBox() {
               </div>
             );
           })}
+
+          {hasQuery && pageResults.length > 0 && (
+            <div className="border-t border-line/40">
+              <div className="flex items-center gap-1.5 bg-surface/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-fg-subtle">
+                <Compass size={10} aria-hidden="true" />
+                <span>페이지</span>
+                <span className="ml-auto tabular-nums text-fg-subtle/70">
+                  {pageResults.length}
+                </span>
+              </div>
+              <ul>
+                {pageResults.map((p, idx) => {
+                  const globalIdx = assetCount + idx;
+                  const isActive = globalIdx === activeIndex;
+                  const optionId = `${listboxId}-page-${idx}`;
+                  return (
+                    <li key={p.href}>
+                      <Link
+                        id={optionId}
+                        role="option"
+                        aria-selected={isActive}
+                        href={p.href}
+                        onClick={handleSelect}
+                        onMouseEnter={() => setActiveIndex(globalIdx)}
+                        className={
+                          isActive
+                            ? "block bg-surface-hover px-4 py-2"
+                            : "block px-4 py-2 transition-colors hover:bg-surface"
+                        }
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span aria-hidden="true" className="text-base leading-none">
+                            {p.icon}
+                          </span>
+                          <span className="flex min-w-0 flex-1 flex-col">
+                            <span className="truncate text-sm font-medium text-fg">
+                              {highlight(p.titleKo, trimmedQuery)}
+                            </span>
+                            <span className="truncate text-[11px] text-fg-subtle">
+                              {p.descKo}
+                            </span>
+                          </span>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
 
           {hasQuery && (
             <div
