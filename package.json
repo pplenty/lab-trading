@@ -14,7 +14,8 @@
     "cf:preview": "opennextjs-cloudflare preview",
     "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "wrangler d1 migrations apply lab-trading-db"
+    "db:migrate": "wrangler d1 migrations apply lab-trading-db",
+    "gen:og": "bun run scripts/gen-og.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.36.4",
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20251104.0",
     "@opennextjs/cloudflare": "^1.19.8",
+    "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

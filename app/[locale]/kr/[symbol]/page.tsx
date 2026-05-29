@@ -88,7 +88,7 @@ export async function generateMetadata({
       type: "website",
       images: [
         {
-          url: absoluteUrl(`/api/og/kr/${entry.symbol}`),
+          url: absoluteUrl(`/og/kr/${entry.symbol}.png`),
           width: 1200,
           height: 630,
           alt: `${name} (${entry.ticker}) 시세`,
@@ -99,7 +99,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title: `${name} (${entry.ticker})`,
       description,
-      images: [absoluteUrl(`/api/og/kr/${entry.symbol}`)],
+      images: [absoluteUrl(`/og/kr/${entry.symbol}.png`)],
     },
     alternates: {
       canonical: url,

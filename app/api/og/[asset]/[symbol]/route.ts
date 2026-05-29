@@ -2,8 +2,9 @@ import {NextResponse} from "next/server";
 import type {AssetClass} from "@/lib/types";
 import {buildOgSvg, getOgMeta, loadRecentCandles} from "@/lib/og/svg";
 
-// 종목 상세 OG image (SVG 응답, ADR-0015 D).
-// PNG 응답은 [symbol]/png/route.ts.
+// 종목 상세 OG image (동적 SVG 응답, 가격+스파크라인 포함, ADR-0015 D).
+// 카카오톡/트위터가 렌더하는 기본 og:image 는 빌드타임 정적 PNG(public/og/<asset>/<symbol>.png,
+// scripts/gen-og.ts). 이 endpoint 는 가격 포함 동적 버전 fallback 으로 유지.
 
 export const dynamic = "force-dynamic";
 

@@ -52,8 +52,9 @@ yarn-error.log*
 *.sqlite-shm
 !fixtures/*.sqlite
 
-# OG 이미지 — 빌드 타임 생성 (Phase 2)
-/public/og/
+# OG 이미지 정적 PNG (scripts/gen-og.ts) — public/og/ 는 커밋 (서빙 산출물).
+# 폰트는 5MB 빌드 도구라 커밋 X — release zip 에서 받는다 (scripts/fonts/README.md).
+/scripts/fonts/*.ttf
 
 # 백테스트 fixture·튜닝 산출물 임시
 _workspace/
