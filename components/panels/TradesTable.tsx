@@ -182,6 +182,11 @@ export function TradesTable({
           </tbody>
         </table>
       </div>
+      {trips.length > maxRows && (
+        <div className="border-t border-line bg-bg/40 px-4 py-2 text-[11px] text-fg-subtle">
+          +{trips.length - maxRows}건 더 — 전체는 위 <span className="font-medium text-fg-muted">CSV</span> 버튼으로 내보내세요.
+        </div>
+      )}
       {!anyReason && (
         <div className="border-t border-line bg-bg/40 px-4 py-2 text-[11px] text-fg-subtle">
           이 전략은 신호 사유를 제공하지 않습니다.
