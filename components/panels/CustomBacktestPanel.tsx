@@ -331,6 +331,7 @@ export function CustomBacktestPanel({
           initialCapital={INITIAL_CAPITAL}
           currency={currency}
           candles={candles}
+          exportName={`${symbol}-custom`}
         />
       )}
     </div>

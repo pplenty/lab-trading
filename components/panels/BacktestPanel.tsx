@@ -384,6 +384,7 @@ export function BacktestPanel({
             initialCapital={INITIAL_CAPITAL}
             currency={currency}
             candles={candles}
+            exportName={`${symbol}-${strategyId}`}
           />
         </>
       ) : candles.length < 2 ? (

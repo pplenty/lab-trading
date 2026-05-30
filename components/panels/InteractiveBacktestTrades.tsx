@@ -13,9 +13,16 @@ type Props = {
   candles: Candle[];
   trades: Trade[];
   currency: string;
+  /** CSV 내보내기 파일명 prefix — TradesTable 로 전달. */
+  exportName?: string;
 };
 
-export function InteractiveBacktestTrades({candles, trades, currency}: Props) {
+export function InteractiveBacktestTrades({
+  candles,
+  trades,
+  currency,
+  exportName,
+}: Props) {
   const chartRef = useRef<ChartHandle>(null);
 
   const buyCount = trades.filter((t) => t.side === "buy").length;
@@ -59,6 +66,7 @@ export function InteractiveBacktestTrades({candles, trades, currency}: Props) {
         currency={currency}
         maxRows={20}
         onRowHover={(t) => chartRef.current?.setHovered(t)}
+        exportName={exportName}
       />
     </>
   );

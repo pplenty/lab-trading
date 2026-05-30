@@ -25,6 +25,8 @@ type Props = {
   currency: string;
   /** 가격 차트 + 매수/매도 화살표 마커용 — 백테스트 입력 candles 그대로 전달. */
   candles?: Candle[];
+  /** CSV 내보내기 파일명 prefix (예: "btc-sma-cross"). */
+  exportName?: string;
 };
 
 const compactFmt = new Intl.NumberFormat(undefined, {
@@ -37,7 +39,13 @@ function fmtPct(v: number, digits = 2) {
   return `${sign}${v.toFixed(digits)}%`;
 }
 
-export function BacktestResultCard({result, initialCapital, currency, candles}: Props) {
+export function BacktestResultCard({
+  result,
+  initialCapital,
+  currency,
+  candles,
+  exportName,
+}: Props) {
   const m = result.metrics;
   const equitySeries: LineSeries = {
     label: "Strategy",
@@ -306,9 +314,15 @@ export function BacktestResultCard({result, initialCapital, currency, candles}: 
           candles={candles}
           trades={result.trades}
           currency={currency}
+          exportName={exportName}
         />
       ) : (
-        <TradesTable trades={result.trades} currency={currency} maxRows={20} />
+        <TradesTable
+          trades={result.trades}
+          currency={currency}
+          maxRows={20}
+          exportName={exportName}
+        />
       )}
     </div>
   );

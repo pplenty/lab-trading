@@ -123,6 +123,7 @@ export default async function SharedBacktestPage({params}: Props) {
         initialCapital={data.initialCapital}
         currency={data.currency}
         candles={data.candles}
+        exportName={`${data.symbol}-${data.strategyId}`}
       />
 
       <section className="mt-8 rounded-lg border border-line bg-surface/30 p-4">
