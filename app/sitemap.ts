@@ -1,6 +1,9 @@
 import type {MetadataRoute} from "next";
+import {sql} from "drizzle-orm";
 import {routing} from "@/i18n/routing";
 import {absoluteUrl} from "@/lib/site";
+import {getDb, isDbAvailable} from "@/lib/db/d1/client";
+import * as schema from "@/lib/db/d1/schema";
 import {
   cryptoRegistry,
   krRegistry,
@@ -70,11 +73,31 @@ function symbolPaths(): string[] {
   return paths;
 }
 
-export default function sitemap(): MetadataRoute.Sitemap {
+/** 단일 round-trip 으로 최신 봉 시각(unix sec) 조회. D1 미가용 또는 실패 시 null. */
+async function loadLastMod(): Promise<Date | null> {
+  if (!(await isDbAvailable())) return null;
+  try {
+    const db = await getDb();
+    const rows = await db
+      .select({latestT: sql<number | null>`(SELECT MAX(t) FROM candles)`})
+      .from(schema.candles)
+      .limit(1);
+    const t = rows[0]?.latestT ?? null;
+    return t ? new Date(t * 1000) : null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ADR-0004: 1차 출시는 ko 단독. routing.locales 의 "en" 은 인프라 보존용이지만
   // sitemap 에 노출하지 않는다 (/en/* 는 middleware 가 /ko/* 로 308 redirect — SEO 중복 회피).
   const locales = ["ko"] as const;
   const entries: MetadataRoute.Sitemap = [];
+
+  // lastmod = D1 최신 봉 날짜 (모든 페이지가 동일 cron 으로 일괄 갱신되므로 단일 신호 OK).
+  // 정직한 freshness 시그널 — 1주일째 stale 이면 Google 도 그렇게 인지.
+  const lastModified = await loadLastMod();
 
   const symbolPath = symbolPaths();
   for (const locale of locales) {
@@ -84,6 +107,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         url: absoluteUrl(`/${locale}${path}`),
         changeFrequency: isDaily ? "daily" : "weekly",
         priority: path === "" ? 1.0 : DAILY_PATHS.has(path) ? 0.8 : 0.6,
+        ...(lastModified ? {lastModified} : {}),
       });
     }
     // 종목 상세 — daily 갱신 (시세 변동), priority 0.8 (랭킹 0.7 보다 약간 높게)
@@ -92,6 +116,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         url: absoluteUrl(`/${locale}${path}`),
         changeFrequency: "daily",
         priority: 0.8,
+        ...(lastModified ? {lastModified} : {}),
       });
     }
   }
