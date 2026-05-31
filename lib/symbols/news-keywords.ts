@@ -119,6 +119,7 @@ const CRYPTO_ALIASES: Record<string, string[]> = {
   vet: ["비체인", "VeChain", "VET"],
   hbar: ["헤데라", "Hedera", "HBAR"],
   mana: ["디센트럴랜드", "Decentraland", "MANA"],
+  xlm: ["스텔라루멘", "스텔라", "Stellar", "XLM"],
 };
 
 /** 자산군 + symbol → keyword[]. 매칭 가능한 keyword 가 없으면 빈 배열. */

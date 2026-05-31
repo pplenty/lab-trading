@@ -56,6 +56,9 @@ const jobs: Job[] = [
   ...krRegistry.map((e) => ({asset: "kr" as const, symbol: e.symbol})),
 ];
 
+const TOTAL_COUNT =
+  cryptoRegistry.length + usRegistry.length + krRegistry.length;
+
 function renderPng(svg: string): Buffer {
   const resvg = new Resvg(svg, {
     fitTo: {mode: "width", value: 1200},
@@ -75,27 +78,27 @@ const PAGE_CARDS = [
     kicker: "TRADING LAB",
     title: "코인 · 해외주식 · 국내주식",
     subtitle: "한 화면에서 시세부터 일봉 백테스트까지",
-    tagline: "80 종목 · 26 지표 · 백테스트 6 전략 · 통합 검색",
+    tagline: `${TOTAL_COUNT} 종목 · 26 지표 · 백테스트 6 전략 · 통합 검색`,
   },
   {
     name: "crypto",
     kicker: "코인",
     title: "코인 시세 · 차트",
-    subtitle: "비트코인 · 이더리움 등 27 종목 · Upbit KRW",
+    subtitle: `비트코인 · 이더리움 등 ${cryptoRegistry.length} 종목 · Upbit KRW`,
     tagline: "일봉 차트 · 26 지표 · 백테스트",
   },
   {
     name: "us",
     kicker: "해외주식",
     title: "미국주식 시세 · 차트",
-    subtitle: "애플 · 엔비디아 등 30 종목 · NASDAQ · NYSE",
+    subtitle: `애플 · 엔비디아 등 ${usRegistry.length} 종목 · NASDAQ · NYSE`,
     tagline: "일봉 차트 · 26 지표 · 백테스트",
   },
   {
     name: "kr",
     kicker: "국내주식",
     title: "국내주식 시세 · 차트",
-    subtitle: "삼성전자 · SK하이닉스 등 24 종목 · KOSPI · KOSDAQ",
+    subtitle: `삼성전자 · SK하이닉스 등 ${krRegistry.length} 종목 · KOSPI · KOSDAQ`,
     tagline: "일봉 차트 · 26 지표 · 백테스트",
   },
   {

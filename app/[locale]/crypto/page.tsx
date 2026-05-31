@@ -14,15 +14,16 @@ import type {Quote} from "@/lib/types";
 // 코인 자산군 인덱스 — Upbit (KRW) listQuotes.
 // 사용자가 한국 시장이라 KRW 디폴트. 글로벌 USD 표시는 Phase 1.5 (CoinGecko 어댑터 도입 후).
 
+// 종목 수는 registry 에서 파생 — registry 추가 시 카피 자동 갱신 (count drift 방지).
+const CRYPTO_COUNT = cryptoRegistry.length;
+
 export const metadata: Metadata = {
   title: "코인 시세 · 차트",
-  description:
-    "비트코인 · 이더리움 · 솔라나 등 26 종목 Upbit KRW 실시간 시세 · 24h 변동률 · 7일 추세. 일봉 차트 · 백테스트.",
+  description: `비트코인 · 이더리움 · 솔라나 등 ${CRYPTO_COUNT} 종목 Upbit KRW 실시간 시세 · 24h 변동률 · 7일 추세. 일봉 차트 · 백테스트.`,
   alternates: {canonical: absoluteUrl("/ko/crypto")},
   openGraph: {
     title: "코인 시세 · 차트",
-    description:
-      "비트코인 · 이더리움 등 27 종목 Upbit KRW 시세 · 24h 변동률 · 일봉 차트 · 백테스트.",
+    description: `비트코인 · 이더리움 등 ${CRYPTO_COUNT} 종목 Upbit KRW 시세 · 24h 변동률 · 일봉 차트 · 백테스트.`,
     url: absoluteUrl("/ko/crypto"),
     siteName: "trading",
     locale: "ko",

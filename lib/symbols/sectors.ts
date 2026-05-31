@@ -33,6 +33,7 @@ const CRYPTO_SECTOR: Record<string, Sector> = {
   ltc: "결제",
   bch: "결제",
   etc: "결제",
+  xlm: "결제",
   // DeFi
   aave: "DeFi",
   uni: "DeFi",

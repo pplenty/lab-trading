@@ -1,5 +1,10 @@
 import {describe, expect, it} from "vitest";
 import {searchAssets, searchIndex} from "./index";
+import {
+  cryptoRegistry,
+  krRegistry,
+  usRegistry,
+} from "@/lib/symbols/registry";
 
 describe("searchIndex", () => {
   it("contains entries from all 3 asset classes", () => {
@@ -7,8 +12,10 @@ describe("searchIndex", () => {
     expect(classes.has("crypto")).toBe(true);
     expect(classes.has("us")).toBe(true);
     expect(classes.has("kr")).toBe(true);
-    // crypto 27 (확장 + LTC 검색 인덱스 포함) / us 30 / kr 24
-    expect(searchIndex.length).toBe(27 + 30 + 24);
+    // 3 registry 의 1:1 매핑 (drop/dedup 없이 전부 인덱싱) — registry 추가 시 자동 추종.
+    expect(searchIndex.length).toBe(
+      cryptoRegistry.length + usRegistry.length + krRegistry.length
+    );
   });
 });
 

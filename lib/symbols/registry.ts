@@ -51,6 +51,8 @@ export const cryptoRegistry: CryptoRegistryEntry[] = [
   {symbol: "vet", name: "VeChain", nameKo: "비체인", cgId: "vechain", binancePair: "VETUSDT", upbitMarket: "KRW-VET"},
   {symbol: "hbar", name: "Hedera", nameKo: "헤데라", cgId: "hedera-hashgraph", binancePair: "HBARUSDT", upbitMarket: "KRW-HBAR"},
   {symbol: "mana", name: "Decentraland", nameKo: "디센트럴랜드", cgId: "decentraland", binancePair: "MANAUSDT", upbitMarket: "KRW-MANA"},
+  // Stellar — XRP 와 같은 결제/송금 계열 (Jed McCaleb 공동 창업). Upbit korean_name "스텔라루멘".
+  {symbol: "xlm", name: "Stellar", nameKo: "스텔라루멘", cgId: "stellar", binancePair: "XLMUSDT", upbitMarket: "KRW-XLM"},
 ];
 
 const bySymbol = new Map<string, CryptoRegistryEntry>(
