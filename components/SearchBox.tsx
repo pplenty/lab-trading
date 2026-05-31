@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect, useId, useMemo, useRef, useState} from "react";
-import {ArrowRight, Clock, Compass, Star} from "lucide-react";
+import {ArrowRight, Clock, Compass, Star, X} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import {Link, useRouter} from "@/i18n/navigation";
 import {getEntry, searchAssets, type SearchEntry} from "@/lib/search";
@@ -178,6 +178,12 @@ export function SearchBox() {
     setActiveIndex(0);
   }
 
+  function handleClear() {
+    setQuery("");
+    setActiveIndex(0);
+    inputRef.current?.focus();
+  }
+
   function goToSearchPage() {
     const q = trimmedQuery;
     if (!q) return;
@@ -267,12 +273,23 @@ export function SearchBox() {
           autoComplete="off"
           className="w-full rounded-md border border-line bg-surface py-1.5 pl-3 pr-8 text-xs text-fg placeholder:text-fg-subtle focus:border-fg focus:outline-none sm:w-56"
         />
-        <kbd
-          aria-hidden="true"
-          className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-line bg-bg px-1 font-mono text-[10px] text-fg-subtle sm:block"
-        >
-          /
-        </kbd>
+        {hasQuery ? (
+          <button
+            type="button"
+            onClick={handleClear}
+            aria-label={t("clear")}
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-sm p-1 text-fg-subtle transition-colors hover:bg-surface hover:text-fg focus:outline-1 focus:outline-fg"
+          >
+            <X size={12} aria-hidden="true" />
+          </button>
+        ) : (
+          <kbd
+            aria-hidden="true"
+            className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-line bg-bg px-1 font-mono text-[10px] text-fg-subtle sm:block"
+          >
+            /
+          </kbd>
+        )}
       </div>
 
       {showDropdown && (
