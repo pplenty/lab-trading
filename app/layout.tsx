@@ -22,6 +22,13 @@ export const metadata: Metadata = {
   other: {
     "google-adsense-account": ADSENSE_CLIENT,
   },
+  // 검색엔진 사이트 소유 확인 — 전역 적용 (네이버 서치어드바이저는 / → /ko 리다이렉트 추적).
+  // verification.other → <meta name="naver-site-verification" content="..."/>.
+  verification: {
+    other: {
+      "naver-site-verification": "fd30e2a4bcac41e625bc1490de04424b5eabebe0",
+    },
+  },
 };
 
 // jdgrid 패밀리와 통일한 다크 chrome 색.
