@@ -3,6 +3,8 @@ import {
   krRegistry,
   usRegistry,
 } from "@/lib/symbols/registry";
+import {buildGaugeInner, ZONE_COLORS} from "@/lib/market/gauge";
+import type {FearGreedZone} from "@/lib/market/gauge";
 import type {AssetClass, Candle} from "@/lib/types";
 
 // 종목 상세 OG image 의 SVG 1200×630 빌더 + 메타.
@@ -275,6 +277,100 @@ export function buildStaticOgSvg(
   </text>
   <text x="${OG_WIDTH - 60}" y="585" font-family="${FONT_FAMILY}" font-size="20" fill="${FG_MUTED}" text-anchor="end">
     코인 · 해외주식 · 국내주식 + 일봉 백테스트
+  </text>
+</svg>`;
+}
+
+// ── 공포·탐욕 지수 OG 카드 (/market 공유 이미지) ─────────────────────────────
+// 코인(alternative.me) + 미국(VIX 프록시) 게이지 2개 + 큰 값. 일 1회 변하므로
+// gen-og.ts 가 라이브 값으로 생성 (또는 데일리 재생성). 게이지 기하는 lib/market/gauge.ts 공유.
+
+export type FngOgInput = {
+  /** 0-100. null 이면 "데이터 준비 중" 표시. */
+  value: number | null;
+  zone: FearGreedZone;
+  labelKo: string;
+  detail?: string;
+};
+
+function buildOgGaugeBlock(
+  cx: number,
+  marketLabel: string,
+  input: FngOgInput | null
+): string {
+  const cy = 360;
+  const r = 104;
+  const sw = 24;
+  const labelAboveY = 196;
+  const valueY = 452;
+  const zoneY = 502;
+
+  if (!input || input.value === null) {
+    return `<text x="${cx}" y="${labelAboveY}" font-family="${FONT_FAMILY}" font-size="30" font-weight="600" fill="${FG}" text-anchor="middle">${svgEscape(
+      marketLabel
+    )}</text>
+  <text x="${cx}" y="${cy}" font-family="${FONT_FAMILY}" font-size="28" fill="${FG_MUTED}" text-anchor="middle">데이터 준비 중</text>`;
+  }
+
+  const gauge = buildGaugeInner({
+    cx,
+    cy,
+    r,
+    strokeWidth: sw,
+    value: input.value,
+    needleColor: FG,
+  });
+  const zoneColor = ZONE_COLORS[input.zone];
+
+  return `<text x="${cx}" y="${labelAboveY}" font-family="${FONT_FAMILY}" font-size="30" font-weight="600" fill="${FG}" text-anchor="middle">${svgEscape(
+    marketLabel
+  )}</text>
+  ${gauge}
+  <text x="${cx}" y="${valueY}" font-family="${FONT_FAMILY}" font-size="72" font-weight="700" fill="${FG}" text-anchor="middle">${input.value}</text>
+  <text x="${cx}" y="${zoneY}" font-family="${FONT_FAMILY}" font-size="28" font-weight="600" fill="${zoneColor}" text-anchor="middle">${svgEscape(
+    input.labelKo
+  )}</text>${
+    input.detail
+      ? `\n  <text x="${cx}" y="${zoneY + 34}" font-family="${FONT_FAMILY}" font-size="20" fill="${FG_MUTED}" text-anchor="middle">${svgEscape(
+          input.detail
+        )}</text>`
+      : ""
+  }`;
+}
+
+/**
+ * 공포·탐욕 지수 OG 카드 (1200×630). 코인 + 미국 게이지 2개.
+ * @param dateLabel "2026-06-01 기준" 등 — 공유 이미지의 stale 명시.
+ */
+export function buildFearGreedOgSvg(opts: {
+  crypto: FngOgInput | null;
+  us: FngOgInput | null;
+  dateLabel: string;
+}): string {
+  const {crypto, us, dateLabel} = opts;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}" width="${OG_WIDTH}" height="${OG_HEIGHT}">
+  <rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="${BG}"/>
+  <rect x="0" y="0" width="8" height="${OG_HEIGHT}" fill="${ACCENT}"/>
+
+  <text x="60" y="90" font-family="${FONT_FAMILY}" font-size="26" font-weight="600" fill="${ACCENT}" letter-spacing="2">
+    시장 심리
+  </text>
+  <text x="60" y="150" font-family="${FONT_FAMILY}" font-size="60" font-weight="700" fill="${FG}">
+    공포 · 탐욕 지수
+  </text>
+  <text x="60" y="196" font-family="${FONT_FAMILY}" font-size="26" font-weight="500" fill="${FG_MUTED}">
+    코인 · 미국 증시 — 지금 시장은 공포일까 탐욕일까
+  </text>
+
+  ${buildOgGaugeBlock(820, "코인", crypto)}
+  ${buildOgGaugeBlock(1066, "미국 증시", us)}
+
+  <line x1="60" y1="556" x2="${OG_WIDTH - 60}" y2="556" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="60" y="598" font-family="${FONT_FAMILY}" font-size="22" font-weight="600" fill="${ACCENT}">
+    trading.jdgrid.com
+  </text>
+  <text x="${OG_WIDTH - 60}" y="598" font-family="${FONT_FAMILY}" font-size="20" fill="${FG_MUTED}" text-anchor="end">
+    ${svgEscape(dateLabel)} · Data: alternative.me · FRED
   </text>
 </svg>`;
 }

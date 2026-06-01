@@ -9,20 +9,36 @@ import {
   usRegistry,
 } from "@/lib/symbols/registry";
 import {loadSentiment, type SentimentSnapshot} from "@/lib/market/sentiment";
+import {loadFearGreed} from "@/lib/market/fear-greed";
+import {FearGreedGauge} from "@/components/panels/FearGreedGauge";
 import {FinancialDelta} from "@/components/FinancialDelta";
 import {absoluteUrl} from "@/lib/site";
 import type {AssetClass} from "@/lib/types";
 
-// 시장 sentiment dashboard — 자산군 × 80 종목 24h 변동 통계.
-// /ko/market — 상승/하락 분포 + 평균 변동률 + top gainers/losers + 거래대금.
+// 시장 sentiment dashboard — 공포·탐욕 지수(코인 alternative.me / 미국 VIX 프록시)
+// + 자산군 × 80 종목 24h 변동 통계 (상승/하락 분포 · 평균 변동률 · top gainers/losers · 거래대금).
+// /ko/market.
 
 export const revalidate = 300;
 
+const OG_MARKET = absoluteUrl("/og/market.png");
+
 export const metadata: Metadata = {
-  title: "시장 sentiment — 코인 · 해외주식 · 국내주식",
+  title: "공포·탐욕 지수 · 시장 분위기 — 코인 · 미국 · 국내",
   description:
-    "코인 · 해외주식 · 국내주식 시장의 24h 변동 분포 · 상승/하락 종목 수 · 거래대금 · 최대 상승/하락 종목.",
+    "지금 시장은 공포일까 탐욕일까 — 코인(alternative.me) · 미국 증시(VIX 프록시) 공포·탐욕 지수 + 코인·해외·국내 80 종목 24h 변동 분포 · 상승/하락 종목 수 · 거래대금.",
   alternates: {canonical: absoluteUrl("/ko/market")},
+  openGraph: {
+    title: "공포·탐욕 지수 · 시장 분위기",
+    description:
+      "코인 · 미국 증시 공포·탐욕 지수 + 80 종목 24h 변동 분포. 지금 시장 심리를 한눈에.",
+    url: absoluteUrl("/ko/market"),
+    siteName: "trading",
+    locale: "ko",
+    type: "website",
+    images: [{url: OG_MARKET, width: 1200, height: 630, alt: "공포·탐욕 지수"}],
+  },
+  twitter: {card: "summary_large_image", images: [OG_MARKET]},
 };
 
 const ASSET_LABEL_KO: Record<AssetClass, string> = {
@@ -60,26 +76,37 @@ export default async function MarketPage({params}: Props) {
   const usSymbols = usRegistry.map((e) => e.symbol);
   const krSymbols = krRegistry.map((e) => e.symbol);
 
-  const [crypto, us, kr] = await Promise.all([
+  const [crypto, us, kr, fngCrypto, fngUs] = await Promise.all([
     loadSentiment("crypto", cryptoSymbols),
     loadSentiment("us", usSymbols),
     loadSentiment("kr", krSymbols),
+    loadFearGreed("crypto"),
+    loadFearGreed("us"),
   ]);
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
-      <header className="mb-8">
+      <header className="mb-6">
         <p className="text-xs uppercase tracking-wider text-fg-subtle">
-          시장 sentiment
+          시장 심리
         </p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
-          시장 분위기
+          공포 · 탐욕 지수
         </h1>
         <p className="mt-1 text-sm text-fg-muted">
-          코인 · 해외주식 · 국내주식 — 자산군 × 80 종목 24h 변동 분포 + 상승/하락 종목 + 거래대금
+          지금 시장은 공포일까 탐욕일까 — 코인 · 미국 증시 심리 지표 + 80 종목 24h 변동 분포
         </p>
       </header>
 
+      {/* 공포·탐욕 게이지 — 외부 지수 (코인 alternative.me / 미국 VIX 프록시) */}
+      <section className="mb-8 grid gap-4 sm:grid-cols-2">
+        <FearGreedGauge reading={fngCrypto} />
+        <FearGreedGauge reading={fngUs} />
+      </section>
+
+      <h2 className="mb-3 text-base font-semibold text-fg">
+        자산군 24h 변동 분포
+      </h2>
       <div className="grid gap-4 lg:grid-cols-3">
         <SentimentCard
           snapshot={crypto}
@@ -101,7 +128,9 @@ export default async function MarketPage({params}: Props) {
       <footer className="mt-10 border-t border-line pt-4 text-xs text-fg-subtle">
         <p>{tDisc("general")}</p>
         <p className="mt-1">
-          24h 변동률 = (오늘 종가 / 어제 종가 - 1) × 100. D1 historical 기반 · 5분 cache.
+          공포·탐욕 지수 — 코인: alternative.me Crypto Fear &amp; Greed Index (0-100, 일 1회).
+          미국: FRED · CBOE VIX 종가를 0-100 으로 환산한 <strong>자체 산출 프록시</strong> (공식 지수 아님,
+          낮은 VIX = 탐욕). 24h 변동 분포는 D1 historical 기반 · 5분 cache.
         </p>
       </footer>
     </main>

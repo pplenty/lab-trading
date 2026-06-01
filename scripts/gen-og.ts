@@ -14,7 +14,14 @@ import {Resvg} from "@resvg/resvg-js";
 import {existsSync, mkdirSync, writeFileSync} from "node:fs";
 import {dirname, join} from "node:path";
 import {fileURLToPath} from "node:url";
-import {buildPageOgSvg, buildStaticOgSvg, getOgMeta} from "@/lib/og/card";
+import {
+  buildFearGreedOgSvg,
+  buildPageOgSvg,
+  buildStaticOgSvg,
+  getOgMeta,
+  type FngOgInput,
+} from "@/lib/og/card";
+import {loadFearGreed} from "@/lib/market/fear-greed";
 import {
   cryptoRegistry,
   krRegistry,
@@ -123,6 +130,31 @@ for (const card of PAGE_CARDS) {
   const svg = buildPageOgSvg({...card, seed: `page:${card.name}`});
   writeFileSync(join(OUT_DIR, `${card.name}.png`), renderPng(svg));
   pageOk++;
+}
+
+// 공포·탐욕 지수 카드 (/market 공유 이미지) — 라이브 값으로 생성.
+// 값은 일 1회 변하므로, 데일리 freshness 가 필요하면 이 스크립트를 cron 재실행 + 커밋.
+// 네트워크 실패 시 카드 생성만 스킵 (전체 gen:og 는 실패시키지 않음).
+try {
+  const [fngCrypto, fngUs] = await Promise.all([
+    loadFearGreed("crypto"),
+    loadFearGreed("us"),
+  ]);
+  const toInput = (r: Awaited<ReturnType<typeof loadFearGreed>>): FngOgInput | null =>
+    r ? {value: r.value, zone: r.zone, labelKo: r.labelKo, detail: r.detail} : null;
+  const today = new Date().toISOString().slice(0, 10);
+  const svg = buildFearGreedOgSvg({
+    crypto: toInput(fngCrypto),
+    us: toInput(fngUs),
+    dateLabel: `${today} 기준`,
+  });
+  writeFileSync(join(OUT_DIR, "market.png"), renderPng(svg));
+  pageOk++;
+  console.log(
+    `  · market.png (코인 ${fngCrypto?.value ?? "—"} / 미국 ${fngUs?.value ?? "—"})`
+  );
+} catch (err) {
+  console.warn(`  - skip market.png (F&G fetch 실패: ${String(err).slice(0, 80)})`);
 }
 
 let ok = 0;
