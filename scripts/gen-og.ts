@@ -124,12 +124,18 @@ const PAGE_CARDS = [
   },
 ];
 
+// `bun run gen:og market` → market.png 만 재생성 (데일리 cron 용 — 종목 82장 재생성·diff 회피).
+const ONLY = process.argv[2];
+const doAll = ONLY !== "market";
+
 mkdirSync(OUT_DIR, {recursive: true});
 let pageOk = 0;
-for (const card of PAGE_CARDS) {
-  const svg = buildPageOgSvg({...card, seed: `page:${card.name}`});
-  writeFileSync(join(OUT_DIR, `${card.name}.png`), renderPng(svg));
-  pageOk++;
+if (doAll) {
+  for (const card of PAGE_CARDS) {
+    const svg = buildPageOgSvg({...card, seed: `page:${card.name}`});
+    writeFileSync(join(OUT_DIR, `${card.name}.png`), renderPng(svg));
+    pageOk++;
+  }
 }
 
 // 공포·탐욕 지수 카드 (/market 공유 이미지) — 라이브 값으로 생성.
@@ -160,18 +166,20 @@ try {
 let ok = 0;
 let skipped = 0;
 
-for (const {asset, symbol} of jobs) {
-  const meta = getOgMeta(asset, symbol);
-  if (!meta) {
-    console.warn(`  - skip ${asset}/${symbol} (no meta)`);
-    skipped++;
-    continue;
+if (doAll) {
+  for (const {asset, symbol} of jobs) {
+    const meta = getOgMeta(asset, symbol);
+    if (!meta) {
+      console.warn(`  - skip ${asset}/${symbol} (no meta)`);
+      skipped++;
+      continue;
+    }
+    const svg = buildStaticOgSvg(meta, {assetLabel: ASSET_LABEL[asset]});
+    const dir = join(OUT_DIR, asset);
+    mkdirSync(dir, {recursive: true});
+    writeFileSync(join(dir, `${symbol}.png`), renderPng(svg));
+    ok++;
   }
-  const svg = buildStaticOgSvg(meta, {assetLabel: ASSET_LABEL[asset]});
-  const dir = join(OUT_DIR, asset);
-  mkdirSync(dir, {recursive: true});
-  writeFileSync(join(dir, `${symbol}.png`), renderPng(svg));
-  ok++;
 }
 
 console.log(

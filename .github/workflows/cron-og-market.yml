@@ -1,0 +1,69 @@
+name: Daily OG market.png refresh
+
+# 매일 공포·탐욕 공유 이미지(public/og/market.png)를 라이브 값으로 재생성 → 변경 시 커밋·푸시.
+# main 푸시 → Cloudflare Workers Build(wrangler.jsonc build.command)가 자동 빌드·배포하여
+# 새 PNG 가 라이브 og:image 에 반영된다. (페이지 게이지는 KV 1h 로 항상 최신 — 이 cron 은
+# 카카오톡/트위터 공유 썸네일 freshness 전용.)
+#
+# F&G 는 일 1회 갱신이라 하루 1회면 충분. gen:og:market 은 종목 OG 82장을 건드리지 않아
+# diff·빌드 비용 최소. 값 변동 없으면 커밋도 스킵.
+#
+# 폰트(Pretendard TTF)는 gitignore(용량) 라 매 실행 시 release zip 에서 받는다 (scripts/fonts/README).
+# CMC_API_KEY GH secret 이 있으면 OG 도 공식 Pro API 값으로 생성 (없으면 무키 data-api 폴백).
+
+on:
+  schedule:
+    - cron: "20 1 * * *" # 매일 01:20 UTC (= 10:20 KST). 코인 F&G 00:00 UTC 갱신 후.
+  workflow_dispatch:
+
+permissions:
+  contents: write # market.png 커밋·푸시
+
+concurrency:
+  group: og-market
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Fetch Pretendard fonts (gitignored)
+        run: |
+          set -euo pipefail
+          mkdir -p scripts/fonts
+          curl -sL -o /tmp/pretendard.zip \
+            https://github.com/orioncactus/pretendard/releases/download/v1.3.9/Pretendard-1.3.9.zip
+          unzip -o -j /tmp/pretendard.zip \
+            "public/static/alternative/Pretendard-Bold.ttf" \
+            "public/static/alternative/Pretendard-Regular.ttf" \
+            -d scripts/fonts/
+          test -f scripts/fonts/Pretendard-Bold.ttf && test -f scripts/fonts/Pretendard-Regular.ttf
+
+      - name: Install deps
+        run: bun install --frozen-lockfile
+
+      - name: Regenerate market.png (라이브 F&G 값)
+        env:
+          CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
+        run: bun run gen:og:market
+
+      - name: Commit if changed
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- public/og/market.png; then
+            echo "market.png 변경 없음 — 커밋 스킵"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/og/market.png
+          git commit -m "chore(og): 데일리 공포·탐욕 market.png 갱신"
+          git push
+          echo "::notice::market.png 갱신 커밋·푸시 — CF Workers Build 자동 배포 대기"

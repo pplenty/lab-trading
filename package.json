@@ -15,7 +15,8 @@
     "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "wrangler d1 migrations apply lab-trading-db",
-    "gen:og": "bun run scripts/gen-og.ts"
+    "gen:og": "bun run scripts/gen-og.ts",
+    "gen:og:market": "bun run scripts/gen-og.ts market"
   },
   "dependencies": {
     "drizzle-orm": "^0.36.4",
