@@ -5,9 +5,10 @@ import {
   timeframeLabel,
 } from "@/lib/chart/timeframe";
 import type {ChartRange} from "@/lib/chart/range";
+import {buildToggleHref} from "@/lib/chart/toggle-url";
 
 // 차트 timeframe segmented control (일봉 / 주봉 / 월봉).
-// URL ?tf=1d|1w|1mo (range 와 함께 보존).
+// URL ?tf=1d|1w|1mo (range 와 함께 보존). buildToggleHref 로 query append 버그 회피.
 
 type Props = {
   basePath: string;
@@ -24,11 +25,10 @@ export function TimeframeToggle({basePath, current, range}: Props) {
     >
       {TIMEFRAMES.map((tf) => {
         const active = tf === current;
-        const tfQuery = tf === "1d" ? "" : `&tf=${tf}`;
         return (
           <Link
             key={tf}
-            href={`${basePath}?range=${range}${tfQuery}`}
+            href={buildToggleHref(basePath, {range, tf})}
             scroll={false}
             role="tab"
             aria-selected={active}

@@ -134,6 +134,10 @@ export default async function ComparePage({params, searchParams}: Props) {
 
   const series = normalizeForCompare(entries);
 
+  // 토글/링크 basePath 는 검증된 종목만으로 재구성 — 과거 append 버그로 오염된
+  // (symbols=...?range=5y) URL 도 유효 토큰만 남겨 자가 치유. raw sp.symbols 사용 X.
+  const cleanSymbols = entries.map((e) => `${e.class}:${e.symbol}`).join(",");
+
   // suggestion — 사용자가 빈 페이지 또는 1개만 진입 시
   const suggestions = [
     {label: "AAPL · TSLA · NVDA", q: "us:aapl,us:tsla,us:nvda"},
@@ -193,7 +197,7 @@ export default async function ComparePage({params, searchParams}: Props) {
               range={range}
             />
             <ChartRangeToggle
-              basePath={`/compare?symbols=${rawSymbols}`}
+              basePath={`/compare?symbols=${cleanSymbols}`}
               current={range}
             />
           </section>

@@ -101,6 +101,18 @@ export default async function PortfolioBacktestPage({
     .map((s) => Number(s.trim()))
     .filter((n) => Number.isFinite(n) && n > 0);
 
+  // range 토글 basePath — symbols/weights/rebalance 보존 (기존엔 symbols 만 담아
+  // range 변경 시 weights 가 초기화됐다). buildToggleHref 가 range 만 교체.
+  const toggleBasePath = `/backtest/portfolio?${[
+    `symbols=${rawSymbols}`,
+    rawWeights ? `weights=${rawWeights}` : "",
+    typeof sp.rebalance === "string" && sp.rebalance
+      ? `rebalance=${sp.rebalance}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join("&")}`;
+
   type LoadedPosition = {
     class: AssetClass;
     symbol: string;
@@ -150,10 +162,7 @@ export default async function PortfolioBacktestPage({
             {rangeLabel(range)} ({bars} 봉)
           </p>
         </div>
-        <ChartRangeToggle
-          basePath={`/backtest/portfolio?symbols=${rawSymbols}`}
-          current={range}
-        />
+        <ChartRangeToggle basePath={toggleBasePath} current={range} />
       </header>
 
       <details className="mb-4 rounded-md border border-line bg-surface/40 px-3 py-2 text-xs text-fg-muted">
