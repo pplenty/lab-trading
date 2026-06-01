@@ -2,13 +2,30 @@ name: Daily incremental backfill
 
 # 매일 06:00 UTC (= 15:00 KST, KOSPI 폐장 후 1시간) `/api/cron/backfill` 호출.
 # 응답에 자산군별 candles/indicators inserted 카운트가 들어오므로 실패 감지 용이.
-# 수동 트리거도 허용 (workflow_dispatch) — 신규 종목 추가 직후 재실행 등.
+#
+# 수동 트리거 (workflow_dispatch):
+#   - 입력 없이 실행 → 전체 증분 backfill (스케줄과 동일).
+#   - symbol 지정 → 단일 종목 **full** backfill (`/api/backfill?days=...`). 신규 종목
+#     추가 직후 5년치 일괄 채울 때. 예: symbol=xlm asset=crypto-upbit days=1825.
 # 가이드: docs/RUN_PLAYBOOK.md "매일 cron 호출 패턴".
 
 on:
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
+    inputs:
+      symbol:
+        description: "단일 종목 full backfill (예: xlm). 비우면 전체 증분."
+        required: false
+        default: ""
+      asset:
+        description: "asset (crypto-upbit / us / kr) — symbol 지정 시 사용"
+        required: false
+        default: "crypto-upbit"
+      days:
+        description: "full backfill 일수 (기본 1825 = 5년)"
+        required: false
+        default: "1825"
 
 permissions:
   contents: read
@@ -18,10 +35,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Trigger /api/cron/backfill
+      - name: Trigger backfill
         env:
           BACKFILL_TOKEN: ${{ secrets.BACKFILL_TOKEN }}
           SITE: https://trading.jdgrid.com
+          # 입력은 env 로만 전달 — 셸 명령 문자열 보간 회피 (스크립트 인젝션 방지).
+          IN_SYMBOL: ${{ github.event.inputs.symbol }}
+          IN_ASSET: ${{ github.event.inputs.asset }}
+          IN_DAYS: ${{ github.event.inputs.days }}
         run: |
           set -euo pipefail
 
@@ -30,10 +51,21 @@ jobs:
             exit 1
           fi
 
+          # symbol 지정 시 단일 종목 full backfill, 아니면 전체 증분.
+          if [ -n "${IN_SYMBOL:-}" ]; then
+            ASSET="${IN_ASSET:-crypto-upbit}"
+            DAYS="${IN_DAYS:-1825}"
+            URL="$SITE/api/backfill?asset=${ASSET}&symbol=${IN_SYMBOL}&days=${DAYS}"
+            echo "단일 종목 full backfill: asset=${ASSET} symbol=${IN_SYMBOL} days=${DAYS}"
+          else
+            URL="$SITE/api/cron/backfill"
+            echo "전체 증분 backfill"
+          fi
+
           # body + HTTP code 동시 캡처
           body=$(mktemp)
           code=$(curl -sS -o "$body" -w "%{http_code}" \
-                      -X POST "$SITE/api/cron/backfill" \
+                      -X POST "$URL" \
                       -H "Authorization: Bearer $BACKFILL_TOKEN" \
                       --max-time 540) || code=000
 
@@ -42,7 +74,7 @@ jobs:
           echo
 
           if [ "$code" != "200" ]; then
-            echo "::error::cron backfill failed with HTTP $code"
+            echo "::error::backfill failed with HTTP $code"
             exit 1
           fi
 
