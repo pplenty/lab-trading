@@ -5,7 +5,9 @@ export const revalidate = 300;
 import {loadQuotesList, loadSparklineCloses} from "@/lib/data/quotes";
 import {usRegistry} from "@/lib/symbols/registry";
 import {QuoteTable} from "@/components/panels/QuoteTable";
+import {FearGreedChip} from "@/components/panels/FearGreedChip";
 import {SectorChips} from "@/components/panels/SectorChips";
+import {loadFearGreed} from "@/lib/market/fear-greed";
 import {getSymbolsBySector} from "@/lib/symbols/sectors";
 import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
 import {absoluteUrl} from "@/lib/site";
@@ -84,7 +86,10 @@ export default async function UsIndexPage({params, searchParams}: Props) {
   }
 
   // 7일 sparkline — 표 행에 mini chart
-  const sparklines = await loadSparklineCloses(quotes.map((q) => q.symbol), 7);
+  const [sparklines, fng] = await Promise.all([
+    loadSparklineCloses(quotes.map((q) => q.symbol), 7),
+    loadFearGreed("us"),
+  ]);
 
   const isDemo = quotes[0]?.source.includes("demo");
 
@@ -106,6 +111,7 @@ export default async function UsIndexPage({params, searchParams}: Props) {
             </span>
           )}
           <span className="text-fg-subtle tabular-nums">{quotes.length} assets</span>
+          <FearGreedChip reading={fng} />
         </div>
       </header>
 

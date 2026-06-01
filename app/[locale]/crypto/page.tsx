@@ -5,7 +5,9 @@ export const revalidate = 300;
 import {loadQuotesList, loadSparklineCloses} from "@/lib/data/quotes";
 import {cryptoRegistry} from "@/lib/symbols/registry";
 import {QuoteTable} from "@/components/panels/QuoteTable";
+import {FearGreedChip} from "@/components/panels/FearGreedChip";
 import {SectorChips} from "@/components/panels/SectorChips";
+import {loadFearGreed} from "@/lib/market/fear-greed";
 import {getSymbolsBySector} from "@/lib/symbols/sectors";
 import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
 import {absoluteUrl} from "@/lib/site";
@@ -85,7 +87,10 @@ export default async function CryptoIndexPage({params, searchParams}: Props) {
   }
 
   // 7일 sparkline — 표 행에 mini chart
-  const sparklines = await loadSparklineCloses(quotes.map((q) => q.symbol), 7);
+  const [sparklines, fng] = await Promise.all([
+    loadSparklineCloses(quotes.map((q) => q.symbol), 7),
+    loadFearGreed("crypto"),
+  ]);
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
@@ -98,8 +103,11 @@ export default async function CryptoIndexPage({params, searchParams}: Props) {
             {tSidebar("quotes")} · Upbit KRW
           </p>
         </div>
-        <div className="text-xs text-fg-subtle tabular-nums">
-          {quotes.length} assets
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-fg-subtle tabular-nums">
+            {quotes.length} assets
+          </span>
+          <FearGreedChip reading={fng} />
         </div>
       </header>
 
