@@ -11,6 +11,8 @@ import {
 } from "@/lib/symbols/registry";
 import {AssetClassCard} from "@/components/panels/AssetClassCard";
 import {BacktestQuickLinks} from "@/components/panels/BacktestQuickLinks";
+import {FearGreedMini} from "@/components/panels/FearGreedMini";
+import {loadFearGreed} from "@/lib/market/fear-greed";
 import {Link} from "@/i18n/navigation";
 import {BrandMark} from "@/components/BrandMark";
 import {OnboardingBanner} from "@/components/OnboardingBanner";
@@ -86,10 +88,12 @@ export default async function HomePage({
     );
     return [...sorted.slice(0, 3), ...sorted.slice(-3)].map((q) => q.symbol);
   };
-  const [cryptoSparks, usSparks, krSparks] = await Promise.all([
+  const [cryptoSparks, usSparks, krSparks, fngCrypto, fngUs] = await Promise.all([
     loadSparklineCloses(topSymbols(crypto.quotes), 7),
     loadSparklineCloses(topSymbols(us.quotes), 7),
     loadSparklineCloses(topSymbols(kr.quotes), 7),
+    loadFearGreed("crypto"),
+    loadFearGreed("us"),
   ]);
 
   return (
@@ -154,6 +158,10 @@ export default async function HomePage({
             sparklines={krSparks}
           />
         </div>
+      </section>
+
+      <section className="mb-10">
+        <FearGreedMini crypto={fngCrypto} us={fngUs} />
       </section>
 
       <section className="mb-10">
