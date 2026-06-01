@@ -11,8 +11,10 @@ import {
 // 공포·탐욕(Fear & Greed) 지수 데이터 레이어.
 //
 // 소스 (모두 무키):
-//   - 코인: alternative.me Crypto Fear & Greed Index (api.alternative.me/fng).
-//       0-100 + value_classification(5단계). 일 1회 갱신. **출처 표기 의무**(ToS) → 위젯에 attribution.
+//   - 코인: CoinMarketCap Fear & Greed (웹사이트 data-api, 무키) 1순위 → 실패 시
+//       alternative.me Crypto Fear & Greed Index 폴백. CMC data-api 는 비공식(웹용)이라
+//       ToS-gray + datacenter IP/UA 차단 가능성 → 브라우저 UA + alternative.me 폴백으로 견고.
+//       둘 다 0-100 + 분류(5단계), 일 1회 갱신. **출처 표기**(attribution) 위젯에 노출.
 //   - 미국: feargreedchart.com (CNN식 자체 산출 5-component 공포·탐욕 합성, 0-100, CORS 개방
 //       → Cloudflare Worker 친화). 실패 시 FRED VIXCLS(공공 도메인 VIX 종가)를 0-100 으로
 //       밴딩한 프록시로 폴백. (CNN 직접 스크랩은 ToS/418 리스크라 회피. FRED 는 미정부 사이트라
@@ -74,7 +76,58 @@ function buildReading(
   };
 }
 
-// ── 코인: alternative.me ─────────────────────────────────────────────
+// ── 코인 1순위: CoinMarketCap (웹사이트 data-api, 무키) ──────────────────
+// dialConfig 밴드(0-20/20-40/40-60/60-80/80-100)는 게이지 5등분과 일치. `name` 분류 신뢰.
+type CmcFngPoint = {score?: number; name?: string; timestamp?: string};
+
+async function fetchCmcFng(): Promise<FearGreedReading> {
+  const now = Math.floor(Date.now() / 1000);
+  const start = now - 8 * 86400; // 8일 → 전일/주간 컨텍스트 확보
+  const url = `https://api.coinmarketcap.com/data-api/v3/fear-greed/chart?start=${start}&end=${now}`;
+  const res = await fetchWithTimeout(url, {
+    timeoutMs: 8000,
+    headers: {
+      Accept: "application/json",
+      // CMC data-api 는 브라우저류 UA 기대 (UA 없거나 봇류면 차단 가능).
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+    },
+  });
+  if (!res.ok) throw new Error(`CMC HTTP ${res.status}`);
+  const json = (await res.json()) as {
+    data?: {
+      historicalValues?: {
+        now?: CmcFngPoint;
+        yesterday?: CmcFngPoint;
+        lastWeek?: CmcFngPoint;
+      };
+      dataList?: CmcFngPoint[];
+    };
+  };
+  const hv = json.data?.historicalValues;
+  const list = json.data?.dataList;
+  const latest = hv?.now ?? (list && list.length > 0 ? list[list.length - 1] : undefined);
+  const score = latest?.score;
+  if (typeof score !== "number" || !Number.isFinite(score)) {
+    throw new Error("CMC bad score");
+  }
+  const value = Math.round(Math.max(0, Math.min(100, score)));
+  const zone = zoneFromClassification(latest?.name ?? "", value);
+  return buildReading("crypto", value, zone, {
+    source: "CoinMarketCap",
+    sourceUrl: "https://coinmarketcap.com/charts/fear-and-greed-index/",
+    updatedAt: latest?.timestamp
+      ? parseInt(latest.timestamp, 10)
+      : Math.floor(Date.now() / 1000),
+    isProxy: false,
+    prev:
+      typeof hv?.yesterday?.score === "number" ? hv.yesterday.score : null,
+    weekAgo:
+      typeof hv?.lastWeek?.score === "number" ? hv.lastWeek.score : null,
+  });
+}
+
+// ── 코인 폴백: alternative.me ────────────────────────────────────────
 type FngApiEntry = {
   value: string; // 문자열 정수 (parseInt 필수)
   value_classification: string;
@@ -200,7 +253,14 @@ async function fetchUsVix(): Promise<FearGreedReading> {
 
 // ── 공개 로더 (KV 캐시 + stale 폴백) ──────────────────────────────────
 async function fetchFresh(market: FearGreedMarket): Promise<FearGreedReading> {
-  if (market === "crypto") return fetchCryptoFng();
+  if (market === "crypto") {
+    // CMC 1순위 (사용자 선호), 실패 시 alternative.me 폴백.
+    try {
+      return await fetchCmcFng();
+    } catch {
+      return await fetchCryptoFng();
+    }
+  }
   // 미국: feargreedchart 1순위, 실패 시 FRED VIX 프록시 폴백.
   try {
     return await fetchFeargreedchart();

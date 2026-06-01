@@ -128,7 +128,7 @@ export default async function MarketPage({params}: Props) {
       <footer className="mt-10 border-t border-line pt-4 text-xs text-fg-subtle">
         <p>{tDisc("general")}</p>
         <p className="mt-1">
-          공포·탐욕 지수 — 코인: alternative.me Crypto Fear &amp; Greed Index (0-100, 일 1회).
+          공포·탐욕 지수 — 코인: CoinMarketCap Fear &amp; Greed (0-100, 일 1회) · 실패 시 alternative.me 폴백.
           미국: feargreedchart.com (CNN식 5개 지표 합성, 0-100) · 실패 시 FRED · CBOE VIX 프록시 폴백.
           <strong> 공포·탐욕 지수는 공식 단일 값이 아니라 서비스마다 산출 방식이 다릅니다</strong> (업비트 등 타
           서비스의 수치와 다를 수 있음). 24h 변동 분포는 D1 historical 기반 · 5분 cache.
