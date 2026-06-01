@@ -10,10 +10,11 @@ import {
 
 // 공포·탐욕(Fear & Greed) 지수 데이터 레이어.
 //
-// 소스 (모두 무키):
-//   - 코인: CoinMarketCap Fear & Greed (웹사이트 data-api, 무키) 1순위 → 실패 시
-//       alternative.me Crypto Fear & Greed Index 폴백. CMC data-api 는 비공식(웹용)이라
-//       ToS-gray + datacenter IP/UA 차단 가능성 → 브라우저 UA + alternative.me 폴백으로 견고.
+// 소스:
+//   - 코인: CoinMarketCap Fear & Greed 1순위 → 실패 시 alternative.me 폴백.
+//       CMC 는 `CMC_API_KEY` 있으면 **공식 Pro API**(X-CMC_PRO_API_KEY, 깨끗한 ToS),
+//       없으면 웹사이트 data-api(무키, 비공식·ToS-gray + 브라우저 UA). 키는 CF Worker secret
+//       (`wrangler secret put CMC_API_KEY`) + 로컬 `.dev.vars`/`.env.local` — 저장소엔 X.
 //       둘 다 0-100 + 분류(5단계), 일 1회 갱신. **출처 표기**(attribution) 위젯에 노출.
 //   - 미국: feargreedchart.com (CNN식 자체 산출 5-component 공포·탐욕 합성, 0-100, CORS 개방
 //       → Cloudflare Worker 친화). 실패 시 FRED VIXCLS(공공 도메인 VIX 종가)를 0-100 으로
@@ -76,11 +77,53 @@ function buildReading(
   };
 }
 
-// ── 코인 1순위: CoinMarketCap (웹사이트 data-api, 무키) ──────────────────
-// dialConfig 밴드(0-20/20-40/40-60/60-80/80-100)는 게이지 5등분과 일치. `name` 분류 신뢰.
+// ── 코인 1순위: CoinMarketCap ────────────────────────────────────────
+// CMC_API_KEY 있으면 공식 Pro API(깨끗한 ToS), 없으면 웹사이트 data-api(무키, 비공식·ToS-gray).
 type CmcFngPoint = {score?: number; name?: string; timestamp?: string};
 
+function cmcApiKey(): string | undefined {
+  const k = typeof process !== "undefined" ? process.env.CMC_API_KEY : undefined;
+  return k && k.length > 0 ? k : undefined;
+}
+
 async function fetchCmcFng(): Promise<FearGreedReading> {
+  const key = cmcApiKey();
+  return key ? fetchCmcProApi(key) : fetchCmcDataApi();
+}
+
+// 공식 Pro API (X-CMC_PRO_API_KEY 헤더). Basic(무료) 플랜 OK. /latest 는 현재값만 (전일/주간 X).
+async function fetchCmcProApi(key: string): Promise<FearGreedReading> {
+  const res = await fetchWithTimeout(
+    "https://pro-api.coinmarketcap.com/v3/fear-and-greed/latest",
+    {
+      timeoutMs: 8000,
+      headers: {Accept: "application/json", "X-CMC_PRO_API_KEY": key},
+    }
+  );
+  if (!res.ok) throw new Error(`CMC Pro HTTP ${res.status}`);
+  const json = (await res.json()) as {
+    data?: {value?: number; value_classification?: string; update_time?: string};
+  };
+  const v = json.data?.value;
+  if (typeof v !== "number" || !Number.isFinite(v)) {
+    throw new Error("CMC Pro bad value");
+  }
+  const value = Math.round(Math.max(0, Math.min(100, v)));
+  const zone = zoneFromClassification(json.data?.value_classification ?? "", value);
+  const upd = json.data?.update_time
+    ? Math.floor(new Date(json.data.update_time).getTime() / 1000)
+    : Math.floor(Date.now() / 1000);
+  return buildReading("crypto", value, zone, {
+    source: "CoinMarketCap",
+    sourceUrl: "https://coinmarketcap.com/charts/fear-and-greed-index/",
+    updatedAt: Number.isFinite(upd) ? upd : Math.floor(Date.now() / 1000),
+    isProxy: false,
+  });
+}
+
+// 폴백/무키: 웹사이트 data-api (비공식). dialConfig 밴드(0-20/20-40/40-60/60-80/80-100)는
+// 게이지 5등분과 일치. `name` 분류 신뢰. historicalValues 로 전일/주간 컨텍스트 제공.
+async function fetchCmcDataApi(): Promise<FearGreedReading> {
   const now = Math.floor(Date.now() / 1000);
   const start = now - 8 * 86400; // 8일 → 전일/주간 컨텍스트 확보
   const url = `https://api.coinmarketcap.com/data-api/v3/fear-greed/chart?start=${start}&end=${now}`;
