@@ -129,8 +129,9 @@ export default async function MarketPage({params}: Props) {
         <p>{tDisc("general")}</p>
         <p className="mt-1">
           공포·탐욕 지수 — 코인: alternative.me Crypto Fear &amp; Greed Index (0-100, 일 1회).
-          미국: FRED · CBOE VIX 종가를 0-100 으로 환산한 <strong>자체 산출 프록시</strong> (공식 지수 아님,
-          낮은 VIX = 탐욕). 24h 변동 분포는 D1 historical 기반 · 5분 cache.
+          미국: feargreedchart.com (CNN식 5개 지표 합성, 0-100) · 실패 시 FRED · CBOE VIX 프록시 폴백.
+          <strong> 공포·탐욕 지수는 공식 단일 값이 아니라 서비스마다 산출 방식이 다릅니다</strong> (업비트 등 타
+          서비스의 수치와 다를 수 있음). 24h 변동 분포는 D1 historical 기반 · 5분 cache.
         </p>
       </footer>
     </main>

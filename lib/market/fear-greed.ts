@@ -13,9 +13,10 @@ import {
 // 소스 (모두 무키):
 //   - 코인: alternative.me Crypto Fear & Greed Index (api.alternative.me/fng).
 //       0-100 + value_classification(5단계). 일 1회 갱신. **출처 표기 의무**(ToS) → 위젯에 attribution.
-//   - 미국: FRED VIXCLS (CBOE VIX 종가, 공공 도메인, 36년, EOD). 공식 공포지수가 아니므로
-//       VIX 레벨을 0-100 "탐욕 점수"로 밴딩한 **프록시**. 낮은 VIX = 평온/탐욕, 높은 VIX = 공포.
-//       (CNN 직접 스크랩은 ToS/418 리스크라 회피. feargreedchart.com 합성은 단일 운영자 의존 → 향후 옵션.)
+//   - 미국: feargreedchart.com (CNN식 자체 산출 5-component 공포·탐욕 합성, 0-100, CORS 개방
+//       → Cloudflare Worker 친화). 실패 시 FRED VIXCLS(공공 도메인 VIX 종가)를 0-100 으로
+//       밴딩한 프록시로 폴백. (CNN 직접 스크랩은 ToS/418 리스크라 회피. FRED 는 미정부 사이트라
+//       CF 데이터센터 IP 를 차단 → 런타임 실패 → feargreedchart 를 1순위로.)
 //
 // 캐시: KV 7일 보관 + fetchedAt 기준 1h freshness. fetch 실패 시 stale 캐시 반환(stale-while-error).
 // 둘 다 일 1회 갱신이라 1h TTL 로 충분. 단일 호스트 → stale 폴백으로 위젯이 절대 비지 않게.
@@ -106,7 +107,35 @@ async function fetchCryptoFng(): Promise<FearGreedReading> {
   });
 }
 
-// ── 미국: FRED VIXCLS (프록시) ────────────────────────────────────────
+// ── 미국 1순위: feargreedchart.com (CNN식 5-component 합성, 0-100) ──────────
+async function fetchFeargreedchart(): Promise<FearGreedReading> {
+  const res = await fetchWithTimeout(
+    "https://feargreedchart.com/api/?action=all",
+    {timeoutMs: 8000, headers: {Accept: "application/json"}}
+  );
+  if (!res.ok) throw new Error(`feargreedchart HTTP ${res.status}`);
+  const json = (await res.json()) as {
+    score?: {score?: number};
+    ts?: number;
+  };
+  const raw = json.score?.score;
+  if (typeof raw !== "number" || !Number.isFinite(raw)) {
+    throw new Error("feargreedchart bad score");
+  }
+  const value = Math.round(Math.max(0, Math.min(100, raw)));
+  const zone = zoneFromValue(value);
+  return buildReading("us", value, zone, {
+    source: "feargreedchart.com",
+    sourceUrl: "https://feargreedchart.com",
+    updatedAt:
+      typeof json.ts === "number"
+        ? Math.floor(json.ts / 1000)
+        : Math.floor(Date.now() / 1000),
+    isProxy: false,
+  });
+}
+
+// ── 미국 폴백: FRED VIXCLS (프록시) ───────────────────────────────────
 /**
  * VIX 레벨 → 0-100 탐욕 점수. 낮은 VIX = 탐욕(높은 점수).
  * lo=10(탐욕 100) ~ hi=30(공포 0) 선형 클램프 — VIX 20(역사적 평균)이 중립(50)에 오도록 보정.
@@ -171,7 +200,13 @@ async function fetchUsVix(): Promise<FearGreedReading> {
 
 // ── 공개 로더 (KV 캐시 + stale 폴백) ──────────────────────────────────
 async function fetchFresh(market: FearGreedMarket): Promise<FearGreedReading> {
-  return market === "crypto" ? fetchCryptoFng() : fetchUsVix();
+  if (market === "crypto") return fetchCryptoFng();
+  // 미국: feargreedchart 1순위, 실패 시 FRED VIX 프록시 폴백.
+  try {
+    return await fetchFeargreedchart();
+  } catch {
+    return await fetchUsVix();
+  }
 }
 
 /**
