@@ -105,7 +105,10 @@
     "tagline": "Informational only · not investment advice",
     "shortcuts": "Shortcuts",
     "settings": "Settings",
-    "contact": "Contact"
+    "contact": "Contact",
+    "privacy": "Privacy Policy",
+    "terms": "Terms",
+    "about": "About"
   },
   "disclaimer": {
     "general": "Informational use only. This is not investment advice; you are responsible for your own trades.",
