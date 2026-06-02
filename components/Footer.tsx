@@ -24,7 +24,19 @@ export async function Footer() {
           © {year} trading · {t("tagline")}
         </p>
         <p className="text-fg-subtle">{tDisclaimer("general")}</p>
-        <nav className="flex gap-4">
+        <nav className="flex flex-wrap gap-x-4 gap-y-2">
+          <Link
+            href="/privacy"
+            className="font-medium text-fg-muted transition-colors hover:text-fg"
+          >
+            {t("privacy")}
+          </Link>
+          <Link href="/terms" className="transition-colors hover:text-fg">
+            {t("terms")}
+          </Link>
+          <Link href="/about" className="transition-colors hover:text-fg">
+            {t("about")}
+          </Link>
           <ShortcutsTrigger label={t("shortcuts")} variant="subtle" />
           <SettingsLink label={t("settings")} />
           <a

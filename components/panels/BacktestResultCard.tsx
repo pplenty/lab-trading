@@ -324,6 +324,13 @@ export function BacktestResultCard({
           exportName={exportName}
         />
       )}
+
+      {/* 백테스트 결과 면책 (ADR-0017) — 과거 성과·단순화 변수·미래 미보장 */}
+      <p className="mt-4 rounded-md border border-line bg-surface/40 px-3 py-2 text-[11px] leading-relaxed text-fg-subtle">
+        ⚠️ 백테스트 결과는 과거 데이터 기반 가상 시뮬레이션입니다. 수수료·슬리피지·세금이 단순화되어
+        있고, 과거 성과는 미래 수익을 보장하지 않으며 실제 거래와 차이가 있을 수 있습니다. 투자 권유가
+        아닙니다.
+      </p>
     </div>
   );
 }

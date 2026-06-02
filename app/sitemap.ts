@@ -37,6 +37,9 @@ const STATIC_PATHS = [
   "/backtest/new",
   "/market",
   "/indices",
+  "/about",
+  "/privacy",
+  "/terms",
 ];
 
 // 일별 갱신 (시세/뉴스 변동) — changeFrequency daily, priority 0.8.

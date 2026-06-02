@@ -77,12 +77,23 @@ export default function RootLayout({
               src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
               strategy="afterInteractive"
             />
+            {/* GA4 + Consent Mode v2 — EEA/UK/CH 는 동의 전 denied(기본), 그 외(한국 등)는 granted.
+                EEA 동의 배너는 AdSense 콘솔의 '개인정보 보호 및 메시지'(Funding Choices)에서 활성화. */}
             <Script id="ga-init" strategy="afterInteractive">
               {`window.dataLayer = window.dataLayer || [];
 function gtag(){dataLayer.push(arguments);}
+gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied',region:['AT','BE','BG','HR','CY','CZ','DK','EE','FI','FR','DE','GR','HU','IE','IT','LV','LT','LU','MT','NL','PL','PT','RO','SK','SI','ES','SE','IS','LI','NO','GB','CH'],wait_for_update:500});
+gtag('consent','default',{ad_storage:'granted',ad_user_data:'granted',ad_personalization:'granted',analytics_storage:'granted'});
 gtag('js', new Date());
 gtag('config', '${GA_ID}');`}
             </Script>
+            {/* Google AdSense 로더 — Auto Ads(콘솔에서 활성화) 게재. 메타 google-adsense-account 와 별개. */}
+            <Script
+              id="adsense"
+              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+              strategy="afterInteractive"
+              crossOrigin="anonymous"
+            />
           </>
         )}
         {children}

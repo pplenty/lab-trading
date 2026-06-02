@@ -108,7 +108,10 @@
     "tagline": "정보 제공 목적 · 투자 권유 아님",
     "shortcuts": "단축키",
     "settings": "설정",
-    "contact": "문의"
+    "contact": "문의",
+    "privacy": "개인정보처리방침",
+    "terms": "이용약관",
+    "about": "소개"
   },
   "disclaimer": {
     "general": "투자 권유가 아니며 정보 제공 목적입니다. 거래 결과의 책임은 사용자 본인에게 있습니다.",
