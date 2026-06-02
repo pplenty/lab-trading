@@ -10,6 +10,8 @@ import {getKvJson, setKvJson} from "@/lib/cache/kv-json";
 import {loadCandleSeries} from "@/lib/data/candles";
 import {loadQuote} from "@/lib/data/quotes";
 import {cryptoRegistry, getCryptoBySymbol} from "@/lib/symbols/registry";
+import {getSymbolDesc} from "@/lib/symbols/descriptions";
+import {SymbolIntro} from "@/components/panels/SymbolIntro";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {FinancialDelta} from "@/components/FinancialDelta";
 import {FavoriteButton} from "@/components/FavoriteButton";
@@ -98,7 +100,10 @@ export async function generateMetadata({
   } catch {
     /* quote 실패 시 정적 */
   }
-  const description = `${name} (${ticker})${priceFrag} 일봉 차트 · 26 지표 · 백테스트. Upbit KRW + CoinGecko.`;
+  const intro = getSymbolDesc(entry.symbol);
+  const description = intro
+    ? `${intro}${priceFrag} ${name}(${ticker}) 일봉 차트 · 26 지표 · 백테스트.`
+    : `${name} (${ticker})${priceFrag} 일봉 차트 · 26 지표 · 백테스트. Upbit KRW + CoinGecko.`;
   return {
     title: `${name} (${ticker}) 시세 · 차트 · 백테스트`,
     description,
@@ -299,6 +304,8 @@ export default async function CryptoSymbolPage({params, searchParams}: PageProps
 
       <D1FallbackBadge quote={quote} variant="banner" />
 
+      <SymbolIntro symbol={entry.symbol} />
+
       {fetchError && (
         <div className="mb-6 rounded-lg border border-line bg-surface p-4 text-sm text-fg-muted">
           <p className="font-medium text-fg">데이터 fetch 실패</p>
@@ -345,7 +352,21 @@ export default async function CryptoSymbolPage({params, searchParams}: PageProps
             label="시총 순위"
             value={cgQuote.rank !== undefined ? `#${cgQuote.rank}` : "—"}
           />
-          <Stat label="Global source" value="CoinGecko" />
+          {/* CoinGecko 무료 티어 출처 표기 의무 — "Data by CoinGecko" + 백링크 */}
+          <a
+            href="https://www.coingecko.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="USD · 시가총액 · 순위 데이터 제공: CoinGecko"
+            className="rounded-md border border-line bg-bg p-3 transition-colors hover:border-fg"
+          >
+            <div className="text-[10px] uppercase tracking-wider text-fg-subtle">
+              데이터 출처
+            </div>
+            <div className="mt-1 text-sm font-medium text-fg">
+              Data by CoinGecko ↗
+            </div>
+          </a>
         </section>
       )}
 

@@ -7,6 +7,8 @@ import {absoluteUrl} from "@/lib/site";
 import {loadCandleSeries} from "@/lib/data/candles";
 import {loadQuote} from "@/lib/data/quotes";
 import {krRegistry, getKrBySymbol} from "@/lib/symbols/registry";
+import {getSymbolDesc} from "@/lib/symbols/descriptions";
+import {SymbolIntro} from "@/components/panels/SymbolIntro";
 import {toSymbol} from "@/lib/symbols/normalize";
 import {FinancialDelta} from "@/components/FinancialDelta";
 import {FavoriteButton} from "@/components/FavoriteButton";
@@ -75,7 +77,10 @@ export async function generateMetadata({
   } catch {
     /* quote 실패 시 정적 */
   }
-  const description = `${name} (${entry.ticker})${priceFrag} 일봉 차트 · 26 지표 · 백테스트. ${entry.market} 상장.`;
+  const intro = getSymbolDesc(entry.symbol);
+  const description = intro
+    ? `${intro}${priceFrag} ${name}(${entry.ticker}) 일봉 차트 · 26 지표 · 백테스트. ${entry.market} 상장.`
+    : `${name} (${entry.ticker})${priceFrag} 일봉 차트 · 26 지표 · 백테스트. ${entry.market} 상장.`;
   return {
     title: `${name} (${entry.ticker}) 시세 · 차트 · 백테스트`,
     description,
@@ -266,6 +271,8 @@ export default async function KrSymbolPage({params, searchParams}: PageProps) {
       )}
 
       <D1FallbackBadge quote={quote} variant="banner" />
+
+      <SymbolIntro symbol={entry.symbol} />
 
       {isDemo && (
         <div className="mb-4 rounded-md border border-line bg-surface/40 px-3 py-2 text-[11px] text-fg-muted">
