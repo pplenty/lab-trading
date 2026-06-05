@@ -9,8 +9,9 @@ import {
   usRegistry,
 } from "@/lib/symbols/registry";
 import {loadSentiment, type SentimentSnapshot} from "@/lib/market/sentiment";
-import {loadFearGreed} from "@/lib/market/fear-greed";
+import {loadFearGreed, loadFearGreedHistory} from "@/lib/market/fear-greed";
 import {FearGreedGauge} from "@/components/panels/FearGreedGauge";
+import {FearGreedHistoryChart} from "@/components/panels/FearGreedHistoryChart";
 import {FinancialDelta} from "@/components/FinancialDelta";
 import {absoluteUrl} from "@/lib/site";
 import type {AssetClass} from "@/lib/types";
@@ -76,13 +77,16 @@ export default async function MarketPage({params}: Props) {
   const usSymbols = usRegistry.map((e) => e.symbol);
   const krSymbols = krRegistry.map((e) => e.symbol);
 
-  const [crypto, us, kr, fngCrypto, fngUs] = await Promise.all([
-    loadSentiment("crypto", cryptoSymbols),
-    loadSentiment("us", usSymbols),
-    loadSentiment("kr", krSymbols),
-    loadFearGreed("crypto"),
-    loadFearGreed("us"),
-  ]);
+  const [crypto, us, kr, fngCrypto, fngUs, histCrypto, histUs] =
+    await Promise.all([
+      loadSentiment("crypto", cryptoSymbols),
+      loadSentiment("us", usSymbols),
+      loadSentiment("kr", krSymbols),
+      loadFearGreed("crypto"),
+      loadFearGreed("us"),
+      loadFearGreedHistory("crypto", 90),
+      loadFearGreedHistory("us", 90),
+    ]);
 
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
@@ -98,11 +102,29 @@ export default async function MarketPage({params}: Props) {
         </p>
       </header>
 
-      {/* 공포·탐욕 게이지 — 외부 지수 (코인 alternative.me / 미국 VIX 프록시) */}
-      <section className="mb-8 grid gap-4 sm:grid-cols-2">
+      {/* 공포·탐욕 게이지 — 외부 지수 (코인 CMC / 미국 feargreedchart) */}
+      <section className="mb-4 grid gap-4 sm:grid-cols-2">
         <FearGreedGauge reading={fngCrypto} />
         <FearGreedGauge reading={fngUs} />
       </section>
+
+      {/* 지난 90일 추이 */}
+      {(histCrypto.length >= 2 || histUs.length >= 2) && (
+        <section className="mb-8 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-lg border border-line bg-surface/30 p-4 text-fg">
+            <h3 className="mb-2 text-xs font-semibold text-fg-muted">
+              코인 — 지난 추이
+            </h3>
+            <FearGreedHistoryChart points={histCrypto} market="코인" />
+          </div>
+          <div className="rounded-lg border border-line bg-surface/30 p-4 text-fg">
+            <h3 className="mb-2 text-xs font-semibold text-fg-muted">
+              미국 증시 — 지난 추이
+            </h3>
+            <FearGreedHistoryChart points={histUs} market="미국 증시" />
+          </div>
+        </section>
+      )}
 
       <h2 className="mb-3 text-base font-semibold text-fg">
         자산군 24h 변동 분포

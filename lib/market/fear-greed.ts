@@ -338,3 +338,72 @@ export async function loadFearGreed(
     return null;
   }
 }
+
+// ── 히스토리 (지난 추이 차트) ─────────────────────────────────────────
+export type FngHistoryPoint = {t: number; value: number}; // t = unix sec, value 0-100
+
+const CMC_HIST_UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+
+async function fetchCryptoHistory(days: number): Promise<FngHistoryPoint[]> {
+  const now = Math.floor(Date.now() / 1000);
+  const start = now - days * 86400;
+  const url = `https://api.coinmarketcap.com/data-api/v3/fear-greed/chart?start=${start}&end=${now}`;
+  const res = await fetchWithTimeout(url, {
+    timeoutMs: 8000,
+    headers: {Accept: "application/json", "User-Agent": CMC_HIST_UA},
+  });
+  if (!res.ok) throw new Error(`CMC hist HTTP ${res.status}`);
+  const json = (await res.json()) as {data?: {dataList?: CmcFngPoint[]}};
+  const list = json.data?.dataList ?? [];
+  const pts: FngHistoryPoint[] = [];
+  for (const p of list) {
+    const v = p.score;
+    const t = p.timestamp ? parseInt(p.timestamp, 10) : NaN;
+    if (typeof v === "number" && Number.isFinite(v) && Number.isFinite(t)) {
+      pts.push({t, value: Math.round(v)});
+    }
+  }
+  pts.sort((a, b) => a.t - b.t);
+  return pts;
+}
+
+async function fetchUsHistory(days: number): Promise<FngHistoryPoint[]> {
+  const res = await fetchWithTimeout(
+    "https://feargreedchart.com/api/?action=history",
+    {timeoutMs: 8000, headers: {Accept: "application/json"}}
+  );
+  if (!res.ok) throw new Error(`feargreedchart hist HTTP ${res.status}`);
+  const arr = (await res.json()) as Array<{date?: string; score?: number}>;
+  if (!Array.isArray(arr)) throw new Error("feargreedchart hist: not array");
+  const pts: FngHistoryPoint[] = [];
+  for (const p of arr) {
+    if (typeof p.score !== "number" || !p.date) continue;
+    const t = Math.floor(new Date(`${p.date}T00:00:00Z`).getTime() / 1000);
+    if (Number.isFinite(t)) pts.push({t, value: Math.round(p.score)});
+  }
+  pts.sort((a, b) => a.t - b.t);
+  return pts.slice(-days);
+}
+
+/** 시장별 공포·탐욕 지수 히스토리(최근 days일). KV 6h fresh + 7일 stale. 실패 시 캐시/빈 배열. */
+export async function loadFearGreedHistory(
+  market: FearGreedMarket,
+  days = 90
+): Promise<FngHistoryPoint[]> {
+  const key = `fng-hist:${market}:${days}`;
+  const cached = await getKvJson<{pts: FngHistoryPoint[]; fetchedAt: number}>(key);
+  const now = Date.now();
+  if (cached && now - cached.fetchedAt < 6 * 60 * 60 * 1000) return cached.pts;
+  try {
+    const pts =
+      market === "crypto"
+        ? await fetchCryptoHistory(days)
+        : await fetchUsHistory(days);
+    if (pts.length === 0) return cached?.pts ?? [];
+    await setKvJson(key, {pts, fetchedAt: now}, {ttlSeconds: 7 * 24 * 3600});
+    return pts;
+  } catch {
+    return cached?.pts ?? [];
+  }
+}
