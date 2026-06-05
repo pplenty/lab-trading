@@ -58,7 +58,7 @@ export function KimchiPremiumPanel({
         <div>
           <h2 className="text-sm font-semibold text-fg">김치 프리미엄</h2>
           <p className="mt-0.5 text-[11px] text-fg-muted">
-            Upbit(KRW) vs Binance(USD×환율) 괴리율 · 양수 = 한국이 비쌈
+            Upbit(KRW) vs 글로벌 USD(CoinGecko)×환율 괴리율 · 양수 = 한국이 비쌈
           </p>
         </div>
         <div className="flex items-center gap-3 text-right">
@@ -96,7 +96,7 @@ export function KimchiPremiumPanel({
               <th className="px-3 py-1.5 text-left font-medium">코인</th>
               <th className="px-3 py-1.5 text-right font-medium">Upbit</th>
               <th className="hidden px-3 py-1.5 text-right font-medium sm:table-cell">
-                Binance
+                글로벌 USD
               </th>
               <th className="px-3 py-1.5 text-right font-medium">프리미엄</th>
             </tr>
@@ -130,7 +130,7 @@ export function KimchiPremiumPanel({
                     {fmtKrw(r.upbitKrw)}
                   </td>
                   <td className="hidden px-3 py-1.5 text-right tabular-nums text-fg-subtle sm:table-cell">
-                    {fmtUsd(r.binanceUsd)}
+                    {fmtUsd(r.globalUsd)}
                   </td>
                   <td
                     className="px-3 py-1.5 text-right font-semibold tabular-nums"
