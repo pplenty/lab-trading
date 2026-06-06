@@ -10,8 +10,10 @@ import {
 } from "@/lib/symbols/registry";
 import {loadSentiment, type SentimentSnapshot} from "@/lib/market/sentiment";
 import {loadFearGreed, loadFearGreedHistory} from "@/lib/market/fear-greed";
+import {loadKimchiFromKv} from "@/lib/data/kimchi";
 import {FearGreedGauge} from "@/components/panels/FearGreedGauge";
 import {FearGreedHistoryChart} from "@/components/panels/FearGreedHistoryChart";
+import {KimchiSummaryCard} from "@/components/panels/KimchiSummaryCard";
 import {FinancialDelta} from "@/components/FinancialDelta";
 import {absoluteUrl} from "@/lib/site";
 import type {AssetClass} from "@/lib/types";
@@ -77,7 +79,7 @@ export default async function MarketPage({params}: Props) {
   const usSymbols = usRegistry.map((e) => e.symbol);
   const krSymbols = krRegistry.map((e) => e.symbol);
 
-  const [crypto, us, kr, fngCrypto, fngUs, histCrypto, histUs] =
+  const [crypto, us, kr, fngCrypto, fngUs, histCrypto, histUs, kimchi] =
     await Promise.all([
       loadSentiment("crypto", cryptoSymbols),
       loadSentiment("us", usSymbols),
@@ -86,6 +88,7 @@ export default async function MarketPage({params}: Props) {
       loadFearGreed("us"),
       loadFearGreedHistory("crypto", 90),
       loadFearGreedHistory("us", 90),
+      loadKimchiFromKv(),
     ]);
 
   return (
@@ -122,6 +125,17 @@ export default async function MarketPage({params}: Props) {
               미국 증시 — 지난 추이
             </h3>
             <FearGreedHistoryChart points={histUs} market="미국 증시" />
+          </div>
+        </section>
+      )}
+
+      {kimchi && kimchi.rows.length > 0 && (
+        <section className="mb-8">
+          <h2 className="mb-3 text-base font-semibold text-fg">
+            코인 한국 프리미엄
+          </h2>
+          <div className="sm:max-w-md">
+            <KimchiSummaryCard snapshot={kimchi} locale={locale} />
           </div>
         </section>
       )}
