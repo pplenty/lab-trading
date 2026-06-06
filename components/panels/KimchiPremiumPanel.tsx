@@ -6,6 +6,7 @@ import {getCryptoBySymbol} from "@/lib/symbols/registry";
 // 양수(김프) = 한국이 비쌈 → --color-up, 음수(역프) → --color-down (컬러 시맨틱 토글 존중).
 
 function fmtKrw(v: number): string {
+  if (v > 0 && v < 1) return `₩${v.toFixed(3)}`; // 초소액 코인(PEPE·SHIB 등)
   return `₩${Math.round(v).toLocaleString("ko-KR")}`;
 }
 function fmtUsd(v: number): string {
@@ -44,7 +45,7 @@ export function KimchiPremiumPanel({
     );
   }
 
-  const {rows, avgPremium, btc, fx} = snapshot;
+  const {rows, avgPremium, btc, fx, usdSource} = snapshot;
   const shown = rows.slice(0, limit);
   const updated = new Intl.DateTimeFormat("ko-KR", {
     hour: "2-digit",
@@ -58,7 +59,7 @@ export function KimchiPremiumPanel({
         <div>
           <h2 className="text-sm font-semibold text-fg">김치 프리미엄</h2>
           <p className="mt-0.5 text-[11px] text-fg-muted">
-            Upbit(KRW) vs 글로벌 USD(CoinGecko)×환율 괴리율 · 양수 = 한국이 비쌈
+            Upbit(KRW) vs 글로벌 USD({usdSource})×환율 괴리율 · 양수 = 한국이 비쌈
           </p>
         </div>
         <div className="flex items-center gap-3 text-right">
