@@ -9,7 +9,7 @@ import {FearGreedChip} from "@/components/panels/FearGreedChip";
 import {KimchiPremiumPanel} from "@/components/panels/KimchiPremiumPanel";
 import {SectorChips} from "@/components/panels/SectorChips";
 import {loadFearGreed} from "@/lib/market/fear-greed";
-import {loadKimchiPremium} from "@/lib/data/kimchi";
+import {loadKimchiFromKv} from "@/lib/data/kimchi";
 import {getSymbolsBySector} from "@/lib/symbols/sectors";
 import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
 import {absoluteUrl} from "@/lib/site";
@@ -92,7 +92,7 @@ export default async function CryptoIndexPage({params, searchParams}: Props) {
   const [sparklines, fng, kimchi] = await Promise.all([
     loadSparklineCloses(quotes.map((q) => q.symbol), 7),
     loadFearGreed("crypto"),
-    loadKimchiPremium(),
+    loadKimchiFromKv(),
   ]);
 
   return (

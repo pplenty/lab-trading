@@ -1,16 +1,14 @@
-import {upbitAdapter} from "@/lib/adapters/upbit";
-import {coingeckoAdapter} from "@/lib/adapters/coingecko";
-import {loadUsdKrw, type FxRate} from "@/lib/data/fx";
-import {getKvJson, setKvJson} from "@/lib/cache/kv-json";
-import type {Quote} from "@/lib/types";
+import {getKvJson} from "@/lib/cache/kv-json";
+import type {FxRate} from "@/lib/data/fx";
 
 // 김치 프리미엄 — Upbit KRW 가격이 글로벌 USD 가격(×USD/KRW 환율) 대비 얼마나 비싼지(%).
-// 한국 거래소 프리미엄/역프리미엄 지표. 양수 = 한국이 비쌈(김프), 음수 = 역프.
-//   premium% = (upbitKRW / (globalUSD × USDKRW) − 1) × 100
-// 글로벌 USD 는 **CoinGecko**(거래량 가중 평균가) 사용 — Binance api.binance.com 은 CF Worker
-// 데이터센터 IP 를 지오블록(검증됨)해 런타임 실패. CoinGecko 는 Worker 도달 확실(종목상세에서 사용).
-// CoinGecko 글로벌 평균가는 Binance 단일가와 사실상 동일(거래량 가중). Upbit·CoinGecko·환율 동시 호출.
-// 주의: 환율은 일 단위 기준이라 실시간 김프 사이트와 소수% 차이 가능 — 환율 기준일 라벨로 명시.
+// 양수 = 한국이 비쌈(김프), 음수 = 역프.  premium% = (upbitKRW / (globalUSD × USDKRW) − 1) × 100
+//
+// **계산은 cron(node) 에서** (scripts/compute-kimchi.ts) — Upbit·CoinGecko·Binance 라이브 호출이
+// CF Worker 데이터센터 IP 에서 불안정(검증됨)하기 때문. cron 이 binance.vision 글로벌가로 계산 →
+// /api/cron/kimchi 가 KV 저장 → 페이지(Worker)는 loadKimchiFromKv 로 읽기만. (OG cron 과 동일 패턴.)
+
+export const KIMCHI_KV_KEY = "kimchi:all";
 
 export type KimchiRow = {
   symbol: string;
@@ -29,7 +27,7 @@ export type KimchiSnapshot = {
   updatedAt: number; // unix ms
 };
 
-/** (upbitKRW / (globalUSD × fx) − 1) × 100. 테스트용 순수 함수. */
+/** (upbitKRW / (globalUSD × fx) − 1) × 100. 순수 함수. */
 export function computeKimchiPremium(
   upbitKrw: number,
   globalUsd: number,
@@ -40,60 +38,42 @@ export function computeKimchiPremium(
   return (upbitKrw / implied - 1) * 100;
 }
 
-const FRESH_MS = 90 * 1000; // 90s
-const CACHE_TTL_SEC = 60 * 60; // 1h KV 보관(stale 폴백)
-
-/** Upbit·CoinGecko 공통 코인의 김치 프리미엄. 실패/데이터 부족 + 캐시 없음 → null. */
-export async function loadKimchiPremium(): Promise<KimchiSnapshot | null> {
-  const key = "kimchi:all";
-  const cached = await getKvJson<KimchiSnapshot>(key);
-  const now = Date.now();
-  if (cached && now - cached.updatedAt < FRESH_MS) return cached;
-
-  try {
-    const [upbit, global, fx] = await Promise.all([
-      upbitAdapter.listQuotes().catch(() => [] as Quote[]),
-      coingeckoAdapter.listQuotes().catch(() => [] as Quote[]),
-      loadUsdKrw(),
-    ]);
-    if (!fx || upbit.length === 0 || global.length === 0) {
-      return cached ?? null; // 한 소스라도 비면 stale 유지
-    }
-
-    const usdMap = new Map(global.map((q) => [q.symbol, q.price]));
-    const rows: KimchiRow[] = [];
-    for (const u of upbit) {
-      const usd = usdMap.get(u.symbol);
-      if (usd === undefined || usd <= 0 || u.price <= 0) continue;
-      const premiumPct = computeKimchiPremium(u.price, usd, fx.rate);
-      // |프리미엄| > 30% 는 양 소스 가격 불일치(상장폐지·리네임 토큰, 예: MATIC→POL) 신호 → 제외.
-      // 실제 김프는 통상 ±10% 이내라 30% 초과는 데이터 오류로 간주(평균 왜곡 방지).
-      if (Math.abs(premiumPct) > 30) continue;
-      rows.push({
-        symbol: u.symbol,
-        upbitKrw: u.price,
-        globalUsd: usd,
-        impliedKrw: usd * fx.rate,
-        premiumPct,
-      });
-    }
-    if (rows.length === 0) return cached ?? null;
-
-    rows.sort((a, b) => b.premiumPct - a.premiumPct);
-    const avgPremium = rows.reduce((s, r) => s + r.premiumPct, 0) / rows.length;
-    const btc = rows.find((r) => r.symbol === "btc") ?? null;
-
-    const snap: KimchiSnapshot = {
-      rows,
-      avgPremium,
-      btc,
-      fx,
-      usdSource: "CoinGecko",
-      updatedAt: now,
-    };
-    await setKvJson(key, snap, {ttlSeconds: CACHE_TTL_SEC});
-    return snap;
-  } catch {
-    return cached ?? null;
+/**
+ * 스냅샷 빌더 (순수, fetch·KV 없음) — cron 과 테스트가 공유.
+ * @param upbit  Upbit KRW quote ({symbol, price})
+ * @param usdMap symbol → 글로벌 USD 가격
+ * @param fx     USD/KRW 환율
+ * |프리미엄|>30% 는 양 소스 가격 불일치(상장폐지·리네임 토큰, 예: MATIC→POL) 신호 → 제외(평균 왜곡 방지).
+ */
+export function buildKimchiSnapshot(
+  upbit: Array<{symbol: string; price: number}>,
+  usdMap: Map<string, number>,
+  fx: FxRate,
+  usdSource: string,
+  nowMs: number
+): KimchiSnapshot | null {
+  const rows: KimchiRow[] = [];
+  for (const u of upbit) {
+    const usd = usdMap.get(u.symbol);
+    if (usd === undefined || usd <= 0 || u.price <= 0) continue;
+    const premiumPct = computeKimchiPremium(u.price, usd, fx.rate);
+    if (Math.abs(premiumPct) > 30) continue;
+    rows.push({
+      symbol: u.symbol,
+      upbitKrw: u.price,
+      globalUsd: usd,
+      impliedKrw: usd * fx.rate,
+      premiumPct,
+    });
   }
+  if (rows.length === 0) return null;
+  rows.sort((a, b) => b.premiumPct - a.premiumPct);
+  const avgPremium = rows.reduce((s, r) => s + r.premiumPct, 0) / rows.length;
+  const btc = rows.find((r) => r.symbol === "btc") ?? null;
+  return {rows, avgPremium, btc, fx, usdSource, updatedAt: nowMs};
+}
+
+/** 페이지(Worker)용 — KV 에 cron 이 저장한 스냅샷 읽기만. 없으면 null(패널 자동 숨김). */
+export async function loadKimchiFromKv(): Promise<KimchiSnapshot | null> {
+  return getKvJson<KimchiSnapshot>(KIMCHI_KV_KEY);
 }

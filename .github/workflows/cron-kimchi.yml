@@ -1,0 +1,40 @@
+name: Kimchi premium snapshot (15min)
+
+# ~15분마다 김치 프리미엄 스냅샷을 node 로 계산 → /api/cron/kimchi 가 KV(kimchi:all) 저장.
+# Worker 페이지(/crypto)는 KV 읽기만(loadKimchiFromKv). Upbit·Binance·환율 라이브 호출이
+# CF Worker 데이터센터 IP 에서 불안정(검증됨)해 계산을 GitHub Actions(node)로 외부화한 패턴.
+# 글로벌 USD 는 data-api.binance.vision (api.binance.com 지오블록 회피). KV TTL 6h → cron 중단 시 자연 만료.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kimchi
+  cancel-in-progress: true
+
+jobs:
+  kimchi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Compute + push kimchi snapshot
+        env:
+          SITE: https://trading.jdgrid.com
+          BACKFILL_TOKEN: ${{ secrets.BACKFILL_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BACKFILL_TOKEN:-}" ]; then
+            echo "::error::BACKFILL_TOKEN secret is missing"
+            exit 1
+          fi
+          bun run scripts/compute-kimchi.ts
