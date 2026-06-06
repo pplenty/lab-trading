@@ -1,10 +1,11 @@
 import {describe, expect, it} from "vitest";
 import {kisAdapter, normalizeKisCandle, normalizeKisQuote} from "./kis";
+import {krRegistry} from "@/lib/symbols/registry";
 
 describe("kisAdapter — demo mode (no API key)", () => {
-  it("listAssets returns 24 KR tickers (registry 확장 후)", async () => {
+  it("listAssets returns all KR tickers (registry 파생)", async () => {
     const assets = await kisAdapter.listAssets();
-    expect(assets.length).toBe(24);
+    expect(assets.length).toBe(krRegistry.length);
     expect(assets[0].class).toBe("kr");
     expect(assets[0].currency).toBe("KRW");
     expect(assets.find((a) => a.symbol === "005930")?.nameKo).toBe("삼성전자");

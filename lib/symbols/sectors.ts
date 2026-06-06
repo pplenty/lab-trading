@@ -46,6 +46,17 @@ const CRYPTO_SECTOR: Record<string, Sector> = {
   // Metaverse / Gaming
   sand: "메타버스",
   mana: "메타버스",
+  // 확장 (2026-06)
+  sui: "Layer 1",
+  sei: "Layer 1",
+  tia: "Layer 1",
+  wld: "Layer 1",
+  inj: "DeFi",
+  ondo: "DeFi",
+  ena: "DeFi",
+  jup: "DeFi",
+  pepe: "밈",
+  shib: "밈",
 };
 
 const US_SECTOR: Record<string, Sector> = {
@@ -85,6 +96,17 @@ const US_SECTOR: Record<string, Sector> = {
   // 에너지
   xom: "에너지",
   cvx: "에너지",
+  // 확장 (2026-06)
+  amd: "반도체",
+  intc: "반도체",
+  qcom: "반도체",
+  mu: "반도체",
+  pltr: "기술",
+  uber: "기술",
+  dis: "통신",
+  coin: "금융",
+  spy: "ETF",
+  qqq: "ETF",
 };
 
 const KR_SECTOR: Record<string, Sector> = {
@@ -124,6 +146,17 @@ const KR_SECTOR: Record<string, Sector> = {
   "012450": "방산",
   // 에너지
   "034020": "에너지",
+  "015760": "에너지",
+  // 확장 (2026-06)
+  "000270": "자동차",
+  "012330": "자동차",
+  "066570": "전자",
+  "028260": "건설",
+  "329180": "조선",
+  "263750": "게임",
+  "024110": "금융",
+  "377300": "금융",
+  "032830": "금융",
 };
 
 export function getSector(cls: AssetClass, symbol: string): Sector | null {

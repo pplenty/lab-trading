@@ -53,6 +53,16 @@ export const cryptoRegistry: CryptoRegistryEntry[] = [
   {symbol: "mana", name: "Decentraland", nameKo: "디센트럴랜드", cgId: "decentraland", binancePair: "MANAUSDT", upbitMarket: "KRW-MANA"},
   // Stellar — XRP 와 같은 결제/송금 계열 (Jed McCaleb 공동 창업). Upbit korean_name "스텔라루멘".
   {symbol: "xlm", name: "Stellar", nameKo: "스텔라루멘", cgId: "stellar", binancePair: "XLMUSDT", upbitMarket: "KRW-XLM"},
+  {symbol: "sui", name: "Sui", nameKo: "수이", cgId: "sui", binancePair: "SUIUSDT", upbitMarket: "KRW-SUI"},
+  {symbol: "sei", name: "Sei", nameKo: "세이", cgId: "sei-network", binancePair: "SEIUSDT", upbitMarket: "KRW-SEI"},
+  {symbol: "tia", name: "Celestia", nameKo: "셀레스티아", cgId: "celestia", binancePair: "TIAUSDT", upbitMarket: "KRW-TIA"},
+  {symbol: "inj", name: "Injective", nameKo: "인젝티브", cgId: "injective-protocol", binancePair: "INJUSDT", upbitMarket: "KRW-INJ"},
+  {symbol: "wld", name: "Worldcoin", nameKo: "월드코인", cgId: "worldcoin-wld", binancePair: "WLDUSDT", upbitMarket: "KRW-WLD"},
+  {symbol: "pepe", name: "Pepe", nameKo: "페페", cgId: "pepe", binancePair: "PEPEUSDT", upbitMarket: "KRW-PEPE"},
+  {symbol: "shib", name: "Shiba Inu", nameKo: "시바이누", cgId: "shiba-inu", binancePair: "SHIBUSDT", upbitMarket: "KRW-SHIB"},
+  {symbol: "ondo", name: "Ondo", nameKo: "온도파이낸스", cgId: "ondo-finance", binancePair: "ONDOUSDT", upbitMarket: "KRW-ONDO"},
+  {symbol: "ena", name: "Ethena", nameKo: "에테나", cgId: "ethena", binancePair: "ENAUSDT", upbitMarket: "KRW-ENA"},
+  {symbol: "jup", name: "Jupiter", nameKo: "주피터", cgId: "jupiter-exchange-solana", binancePair: "JUPUSDT", upbitMarket: "KRW-JUP"},
 ];
 
 const bySymbol = new Map<string, CryptoRegistryEntry>(
@@ -130,6 +140,16 @@ export const usRegistry: UsRegistryEntry[] = [
   {symbol: "crm", ticker: "CRM", name: "Salesforce, Inc.", nameKo: "세일즈포스", market: "NYSE", basePrice: 280},
   {symbol: "mrk", ticker: "MRK", name: "Merck & Co., Inc.", nameKo: "머크", market: "NYSE", basePrice: 105},
   {symbol: "pep", ticker: "PEP", name: "PepsiCo, Inc.", nameKo: "펩시코", market: "NASDAQ", basePrice: 165},
+  {symbol: "amd", ticker: "AMD", name: "Advanced Micro Devices, Inc.", nameKo: "AMD", market: "NASDAQ", basePrice: 140},
+  {symbol: "intc", ticker: "INTC", name: "Intel Corporation", nameKo: "인텔", market: "NASDAQ", basePrice: 30},
+  {symbol: "qcom", ticker: "QCOM", name: "QUALCOMM Incorporated", nameKo: "퀄컴", market: "NASDAQ", basePrice: 170},
+  {symbol: "mu", ticker: "MU", name: "Micron Technology, Inc.", nameKo: "마이크론", market: "NASDAQ", basePrice: 100},
+  {symbol: "pltr", ticker: "PLTR", name: "Palantir Technologies Inc.", nameKo: "팔란티어", market: "NASDAQ", basePrice: 50},
+  {symbol: "uber", ticker: "UBER", name: "Uber Technologies, Inc.", nameKo: "우버", market: "NYSE", basePrice: 70},
+  {symbol: "dis", ticker: "DIS", name: "The Walt Disney Company", nameKo: "디즈니", market: "NYSE", basePrice: 95},
+  {symbol: "coin", ticker: "COIN", name: "Coinbase Global, Inc.", nameKo: "코인베이스", market: "NASDAQ", basePrice: 230},
+  {symbol: "spy", ticker: "SPY", name: "SPDR S&P 500 ETF Trust", nameKo: "S&P 500 ETF", market: "AMEX", basePrice: 580},
+  {symbol: "qqq", ticker: "QQQ", name: "Invesco QQQ Trust", nameKo: "나스닥 100 ETF", market: "NASDAQ", basePrice: 500},
 ];
 
 const usBySymbol = new Map<string, UsRegistryEntry>(
@@ -189,6 +209,16 @@ export const krRegistry: KrRegistryEntry[] = [
   {symbol: "259960", ticker: "259960", name: "Krafton", nameKo: "크래프톤", market: "KOSPI", basePrice: 290000},
   {symbol: "196170", ticker: "196170", name: "Alteogen", nameKo: "알테오젠", market: "KOSDAQ", basePrice: 280000},
   {symbol: "028300", ticker: "028300", name: "HLB", nameKo: "HLB", market: "KOSDAQ", basePrice: 65000},
+  {symbol: "000270", ticker: "000270", name: "Kia", nameKo: "기아", market: "KOSPI", basePrice: 100000},
+  {symbol: "066570", ticker: "066570", name: "LG Electronics", nameKo: "LG전자", market: "KOSPI", basePrice: 90000},
+  {symbol: "012330", ticker: "012330", name: "Hyundai Mobis", nameKo: "현대모비스", market: "KOSPI", basePrice: 230000},
+  {symbol: "028260", ticker: "028260", name: "Samsung C&T", nameKo: "삼성물산", market: "KOSPI", basePrice: 150000},
+  {symbol: "015760", ticker: "015760", name: "KEPCO", nameKo: "한국전력", market: "KOSPI", basePrice: 22000},
+  {symbol: "024110", ticker: "024110", name: "Industrial Bank of Korea", nameKo: "기업은행", market: "KOSPI", basePrice: 14000},
+  {symbol: "329180", ticker: "329180", name: "HD Hyundai Heavy Industries", nameKo: "HD현대중공업", market: "KOSPI", basePrice: 200000},
+  {symbol: "263750", ticker: "263750", name: "Pearl Abyss", nameKo: "펄어비스", market: "KOSDAQ", basePrice: 40000},
+  {symbol: "377300", ticker: "377300", name: "Kakao Pay", nameKo: "카카오페이", market: "KOSPI", basePrice: 30000},
+  {symbol: "032830", ticker: "032830", name: "Samsung Life Insurance", nameKo: "삼성생명", market: "KOSPI", basePrice: 90000},
 ];
 
 const krBySymbol = new Map<string, KrRegistryEntry>(

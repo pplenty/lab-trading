@@ -55,6 +55,17 @@ const KR_ALIASES: Record<string, string[]> = {
   "259960": ["크래프톤", "Krafton"],
   "196170": ["알테오젠", "Alteogen"],
   "028300": ["HLB"],
+  // 확장 (2026-06)
+  "000270": ["기아", "Kia"],
+  "066570": ["LG전자", "LG Electronics"],
+  "012330": ["현대모비스", "Hyundai Mobis"],
+  "028260": ["삼성물산", "Samsung C&T"],
+  "015760": ["한국전력", "한전", "KEPCO"],
+  "024110": ["기업은행", "IBK"],
+  "329180": ["HD현대중공업", "현대중공업"],
+  "263750": ["펄어비스", "Pearl Abyss"],
+  "377300": ["카카오페이", "Kakao Pay"],
+  "032830": ["삼성생명", "Samsung Life"],
 };
 
 const US_ALIASES: Record<string, string[]> = {
@@ -89,6 +100,17 @@ const US_ALIASES: Record<string, string[]> = {
   crm: ["세일즈포스", "Salesforce", "CRM"],
   mrk: ["머크", "Merck"], // "MRK" 짧음 + 자체 ambiguous
   pep: ["펩시코", "PepsiCo", "Pepsi", "PEP"],
+  // 확장 (2026-06)
+  amd: ["AMD", "에이엠디"],
+  intc: ["인텔", "Intel", "INTC"],
+  qcom: ["퀄컴", "Qualcomm", "QCOM"],
+  mu: ["마이크론", "Micron"], // "MU" 단독 제외
+  pltr: ["팔란티어", "Palantir", "PLTR"],
+  uber: ["우버", "Uber", "UBER"],
+  dis: ["디즈니", "Disney"], // "DIS" 단독 제외
+  coin: ["코인베이스", "Coinbase"], // "COIN" 단독 제외 (모든 코인 뉴스 매칭)
+  spy: ["S&P 500", "S&P500", "SPY"],
+  qqq: ["나스닥 100", "나스닥100", "QQQ"],
 };
 
 const CRYPTO_ALIASES: Record<string, string[]> = {
@@ -120,6 +142,17 @@ const CRYPTO_ALIASES: Record<string, string[]> = {
   hbar: ["헤데라", "Hedera", "HBAR"],
   mana: ["디센트럴랜드", "Decentraland", "MANA"],
   xlm: ["스텔라루멘", "스텔라", "Stellar", "XLM"],
+  // 확장 (2026-06)
+  sui: ["수이", "Sui", "SUI"],
+  sei: ["세이", "Sei", "SEI"],
+  tia: ["셀레스티아", "Celestia", "TIA"],
+  inj: ["인젝티브", "Injective", "INJ"],
+  wld: ["월드코인", "Worldcoin", "WLD"],
+  pepe: ["페페", "Pepe", "PEPE"],
+  shib: ["시바이누", "시바", "Shiba", "SHIB"],
+  ondo: ["온도파이낸스", "Ondo", "ONDO"],
+  ena: ["에테나", "Ethena", "ENA"],
+  jup: ["주피터", "Jupiter", "JUP"],
 };
 
 /** 자산군 + symbol → keyword[]. 매칭 가능한 keyword 가 없으면 빈 배열. */

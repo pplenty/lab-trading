@@ -4,6 +4,7 @@ import {
   normalizeTwelveQuote,
   twelveDataAdapter,
 } from "./twelve-data";
+import {usRegistry} from "@/lib/symbols/registry";
 
 describe("normalizeTwelveQuote", () => {
   it("parses string fields into typed Quote", () => {
@@ -52,9 +53,9 @@ describe("normalizeTwelveCandle", () => {
 describe("twelveDataAdapter — demo mode (no API key)", () => {
   // 테스트 환경엔 TWELVE_DATA_API_KEY 미설정 → demo mode.
 
-  it("listAssets returns 30 US tickers (registry 확장 후)", async () => {
+  it("listAssets returns all US tickers (registry 파생)", async () => {
     const assets = await twelveDataAdapter.listAssets();
-    expect(assets.length).toBe(30);
+    expect(assets.length).toBe(usRegistry.length);
     expect(assets[0].class).toBe("us");
     expect(assets.find((a) => a.symbol === "aapl")?.name).toMatch(/Apple/);
     expect(assets.find((a) => a.symbol === "wmt")?.nameKo).toBe("월마트");
