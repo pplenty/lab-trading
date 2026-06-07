@@ -51,6 +51,8 @@ type Props = {
   /** 표시명 + ticker — share 시 다른 사람에게 보일 라벨. */
   displayName?: string;
   displayTicker?: string;
+  /** 전략 vs 시장 — 같은 자산군 벤치마크 동기간 buy&hold 수익률(%) (서버 계산). */
+  benchmark?: {label: string; returnPct: number} | null;
 };
 
 export function BacktestPanel({
@@ -66,6 +68,7 @@ export function BacktestPanel({
   tf = "1d",
   displayName,
   displayTicker,
+  benchmark,
 }: Props) {
   const [strategyId, setStrategyId] = useState<string>(
     initialStrategyId ?? "buy-and-hold"
@@ -385,6 +388,7 @@ export function BacktestPanel({
             currency={currency}
             candles={candles}
             exportName={`${symbol}-${strategyId}`}
+            benchmark={benchmark}
           />
         </>
       ) : candles.length < 2 ? (

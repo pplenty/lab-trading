@@ -19,6 +19,11 @@ import {
   timeframeLabel,
 } from "@/lib/chart/timeframe";
 import {computeIndicators} from "@/lib/backfill/indicators-batch";
+import {
+  BENCHMARK_LABEL,
+  BENCHMARK_SYMBOL,
+  benchmarkReturnOverRange,
+} from "@/lib/backtest/benchmark";
 import type {AssetClass, Candle, CandleSeries, IndicatorRow} from "@/lib/types";
 
 // 주봉/월봉 backtest 시 의미 있는 봉 수 확보 위해 일봉 fetch 윈도우 확장.
@@ -192,6 +197,28 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
     comparisonCache = await loadComparisonFromCache(assetClass, symbol, lastT);
   }
 
+  // 전략 vs 시장 — 같은 자산군 벤치마크(코인 BTC / 미국 SPY / 국내 KODEX 200) 동기간 buy&hold 수익률.
+  // 같은 거래 캘린더라 정렬 안전. 종목 자신이 벤치마크면(예: btc) 생략. 데이터 없으면 graceful null.
+  let benchmark: {label: string; returnPct: number} | null = null;
+  const benchSym = BENCHMARK_SYMBOL[assetClass];
+  if (candles.length >= 2 && symbol !== benchSym) {
+    try {
+      const bs = await loadCandleSeries({
+        asset: assetClass,
+        symbol: benchSym,
+        limit: fetchLimit,
+      });
+      const r = benchmarkReturnOverRange(
+        bs.candles,
+        candles[0].t,
+        candles[candles.length - 1].t
+      );
+      if (r !== null) benchmark = {label: BENCHMARK_LABEL[assetClass], returnPct: r};
+    } catch {
+      /* 벤치마크 데이터 없으면 생략 */
+    }
+  }
+
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
       <header className="mb-6">
@@ -273,6 +300,7 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
           tf={tf}
           displayName={displayName}
           displayTicker={displayTicker}
+          benchmark={benchmark}
         />
       ) : !fetchError ? (
         <p className="rounded-md border border-line bg-surface p-4 text-sm text-fg-muted">

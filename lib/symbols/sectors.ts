@@ -157,6 +157,7 @@ const KR_SECTOR: Record<string, Sector> = {
   "024110": "금융",
   "377300": "금융",
   "032830": "금융",
+  "069500": "ETF",
 };
 
 export function getSector(cls: AssetClass, symbol: string): Sector | null {

@@ -219,6 +219,7 @@ export const krRegistry: KrRegistryEntry[] = [
   {symbol: "263750", ticker: "263750", name: "Pearl Abyss", nameKo: "펄어비스", market: "KOSDAQ", basePrice: 40000},
   {symbol: "377300", ticker: "377300", name: "Kakao Pay", nameKo: "카카오페이", market: "KOSPI", basePrice: 30000},
   {symbol: "032830", ticker: "032830", name: "Samsung Life Insurance", nameKo: "삼성생명", market: "KOSPI", basePrice: 90000},
+  {symbol: "069500", ticker: "069500", name: "KODEX 200", nameKo: "KODEX 200", market: "KOSPI", basePrice: 35000},
 ];
 
 const krBySymbol = new Map<string, KrRegistryEntry>(

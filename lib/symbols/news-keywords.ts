@@ -66,6 +66,7 @@ const KR_ALIASES: Record<string, string[]> = {
   "263750": ["펄어비스", "Pearl Abyss"],
   "377300": ["카카오페이", "Kakao Pay"],
   "032830": ["삼성생명", "Samsung Life"],
+  "069500": ["KODEX 200", "코덱스 200", "코스피200"],
 };
 
 const US_ALIASES: Record<string, string[]> = {
