@@ -37,6 +37,7 @@ import {VolatilityPanel} from "@/components/panels/VolatilityPanel";
 import {VolumePanel} from "@/components/panels/VolumePanel";
 import {PriceLevelsPanel} from "@/components/panels/PriceLevelsPanel";
 import {ReturnsPanel} from "@/components/panels/ReturnsPanel";
+import {SymbolFaqPanel} from "@/components/panels/SymbolFaqPanel";
 import {assetJsonLd} from "@/lib/seo/asset-jsonld";
 import type {Quote, CandleSeries} from "@/lib/types";
 
@@ -340,6 +341,14 @@ export default async function UsSymbolPage({params, searchParams}: PageProps) {
       )}
 
       <SymbolRelatedNews class="us" symbol={entry.symbol} locale="ko" />
+
+      <SymbolFaqPanel
+        class="us"
+        symbol={entry.symbol}
+        displayName={entry.nameKo ?? entry.name}
+        label={entry.ticker}
+        market={entry.market}
+      />
 
       <SymbolNotesPanel
         class="us"
