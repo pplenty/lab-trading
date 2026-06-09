@@ -33,8 +33,8 @@ export const cryptoRegistry: CryptoRegistryEntry[] = [
   // Polygon — 2024 MATIC → POL 마이그레이션 후 Upbit 마켓은 KRW-POL. Binance / CoinGecko 는 아직 두 티커 노출하므로 binancePair / cgId 는 그대로 둠.
   {symbol: "matic", name: "Polygon", nameKo: "폴리곤", cgId: "matic-network", binancePair: "MATICUSDT", upbitMarket: "KRW-POL"},
   {symbol: "dot", name: "Polkadot", nameKo: "폴카닷", cgId: "polkadot", binancePair: "DOTUSDT", upbitMarket: "KRW-DOT"},
-  // Litecoin — Upbit 는 2018 KRW 페어 종료 (BTC 페어만 운영). Upbit 어댑터에서 자동 제외.
-  {symbol: "ltc", name: "Litecoin", nameKo: "라이트코인", cgId: "litecoin", binancePair: "LTCUSDT", upbitMarket: ""},
+  // NOTE: Litecoin(LTC) 은 Upbit KRW 페어 부재(2018 종료)로 백필 경로가 없어 제거 (2026-06-09).
+  // 비-Upbit 코인 지원 시 Bithumb KRW 또는 Binance USD×FX 외부화 백필 신설 후 재등록.
   // Phase 2 확장 — Upbit KRW 페어 가용 + CoinGecko 시총 top 30 안.
   {symbol: "bch", name: "Bitcoin Cash", nameKo: "비트코인캐시", cgId: "bitcoin-cash", binancePair: "BCHUSDT", upbitMarket: "KRW-BCH"},
   {symbol: "etc", name: "Ethereum Classic", nameKo: "이더리움클래식", cgId: "ethereum-classic", binancePair: "ETCUSDT", upbitMarket: "KRW-ETC"},

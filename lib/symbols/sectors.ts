@@ -30,7 +30,6 @@ const CRYPTO_SECTOR: Record<string, Sector> = {
   op: "Layer 2",
   // payments
   xrp: "결제",
-  ltc: "결제",
   bch: "결제",
   etc: "결제",
   xlm: "결제",
