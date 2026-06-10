@@ -27,8 +27,16 @@ type Props = {
   candles?: Candle[];
   /** CSV 내보내기 파일명 prefix (예: "btc-sma-cross"). */
   exportName?: string;
-  /** 전략 vs 시장 — 같은 자산군 벤치마크(BTC/SPY/KOSPI200) 동기간 buy&hold 수익률(%). */
-  benchmark?: {label: string; returnPct: number} | null;
+  /** 전략 vs 시장 — 같은 자산군 벤치마크(BTC/SPY/KOSPI200) 동기간 buy&hold 위험조정 지표. */
+  benchmark?:
+    | {
+        label: string;
+        totalReturnPct: number;
+        cagrPct: number;
+        mddPct: number;
+        sharpe: number;
+      }
+    | null;
 };
 
 const compactFmt = new Intl.NumberFormat(undefined, {
@@ -41,6 +49,28 @@ function fmtPct(v: number, digits = 2) {
   return `${sign}${v.toFixed(digits)}%`;
 }
 
+/** 전략 vs 시장 비교 셀 — 시장 대비 우위면 up 색, 열위면 down 색(MDD 는 낮을수록 우위). */
+function BenchCell({
+  self,
+  other,
+  fmt,
+  higherBetter,
+}: {
+  self: number;
+  other: number;
+  fmt: (v: number) => string;
+  higherBetter: boolean;
+}) {
+  const beats = higherBetter ? self > other : self < other;
+  const cls =
+    self === other
+      ? "text-fg"
+      : beats
+      ? "text-[var(--color-up)]"
+      : "text-[var(--color-down)]";
+  return <span className={`text-center font-medium ${cls}`}>{fmt(self)}</span>;
+}
+
 export function BacktestResultCard({
   result,
   initialCapital,
@@ -51,7 +81,9 @@ export function BacktestResultCard({
 }: Props) {
   const m = result.metrics;
   // 전략 vs 시장 — 전략 총수익률 − 벤치마크 수익률.
-  const vsMarketPct = benchmark ? m.totalReturnPct - benchmark.returnPct : null;
+  const vsMarketPct = benchmark
+    ? m.totalReturnPct - benchmark.totalReturnPct
+    : null;
   const vsMarketTone: "up" | "down" | "neutral" =
     vsMarketPct === null
       ? "neutral"
@@ -150,29 +182,50 @@ export function BacktestResultCard({
         </div>
       </section>
 
-      {/* 전략 vs 시장 — 같은 자산군 벤치마크 동기간 buy&hold 비교 */}
+      {/* 전략 vs 시장 — 같은 자산군 벤치마크 동기간 buy&hold 위험조정 비교 */}
       {benchmark && vsMarketPct !== null && (
-        <section className="-mt-3 flex flex-wrap items-baseline justify-between gap-2 rounded-md border border-line bg-bg/40 px-4 py-2.5 text-xs">
-          <span className="text-fg-muted">
-            같은 기간{" "}
-            <span className="font-medium text-fg">시장 ({benchmark.label})</span>{" "}
-            <span className="tabular-nums">{fmtPct(benchmark.returnPct)}</span>
-          </span>
-          <span className="flex items-baseline gap-2">
-            <span className="text-fg-subtle">전략이 시장 대비</span>
-            <span
-              className={
-                "text-base font-semibold tabular-nums " +
-                (vsMarketTone === "up"
-                  ? "text-[var(--color-up)]"
-                  : vsMarketTone === "down"
-                  ? "text-[var(--color-down)]"
-                  : "text-fg-muted")
-              }
-            >
-              {fmtPct(vsMarketPct)}
+        <section className="-mt-3 rounded-md border border-line bg-bg/40 px-4 py-3 text-xs">
+          <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-2">
+            <span className="text-fg-muted">
+              같은 기간{" "}
+              <span className="font-medium text-fg">시장 ({benchmark.label})</span>{" "}
+              대비 위험조정 비교
             </span>
-          </span>
+            <span className="flex items-baseline gap-2">
+              <span className="text-fg-subtle">총수익 격차</span>
+              <span
+                className={
+                  "text-base font-semibold tabular-nums " +
+                  (vsMarketTone === "up"
+                    ? "text-[var(--color-up)]"
+                    : vsMarketTone === "down"
+                    ? "text-[var(--color-down)]"
+                    : "text-fg-muted")
+                }
+              >
+                {fmtPct(vsMarketPct)}
+              </span>
+            </span>
+          </div>
+          <div className="grid grid-cols-5 gap-x-2 gap-y-1 tabular-nums">
+            <span className="text-fg-subtle" />
+            <span className="text-center text-fg-subtle">총수익</span>
+            <span className="text-center text-fg-subtle">CAGR</span>
+            <span className="text-center text-fg-subtle">MDD</span>
+            <span className="text-center text-fg-subtle">Sharpe</span>
+
+            <span className="font-medium text-fg">전략</span>
+            <BenchCell self={m.totalReturnPct} other={benchmark.totalReturnPct} fmt={fmtPct} higherBetter />
+            <BenchCell self={m.cagrPct} other={benchmark.cagrPct} fmt={fmtPct} higherBetter />
+            <BenchCell self={m.mddPct} other={benchmark.mddPct} fmt={(v) => `-${v.toFixed(2)}%`} higherBetter={false} />
+            <BenchCell self={m.sharpe} other={benchmark.sharpe} fmt={(v) => v.toFixed(2)} higherBetter />
+
+            <span className="text-fg-subtle">시장</span>
+            <span className="text-center text-fg-muted">{fmtPct(benchmark.totalReturnPct)}</span>
+            <span className="text-center text-fg-muted">{fmtPct(benchmark.cagrPct)}</span>
+            <span className="text-center text-fg-muted">-{benchmark.mddPct.toFixed(2)}%</span>
+            <span className="text-center text-fg-muted">{benchmark.sharpe.toFixed(2)}</span>
+          </div>
         </section>
       )}
 

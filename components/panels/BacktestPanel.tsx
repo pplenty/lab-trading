@@ -51,8 +51,16 @@ type Props = {
   /** 표시명 + ticker — share 시 다른 사람에게 보일 라벨. */
   displayName?: string;
   displayTicker?: string;
-  /** 전략 vs 시장 — 같은 자산군 벤치마크 동기간 buy&hold 수익률(%) (서버 계산). */
-  benchmark?: {label: string; returnPct: number} | null;
+  /** 전략 vs 시장 — 같은 자산군 벤치마크 동기간 buy&hold 위험조정 지표 (서버 계산). */
+  benchmark?:
+    | {
+        label: string;
+        totalReturnPct: number;
+        cagrPct: number;
+        mddPct: number;
+        sharpe: number;
+      }
+    | null;
 };
 
 export function BacktestPanel({

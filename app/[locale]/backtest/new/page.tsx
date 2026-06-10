@@ -22,7 +22,8 @@ import {computeIndicators} from "@/lib/backfill/indicators-batch";
 import {
   BENCHMARK_LABEL,
   BENCHMARK_SYMBOL,
-  benchmarkReturnOverRange,
+  benchmarkMetricsOverRange,
+  type BenchmarkMetrics,
 } from "@/lib/backtest/benchmark";
 import type {AssetClass, Candle, CandleSeries, IndicatorRow} from "@/lib/types";
 
@@ -197,9 +198,10 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
     comparisonCache = await loadComparisonFromCache(assetClass, symbol, lastT);
   }
 
-  // 전략 vs 시장 — 같은 자산군 벤치마크(코인 BTC / 미국 SPY / 국내 KODEX 200) 동기간 buy&hold 수익률.
-  // 같은 거래 캘린더라 정렬 안전. 종목 자신이 벤치마크면(예: btc) 생략. 데이터 없으면 graceful null.
-  let benchmark: {label: string; returnPct: number} | null = null;
+  // 전략 vs 시장 — 같은 자산군 벤치마크(코인 BTC / 미국 SPY / 국내 KODEX 200) 동기간 buy&hold.
+  // 총수익·CAGR·MDD·Sharpe 를 전략과 동일 metrics 함수로 계산(위험조정 비교). 같은 거래 캘린더라
+  // 정렬 안전. 종목 자신이 벤치마크면(예: btc) 생략. 데이터 없으면 graceful null.
+  let benchmark: ({label: string} & BenchmarkMetrics) | null = null;
   const benchSym = BENCHMARK_SYMBOL[assetClass];
   if (candles.length >= 2 && symbol !== benchSym) {
     try {
@@ -208,12 +210,15 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
         symbol: benchSym,
         limit: fetchLimit,
       });
-      const r = benchmarkReturnOverRange(
-        bs.candles,
+      // 전략과 동일 timeframe 으로 aggregate — 주/월봉에서 봉 입도가 어긋나면
+      // MDD·Sharpe 가 비교 불가(전략에 구조적 유리)해지므로 정렬 필수 (backtest-validator P1-1).
+      const benchCandles = applyTimeframe(bs.candles, tf);
+      const bm = benchmarkMetricsOverRange(
+        benchCandles,
         candles[0].t,
         candles[candles.length - 1].t
       );
-      if (r !== null) benchmark = {label: BENCHMARK_LABEL[assetClass], returnPct: r};
+      if (bm !== null) benchmark = {label: BENCHMARK_LABEL[assetClass], ...bm};
     } catch {
       /* 벤치마크 데이터 없으면 생략 */
     }
