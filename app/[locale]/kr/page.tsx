@@ -6,6 +6,7 @@ import {loadQuotesList, loadSparklineCloses} from "@/lib/data/quotes";
 import {krRegistry} from "@/lib/symbols/registry";
 import {QuoteTable} from "@/components/panels/QuoteTable";
 import {SectorChips} from "@/components/panels/SectorChips";
+import {MarketBreadthStrip} from "@/components/panels/MarketBreadthStrip";
 import {getSymbolsBySector} from "@/lib/symbols/sectors";
 import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
 import {absoluteUrl} from "@/lib/site";
@@ -108,6 +109,8 @@ export default async function KrIndexPage({params, searchParams}: Props) {
           <span className="text-fg-subtle tabular-nums">{quotes.length} assets</span>
         </div>
       </header>
+
+      <MarketBreadthStrip class="kr" quotes={quotes} nameMap={nameMap} locale={locale} />
 
       <section className="mb-5">
         <SectorChips class="kr" current={sectorFilter} />

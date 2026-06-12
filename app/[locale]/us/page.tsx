@@ -6,6 +6,7 @@ import {loadQuotesList, loadSparklineCloses} from "@/lib/data/quotes";
 import {usRegistry} from "@/lib/symbols/registry";
 import {QuoteTable} from "@/components/panels/QuoteTable";
 import {FearGreedChip} from "@/components/panels/FearGreedChip";
+import {MarketBreadthStrip} from "@/components/panels/MarketBreadthStrip";
 import {SectorChips} from "@/components/panels/SectorChips";
 import {loadFearGreed} from "@/lib/market/fear-greed";
 import {getSymbolsBySector} from "@/lib/symbols/sectors";
@@ -114,6 +115,8 @@ export default async function UsIndexPage({params, searchParams}: Props) {
           <FearGreedChip reading={fng} />
         </div>
       </header>
+
+      <MarketBreadthStrip class="us" quotes={quotes} nameMap={nameMap} locale={locale} />
 
       <section className="mb-5">
         <SectorChips class="us" current={sectorFilter} />

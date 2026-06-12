@@ -6,6 +6,7 @@ import {loadQuotesList, loadSparklineCloses} from "@/lib/data/quotes";
 import {cryptoRegistry} from "@/lib/symbols/registry";
 import {QuoteTable} from "@/components/panels/QuoteTable";
 import {FearGreedChip} from "@/components/panels/FearGreedChip";
+import {MarketBreadthStrip} from "@/components/panels/MarketBreadthStrip";
 import {KimchiPremiumPanel} from "@/components/panels/KimchiPremiumPanel";
 import {SectorChips} from "@/components/panels/SectorChips";
 import {loadFearGreed} from "@/lib/market/fear-greed";
@@ -113,6 +114,8 @@ export default async function CryptoIndexPage({params, searchParams}: Props) {
           <FearGreedChip reading={fng} />
         </div>
       </header>
+
+      <MarketBreadthStrip class="crypto" quotes={quotes} nameMap={nameMap} locale={locale} />
 
       <section className="mb-5">
         <SectorChips class="crypto" current={sectorFilter} />
