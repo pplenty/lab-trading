@@ -35,7 +35,10 @@ export function MarketBreadthStrip({class: cls, quotes, nameMap, locale}: Props)
   };
 
   return (
-    <section className="mb-5 rounded-lg border border-line bg-surface/40 px-4 py-3">
+    <section
+      aria-label="시장 폭 요약"
+      className="mb-5 rounded-lg border border-line bg-surface/40 px-4 py-3"
+    >
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2.5 text-sm">
         {/* 좌: 종목 수 + 상승/하락/보합 + advance-decline 바 */}
         <div className="flex items-center gap-3">
