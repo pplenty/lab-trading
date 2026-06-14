@@ -4,6 +4,7 @@ import type {DataAdapter} from "@/lib/adapters/types";
 import {QuoteTable} from "./QuoteTable";
 import {assetListJsonLd} from "@/lib/seo/asset-list-jsonld";
 import {loadRankingsFromD1, loadSparklineCloses} from "@/lib/data/quotes";
+import {buildRankingSummary} from "@/lib/market/ranking-summary";
 
 // 자산군 × 랭킹 종류 공용 페이지 컴포넌트.
 // 각 자산군의 어댑터 (rankings 구현) 위임 + 실패 시 D1 candles 기반 fallback.
@@ -68,12 +69,46 @@ export async function RankingPage({
   const label = locale === "ko" ? KIND_LABEL[kind].ko : KIND_LABEL[kind].en;
   const assetLabel = locale === "ko" ? t(cls === "crypto" ? "crypto" : cls === "us" ? "us" : "kr") : cls.toUpperCase();
 
+  // 데이터 파생 요약 — h1 + 테이블만이던 thin 랭킹 페이지에 고유 본문(검색 진입).
+  const ASSET_KO: Record<AssetClass, string> = {
+    crypto: "코인",
+    us: "해외주식",
+    kr: "국내주식",
+  };
+  const displayName = (sym: string): string => {
+    const meta = nameMap?.[sym];
+    if (!meta) return sym.toUpperCase();
+    return (
+      (locale === "ko" ? meta.nameKo ?? meta.name : meta.name) ||
+      sym.toUpperCase()
+    );
+  };
+  const dateStr = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(new Date());
+  const summary = buildRankingSummary({
+    cls,
+    kind,
+    quotes,
+    displayName,
+    assetLabel: ASSET_KO[cls],
+    dateStr,
+  });
+
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
       <header className="mb-6">
         <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">
           {assetLabel} · {label}
         </h1>
+        {summary && (
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-fg-muted">
+            {summary}
+          </p>
+        )}
       </header>
 
       {fetchError && (
