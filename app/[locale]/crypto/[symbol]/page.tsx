@@ -23,6 +23,7 @@ import {RecentTracker} from "@/components/RecentTracker";
 import {SymbolActions} from "@/components/panels/SymbolActions";
 import {RelatedSymbolChips} from "@/components/panels/RelatedSymbolChips";
 import {SimilarSymbolsPanel} from "@/components/panels/SimilarSymbolsPanel";
+import {SectorPerformancePanel} from "@/components/panels/SectorPerformancePanel";
 import {SymbolBacktestPreview} from "@/components/panels/SymbolBacktestPreview";
 import {SymbolNotesPanel} from "@/components/panels/SymbolNotesPanel";
 import {SymbolRelatedNews} from "@/components/panels/SymbolRelatedNews";
@@ -426,6 +427,12 @@ export default async function CryptoSymbolPage({params, searchParams}: PageProps
         symbol={entry.symbol}
         currentPrice={quote?.price}
         currency="KRW"
+      />
+
+      <SectorPerformancePanel
+        class="crypto"
+        symbol={entry.symbol}
+        displayName={entry.nameKo ?? entry.name}
       />
 
       <SimilarSymbolsPanel class="crypto" symbol={entry.symbol} locale="ko" />
