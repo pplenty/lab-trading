@@ -17,7 +17,8 @@
   --surface-hover: #eeeef8;
   --fg: #0f172a;
   --fg-muted: #475569;
-  --fg-subtle: #94a3b8;
+  /* WCAG AA — #94a3b8(2.6:1) 은 본문 대비 미달 → #67768a(4.6:1). fg-muted 보다 밝게 유지(계층). */
+  --fg-subtle: #67768a;
   --line: #e2e8f0;
   --accent: #475569;
   --accent-fg: #ffffff;
@@ -32,7 +33,8 @@
   --surface-hover: #252320;
   --fg: #e8e6e0;
   --fg-muted: #9e9b94;
-  --fg-subtle: #6b6964;
+  /* WCAG AA — #6b6964(3.2:1) → #86837d(4.6:1, surface 기준). */
+  --fg-subtle: #86837d;
   --line: #2c2a26;
   /* 한국식 + 다크 */
   --color-up: #ef4444;
