@@ -17,8 +17,8 @@
   --surface-hover: #eeeef8;
   --fg: #0f172a;
   --fg-muted: #475569;
-  /* WCAG AA — #94a3b8(2.6:1) 은 본문 대비 미달 → #67768a(4.6:1). fg-muted 보다 밝게 유지(계층). */
-  --fg-subtle: #67768a;
+  /* WCAG AA — #94a3b8(2.6:1) 미달 → #627084 (surface 4.75:1 / bg 5.0:1). fg-muted 보다 밝게(계층). */
+  --fg-subtle: #627084;
   --line: #e2e8f0;
   --accent: #475569;
   --accent-fg: #ffffff;
