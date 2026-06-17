@@ -8,6 +8,30 @@ import {
   krRegistry,
   usRegistry,
 } from "@/lib/symbols/registry";
+import {
+  mddPct,
+  returnsFromEquity,
+  TRADING_DAYS_PER_YEAR,
+} from "@/lib/backtest/metrics";
+
+/**
+ * composite 정규화 시계열의 위험 지표 — 최대 낙폭 + 연환산 변동성.
+ * mddPct 는 백테스트와 동일 함수 재사용(apples-to-apples). 변동성은 일간 수익률
+ * stdev × √365 (자산군 무관 365 — metrics.ts 컨벤션과 일치). 2점 미만이면 0.
+ */
+export function compositeRiskMetrics(values: number[]): {
+  mddPct: number;
+  volatilityPct: number;
+} {
+  if (values.length < 2) return {mddPct: 0, volatilityPct: 0};
+  const rets = returnsFromEquity(values);
+  const mean = rets.reduce((s, r) => s + r, 0) / rets.length;
+  const variance =
+    rets.reduce((s, r) => s + (r - mean) * (r - mean), 0) / rets.length;
+  const volatilityPct =
+    Math.sqrt(variance) * Math.sqrt(TRADING_DAYS_PER_YEAR) * 100;
+  return {mddPct: mddPct(values), volatilityPct};
+}
 
 // 자산군별 자체 합성 지수 (equal-weight composite index).
 // 80 종목의 일자별 close 를 가중평균 (등가중) → 시계열.
@@ -87,6 +111,10 @@ export type CompositeIndex = {
   lastT: number | null;
   /** 전체 기간 변동률 (last/first - 1) * 100. */
   totalReturnPct: number;
+  /** 최대 낙폭 % (양수 magnitude). */
+  mddPct: number;
+  /** 연환산 변동성 % (일간 수익률 stdev × √365). */
+  volatilityPct: number;
 };
 
 function getRegistrySymbols(asset: AssetClass): string[] {
@@ -109,6 +137,8 @@ function emptyComposite(asset: AssetClass, range: CompositeRange): CompositeInde
     firstT: null,
     lastT: null,
     totalReturnPct: 0,
+    mddPct: 0,
+    volatilityPct: 0,
   };
 }
 
@@ -192,6 +222,7 @@ async function buildComposite(
     points.length >= 2 && points[0].v > 0
       ? ((points[points.length - 1].v - points[0].v) / points[0].v) * 100
       : 0;
+  const risk = compositeRiskMetrics(points.map((p) => p.v));
 
   return {
     asset,
@@ -202,6 +233,8 @@ async function buildComposite(
     firstT,
     lastT,
     totalReturnPct,
+    mddPct: risk.mddPct,
+    volatilityPct: risk.volatilityPct,
   };
 }
 

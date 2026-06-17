@@ -248,6 +248,14 @@ function AssetCard({
         />
       </div>
       <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+        <dt className="text-fg-subtle">최대 낙폭</dt>
+        <dd className="text-right tabular-nums text-[var(--color-down)]">
+          {idx.barCount >= 2 ? `-${idx.mddPct.toFixed(1)}%` : "—"}
+        </dd>
+        <dt className="text-fg-subtle">변동성 (연)</dt>
+        <dd className="text-right tabular-nums text-fg-muted">
+          {idx.barCount >= 2 ? `${idx.volatilityPct.toFixed(1)}%` : "—"}
+        </dd>
         <dt className="text-fg-subtle">종목 수</dt>
         <dd className="text-right tabular-nums text-fg-muted">
           {idx.totalSymbols}
