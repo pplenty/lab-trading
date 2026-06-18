@@ -6,6 +6,17 @@ import {
   NewsSearchPanel,
   type NewsArticleWithAsset,
 } from "@/components/panels/NewsSearchPanel";
+import {NewsMentionsPanel} from "@/components/panels/NewsMentionsPanel";
+import {rankNewsMentions} from "@/lib/data/news-mentions";
+import {keywordsForSymbol} from "@/lib/symbols/news-keywords";
+import {
+  cryptoRegistry,
+  usRegistry,
+  krRegistry,
+  getCryptoBySymbol,
+  getUsBySymbol,
+  getKrBySymbol,
+} from "@/lib/symbols/registry";
 import type {AssetClass} from "@/lib/types";
 
 // 통합 뉴스 — 3 자산군 (crypto + us + kr) 의 최신 헤드라인을 한 화면에.
@@ -77,6 +88,42 @@ export default async function CombinedNewsPage({
     ...kr.articles.map((a) => ({...a, asset: "kr" as const})),
   ];
 
+  // 뉴스 주목 종목 — 로드된 기사 재사용해 전 종목 언급 빈도 집계(추가 쿼리 0).
+  const mentions = rankNewsMentions(
+    [
+      {
+        asset: "crypto",
+        articles: crypto.articles,
+        symbols: cryptoRegistry.map((e) => e.symbol),
+        keywordsFor: (s) => keywordsForSymbol("crypto", s),
+      },
+      {
+        asset: "us",
+        articles: us.articles,
+        symbols: usRegistry.map((e) => e.symbol),
+        keywordsFor: (s) => keywordsForSymbol("us", s),
+      },
+      {
+        asset: "kr",
+        articles: kr.articles,
+        symbols: krRegistry.map((e) => e.symbol),
+        keywordsFor: (s) => keywordsForSymbol("kr", s),
+      },
+    ],
+    10
+  );
+  const nameOf = (asset: AssetClass, symbol: string): string => {
+    const e =
+      asset === "crypto"
+        ? getCryptoBySymbol(symbol)
+        : asset === "us"
+        ? getUsBySymbol(symbol)
+        : getKrBySymbol(symbol);
+    if (!e) return symbol.toUpperCase();
+    const ko = "nameKo" in e ? e.nameKo : undefined;
+    return (locale === "ko" ? ko ?? e.name : e.name) || symbol.toUpperCase();
+  };
+
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10">
       <header className="mb-6 flex items-baseline justify-between gap-4">
@@ -90,6 +137,12 @@ export default async function CombinedNewsPage({
           </p>
         </div>
       </header>
+
+      <NewsMentionsPanel
+        mentions={mentions}
+        nameOf={nameOf}
+        assetLabels={assetLabels}
+      />
 
       <NewsSearchPanel
         articles={articles}
