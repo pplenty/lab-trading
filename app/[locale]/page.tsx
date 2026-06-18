@@ -12,6 +12,8 @@ import {
 import {AssetClassCard} from "@/components/panels/AssetClassCard";
 import {BacktestQuickLinks} from "@/components/panels/BacktestQuickLinks";
 import {FearGreedMini} from "@/components/panels/FearGreedMini";
+import {DashboardBreadthRow} from "@/components/panels/DashboardBreadthRow";
+import {computeMarketBreadth} from "@/lib/market/breadth";
 import {loadFearGreed} from "@/lib/market/fear-greed";
 import {Link} from "@/i18n/navigation";
 import {BrandMark} from "@/components/BrandMark";
@@ -96,6 +98,13 @@ export default async function HomePage({
     loadFearGreed("us"),
   ]);
 
+  // 오늘 시장 폭 — 이미 로드된 quotes 파생 (추가 쿼리 0). KR 포함(F&G 엔 없음).
+  const breadthItems = [
+    {asset: "crypto" as const, label: t("crypto"), breadth: computeMarketBreadth(crypto.quotes)},
+    {asset: "us" as const, label: t("us"), breadth: computeMarketBreadth(us.quotes)},
+    {asset: "kr" as const, label: t("kr").replace(" (Phase 1.5)", ""), breadth: computeMarketBreadth(kr.quotes)},
+  ];
+
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-10 sm:py-12">
       <script
@@ -159,6 +168,8 @@ export default async function HomePage({
           />
         </div>
       </section>
+
+      <DashboardBreadthRow items={breadthItems} />
 
       <section className="mb-10">
         <FearGreedMini crypto={fngCrypto} us={fngUs} />
