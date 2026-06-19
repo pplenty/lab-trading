@@ -1,7 +1,7 @@
 "use client";
 
-import {useMemo, useState} from "react";
-import {Star, Tag, Search, Trash2, Pencil, X, Check} from "lucide-react";
+import {useEffect, useMemo, useState} from "react";
+import {Star, Tag, Search, Trash2, Pencil, X, Check, ArrowDownUp} from "lucide-react";
 import {Link} from "@/i18n/navigation";
 import {
   useFavorites,
@@ -10,7 +10,9 @@ import {
 } from "@/lib/favorites";
 import {useFavoriteLabels} from "@/lib/favorite-labels";
 import {getAssetMeta} from "@/lib/symbols/registry";
-import type {AssetClass} from "@/lib/types";
+import {FinancialDelta} from "@/components/FinancialDelta";
+import {buildFavoriteDigest} from "@/lib/favorites/digest";
+import type {AssetClass, Quote} from "@/lib/types";
 
 // 즐겨찾기 통합 페이지 — 라벨별 group + 자산군 필터 + 검색.
 // 사용자 자산 80 종목 즐겨찾기 늘면 분류 필요.
@@ -20,6 +22,17 @@ const ASSET_LABEL: Record<AssetClass, string> = {
   us: "해외주식",
   kr: "국내주식",
 };
+
+type QuotesMap = Record<string, Quote | null>;
+type SortMode = "change" | "name";
+const QUOTE_BATCH = 30; // /api/portfolio-quotes MAX_SYMBOLS
+
+function fmtPrice(p: number, currency: string): string {
+  if (currency === "KRW") return `₩${p.toLocaleString("ko-KR")}`;
+  if (currency === "USD")
+    return `$${p.toLocaleString(undefined, {maximumFractionDigits: 2})}`;
+  return p.toLocaleString();
+}
 
 type FilterLabel = string | "__all__" | "__none__";
 
@@ -46,6 +59,9 @@ export function FavoritesPanel() {
   const [filter, setFilter] = useState<FilterLabel>("__all__");
   const [assetFilter, setAssetFilter] = useState<AssetClass | "all">("all");
   const [query, setQuery] = useState("");
+  const [quotes, setQuotes] = useState<QuotesMap>({});
+  const [quotesLoading, setQuotesLoading] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>("change");
 
   // hydrate — 즐겨찾기 + meta + labels
   const entries = useMemo<FavoriteEntry[]>(() => {
@@ -96,6 +112,73 @@ export function FavoritesPanel() {
       kr: entries.filter((e) => e.class === "kr").length,
     }),
     [entries]
+  );
+
+  // 시세 batch fetch — /api/portfolio-quotes (KV 60s 캐시). entry.id 가 "cls:symbol"
+  // 토큰과 동일. 30 cap 초과 시 chunk. 전부 client 라 SSR 부담 0.
+  const idsKey = useMemo(
+    () => entries.map((e) => e.id).sort().join(","),
+    [entries]
+  );
+  useEffect(() => {
+    if (idsKey === "") {
+      setQuotes({});
+      return;
+    }
+    const ids = idsKey.split(",");
+    let cancelled = false;
+    (async () => {
+      setQuotesLoading(true);
+      try {
+        const merged: QuotesMap = {};
+        for (let i = 0; i < ids.length; i += QUOTE_BATCH) {
+          const chunk = ids.slice(i, i + QUOTE_BATCH);
+          const res = await fetch(
+            `/api/portfolio-quotes?symbols=${encodeURIComponent(chunk.join(","))}`,
+            {cache: "no-store"}
+          );
+          if (!res.ok) continue;
+          const data = (await res.json()) as {quotes: QuotesMap};
+          Object.assign(merged, data.quotes);
+        }
+        if (!cancelled) setQuotes(merged);
+      } catch {
+        if (!cancelled) setQuotes({});
+      } finally {
+        if (!cancelled) setQuotesLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [idsKey]);
+
+  // 변동률 정렬 (quote 없는 종목은 뒤로). 이름순은 가나다/알파벳.
+  const sortedFiltered = useMemo(() => {
+    const arr = [...filtered];
+    if (sortMode === "name") {
+      arr.sort((a, b) => a.displayName.localeCompare(b.displayName, "ko"));
+    } else {
+      arr.sort((a, b) => {
+        const ca = quotes[a.id]?.changePct24h ?? -Infinity;
+        const cb = quotes[b.id]?.changePct24h ?? -Infinity;
+        return cb - ca;
+      });
+    }
+    return arr;
+  }, [filtered, sortMode, quotes]);
+
+  // 필터된 집합의 다이제스트 — 라벨/자산 필터 시 해당 그룹 요약으로 동작.
+  const digest = useMemo(
+    () =>
+      buildFavoriteDigest(
+        filtered.map((e) => ({
+          id: e.id,
+          symbol: e.symbol,
+          changePct: quotes[e.id]?.changePct24h ?? null,
+        }))
+      ),
+    [filtered, quotes]
   );
 
   if (entries.length === 0) {
@@ -186,11 +269,76 @@ export function FavoritesPanel() {
               className="w-full rounded-md border border-line bg-bg py-1 pl-7 pr-2 text-xs text-fg placeholder:text-fg-subtle focus:border-fg focus:outline-none"
             />
           </div>
-          <span className="ml-auto text-[11px] tabular-nums text-fg-subtle">
-            {filtered.length} 종목
-          </span>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSortMode((m) => (m === "change" ? "name" : "change"))}
+              className="inline-flex items-center gap-1 rounded-md border border-line bg-bg px-2 py-1 text-[11px] text-fg-muted transition-colors hover:border-fg-subtle hover:text-fg"
+              aria-label="정렬 전환"
+            >
+              <ArrowDownUp size={11} aria-hidden="true" />
+              {sortMode === "change" ? "변동률순" : "이름순"}
+            </button>
+            <span className="text-[11px] tabular-nums text-fg-subtle">
+              {filtered.length} 종목
+            </span>
+          </div>
         </div>
       </div>
+
+      {/* 오늘 요약 — 필터된 집합 기준 (라벨/자산 필터 시 그룹 다이제스트) */}
+      {filtered.length > 0 && (
+        <section
+          aria-label="관심종목 오늘 요약"
+          className="rounded-lg border border-line bg-surface/40 px-4 py-2.5"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 text-xs">
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="text-fg-subtle">오늘</span>
+              <span className="flex items-center gap-2 tabular-nums">
+                <span className="text-[var(--color-up)]">▲ {digest.upCount}</span>
+                <span className="text-[var(--color-down)]">▼ {digest.downCount}</span>
+                {digest.flatCount > 0 && (
+                  <span className="text-fg-subtle">— {digest.flatCount}</span>
+                )}
+              </span>
+              {digest.avgChangePct !== null && (
+                <span className="flex items-center gap-1 text-fg-subtle">
+                  평균 <FinancialDelta changePct={digest.avgChangePct} />
+                </span>
+              )}
+            </span>
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+              {digest.topGainer && (
+                <span className="flex items-center gap-1 text-fg-subtle">
+                  최고{" "}
+                  <span className="font-medium text-fg">
+                    {entries.find((e) => e.id === digest.topGainer!.id)?.displayName ??
+                      digest.topGainer.symbol.toUpperCase()}
+                  </span>
+                  <FinancialDelta changePct={digest.topGainer.changePct} />
+                </span>
+              )}
+              {digest.topLoser && digest.topLoser.id !== digest.topGainer?.id && (
+                <span className="flex items-center gap-1 text-fg-subtle">
+                  최저{" "}
+                  <span className="font-medium text-fg">
+                    {entries.find((e) => e.id === digest.topLoser!.id)?.displayName ??
+                      digest.topLoser.symbol.toUpperCase()}
+                  </span>
+                  <FinancialDelta changePct={digest.topLoser.changePct} />
+                </span>
+              )}
+              {digest.stale > 0 && (
+                <span className="text-fg-subtle">· {digest.stale} 데이터 대기</span>
+              )}
+              {quotesLoading && digest.quoted === 0 && (
+                <span className="text-fg-subtle">시세 불러오는 중…</span>
+              )}
+            </span>
+          </div>
+        </section>
+      )}
 
       {/* list */}
       {filtered.length === 0 ? (
@@ -199,10 +347,11 @@ export function FavoritesPanel() {
         </div>
       ) : (
         <ul className="flex flex-col gap-2">
-          {filtered.map((e) => (
+          {sortedFiltered.map((e) => (
             <FavoriteRow
               key={e.id}
               entry={e}
+              quote={quotes[e.id]}
               allLabels={allLabels.map((l) => l.label)}
               onAddLabel={(label) => addLabel(e.id, label)}
               onRemoveLabel={(label) => removeLabel(e.id, label)}
@@ -345,12 +494,14 @@ function LabelChip({
 
 function FavoriteRow({
   entry,
+  quote,
   allLabels,
   onAddLabel,
   onRemoveLabel,
   onUnfavorite,
 }: {
   entry: FavoriteEntry;
+  quote: Quote | null | undefined;
   allLabels: string[];
   onAddLabel: (label: string) => void;
   onRemoveLabel: (label: string) => void;
@@ -385,6 +536,20 @@ function FavoriteRow({
         <span className="text-[10px] uppercase tracking-wider text-fg-subtle">
           {ASSET_LABEL[entry.class]}
         </span>
+        {quote === undefined ? (
+          <span className="text-[11px] text-fg-subtle" aria-hidden="true">
+            ···
+          </span>
+        ) : quote === null ? (
+          <span className="text-[11px] text-fg-subtle">데이터 대기</span>
+        ) : (
+          <span className="flex items-baseline gap-2 tabular-nums">
+            <span className="text-xs text-fg-muted">
+              {fmtPrice(quote.price, quote.currency)}
+            </span>
+            <FinancialDelta changePct={quote.changePct24h} className="text-xs" />
+          </span>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
