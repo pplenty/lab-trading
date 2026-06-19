@@ -121,14 +121,14 @@ function SweepChart({sweep}: {sweep: Sweep}) {
         role="img"
         aria-label={`${param.labelKo} 민감도 — ${points.length}개 값, 최고 ${analysis ? analysis.bestValue : "?"}, 현재 ${current}`}
       >
-        {/* zero baseline */}
+        {/* zero baseline — 부호 인코딩에 load-bearing 이라 line 보다 진한 fg-subtle (AA). */}
         <line
           x1="0"
           x2={W}
           y1={zeroY}
           y2={zeroY}
-          stroke="var(--color-line)"
-          strokeWidth="0.4"
+          stroke="var(--color-fg-subtle)"
+          strokeWidth="0.3"
         />
         {points.map((p, i) => {
           const x = i * slot + (slot - barW) / 2;
@@ -149,6 +149,8 @@ function SweepChart({sweep}: {sweep: Sweep}) {
                 }
                 opacity={isCur ? 1 : 0.5}
               />
+              {/* 현재값 = 전체높이 하이라이트 박스, 최고 = dot. accent 는 다크 저대비
+                  (2.5:1) 라 고대비 fg 로. 형태(박스 vs dot)로 구분. */}
               {isCur && (
                 <rect
                   x={x - 0.4}
@@ -156,12 +158,17 @@ function SweepChart({sweep}: {sweep: Sweep}) {
                   width={barW + 0.8}
                   height={H - 0.8}
                   fill="none"
-                  stroke="var(--color-accent)"
+                  stroke="var(--color-fg)"
                   strokeWidth="0.5"
                 />
               )}
               {isBest && !isCur && (
-                <circle cx={x + barW / 2} cy={Math.min(yv, zeroY) - 1.2} r="0.9" fill="var(--color-accent)" />
+                <circle
+                  cx={x + barW / 2}
+                  cy={Math.max(1.2, Math.min(yv, zeroY) - 1.2)}
+                  r="1"
+                  fill="var(--color-fg)"
+                />
               )}
             </g>
           );
@@ -170,7 +177,9 @@ function SweepChart({sweep}: {sweep: Sweep}) {
       <div className="mt-0.5 flex justify-between text-[9px] tabular-nums text-fg-subtle">
         <span>{points[0].value}</span>
         {analysis && analysis.bestValue !== current && (
-          <span className="text-accent">최고 {analysis.bestValue}</span>
+          <span className="font-medium text-fg-muted">
+            최고 {analysis.bestValue}
+          </span>
         )}
         <span>{points[points.length - 1].value}</span>
       </div>
