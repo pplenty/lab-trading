@@ -329,11 +329,14 @@ export function FavoritesPanel() {
                   <FinancialDelta changePct={digest.topLoser.changePct} />
                 </span>
               )}
-              {digest.stale > 0 && (
-                <span className="text-fg-subtle">· {digest.stale} 데이터 대기</span>
-              )}
-              {quotesLoading && digest.quoted === 0 && (
+              {quotesLoading ? (
                 <span className="text-fg-subtle">시세 불러오는 중…</span>
+              ) : (
+                digest.stale > 0 && (
+                  <span className="text-fg-subtle">
+                    · {digest.stale} 데이터 대기
+                  </span>
+                )
               )}
             </span>
           </div>
@@ -533,17 +536,22 @@ function FavoriteRow({
           </span>
           <span className="text-[11px] text-fg-subtle">{entry.ticker}</span>
         </Link>
-        <span className="text-[10px] uppercase tracking-wider text-fg-subtle">
+        <span className="hidden whitespace-nowrap text-[10px] uppercase tracking-wider text-fg-subtle sm:inline">
           {ASSET_LABEL[entry.class]}
         </span>
         {quote === undefined ? (
-          <span className="text-[11px] text-fg-subtle" aria-hidden="true">
+          <span
+            className="shrink-0 text-[11px] text-fg-subtle"
+            aria-hidden="true"
+          >
             ···
           </span>
         ) : quote === null ? (
-          <span className="text-[11px] text-fg-subtle">데이터 대기</span>
+          <span className="shrink-0 whitespace-nowrap text-[11px] text-fg-subtle">
+            데이터 대기
+          </span>
         ) : (
-          <span className="flex items-baseline gap-2 tabular-nums">
+          <span className="flex shrink-0 items-baseline gap-2 whitespace-nowrap tabular-nums">
             <span className="text-xs text-fg-muted">
               {fmtPrice(quote.price, quote.currency)}
             </span>

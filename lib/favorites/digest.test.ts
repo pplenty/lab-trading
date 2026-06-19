@@ -71,4 +71,21 @@ describe("buildFavoriteDigest", () => {
     expect(d.topGainer?.symbol).toBe("b");
     expect(d.topLoser?.symbol).toBe("c");
   });
+
+  it("단일 종목 — topGainer 와 topLoser 가 같은 id (UI 중복표시 가드 전제)", () => {
+    const d = buildFavoriteDigest([it_("crypto:btc", 2.5)]);
+    expect(d.topGainer).toEqual({id: "crypto:btc", symbol: "btc", changePct: 2.5});
+    expect(d.topLoser).toEqual({id: "crypto:btc", symbol: "btc", changePct: 2.5});
+    expect(d.topGainer!.id).toBe(d.topLoser!.id);
+  });
+
+  it("전부 보합(0%) — flatCount 만, avg 0, topMover 는 첫 종목", () => {
+    const d = buildFavoriteDigest([it_("us:a", 0), it_("us:b", 0)]);
+    expect(d.upCount).toBe(0);
+    expect(d.downCount).toBe(0);
+    expect(d.flatCount).toBe(2);
+    expect(d.avgChangePct).toBe(0);
+    expect(d.topGainer?.symbol).toBe("a");
+    expect(d.topLoser?.symbol).toBe("a");
+  });
 });
