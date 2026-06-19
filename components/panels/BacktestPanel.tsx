@@ -6,6 +6,8 @@ import {runBacktest} from "@/lib/backtest/run";
 import {strategies, getStrategy} from "@/lib/backtest/strategies/registry";
 import type {Candle, AssetClass, IndicatorRow} from "@/lib/types";
 import {BacktestResultCard} from "./BacktestResultCard";
+import {ParamSweepPanel, type Sweep} from "./ParamSweepPanel";
+import {sweepValues, type SweepPoint} from "@/lib/backtest/sweep";
 import {ShareBacktestButton} from "./ShareBacktestButton";
 import {SaveStrategyButton} from "./SaveStrategyButton";
 import {CopyResultUrlButton} from "./CopyResultUrlButton";
@@ -178,6 +180,72 @@ export function BacktestPanel({
       setTimeout(compute, 0);
     }
   }, [candles, indicators, symbol, cls]);
+
+  // 파라미터 민감도 스윕 — 각 파라미터를 격자로 변화시킨 총수익률. 전략이 비-사전계산
+  // 파라미터를 streaming 자체계산하므로 임의 값에서 runBacktest 동작. 250ms debounce 로
+  // 슬라이더 드래그 중 N회 재계산 억제. 6전략 비교와 동일하게 client-only.
+  const [sweeps, setSweeps] = useState<Sweep[]>([]);
+  const [sweepLoading, setSweepLoading] = useState(false);
+  useEffect(() => {
+    if (!strategy || candles.length < 2 || strategy.params.length === 0) {
+      setSweeps([]);
+      setSweepLoading(false);
+      return;
+    }
+    setSweepLoading(true);
+    const s = strategy;
+    let cancelled = false;
+    const compute = () => {
+      if (cancelled) return;
+      const out: Sweep[] = [];
+      for (const param of s.params) {
+        const cur = params[param.key] ?? param.default;
+        const valueSet = new Set(sweepValues(param, 24));
+        valueSet.add(cur); // 현재값 포함 (마커 + verdict 일관성)
+        const vals = [...valueSet].sort((a, b) => a - b);
+        const points: SweepPoint[] = [];
+        for (const v of vals) {
+          const candidate = {...params, [param.key]: v};
+          if (s.validateParams && s.validateParams(candidate)) continue;
+          try {
+            const r = runBacktest({
+              symbol,
+              class: cls,
+              candles,
+              indicators,
+              strategyId,
+              params: candidate,
+              initialCapital: INITIAL_CAPITAL,
+              feePct: FEE_PCT,
+              slippagePct: SLIPPAGE_PCT,
+              fillModel: "next-open",
+            });
+            points.push({value: v, pct: r.metrics.totalReturnPct});
+          } catch {
+            /* invalid 조합 skip */
+          }
+        }
+        // current 스냅샷 동봉 — panel 이 live params 대신 이걸로 현재 point 를 잡아
+        // 드래그 중 stale 불일치(P0/P1) 회피.
+        if (points.length >= 3) out.push({param, points, current: cur});
+      }
+      if (cancelled) return;
+      setSweeps(out);
+      setSweepLoading(false);
+    };
+    // 250ms debounce(드래그 억제) → idle 양보(롱태스크 방지, 6전략 비교와 동일 패턴).
+    const t = setTimeout(() => {
+      const ric = (
+        window as unknown as {requestIdleCallback?: (cb: () => void) => number}
+      ).requestIdleCallback;
+      if (typeof ric === "function") ric(compute);
+      else compute();
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [strategy, candles, indicators, symbol, cls, strategyId, params]);
 
   const currencyFmt = useMemo(
     () =>
@@ -398,6 +466,7 @@ export function BacktestPanel({
             exportName={`${symbol}-${strategyId}`}
             benchmark={benchmark}
           />
+          <ParamSweepPanel sweeps={sweeps} loading={sweepLoading} />
         </>
       ) : candles.length < 2 ? (
         <p className="rounded-md border border-line bg-surface p-4 text-sm text-fg-muted">
