@@ -65,9 +65,18 @@ export function runBacktest(config: BacktestConfig): BacktestResult {
   const equityCurve: EquityPoint[] = [];
   let pendingSignal: SignalDetail = {action: "hold"};
 
+  const warmup = config.warmupBars ?? 0;
+
   for (let i = 0; i < candles.length; i++) {
     const candle = candles[i];
     const indRow = indicators?.[i];
+
+    // 0) 워밍업 — state(누적 closes·prevSign 등) 만 build, 거래·equity 미집계.
+    // position 0 유지(미체결). 워밍업 후 봉부터 평소대로 → 지표 warm 한 채 OOS 진입.
+    if (i < warmup) {
+      strategy.onBar(candle, indRow, state, position);
+      continue;
+    }
 
     // 1) next-open 체결 — 이전 봉의 pendingSignal 을 이 봉 시가에 체결.
     if (config.fillModel === "next-open" && pendingSignal.action !== "hold") {

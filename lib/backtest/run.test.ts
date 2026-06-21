@@ -142,4 +142,23 @@ describe("runBacktest — edge cases", () => {
     // 첫 trade 가 봉 0 t=0 에 체결 (next-open 은 봉 1 t=DAY)
     expect(result.trades[0].t).toBe(0);
   });
+
+  it("warmupBars 는 앞 N봉 거래·equity 제외하되 state(지표) 는 build", () => {
+    // 하락→상승(골든크로스)→하락. 크로스는 warmup(4) 이후에 발생.
+    const series = [
+      20, 19, 18, 17, 16, 18, 20, 22, 24, 26, 28, 26, 24, 22, 20, 18, 16, 14,
+    ];
+    const candles = mkCandles(series);
+    const full = runBacktest(baseConfig(candles, "sma-cross", {fast: 3, slow: 5}));
+    const warm = runBacktest({
+      ...baseConfig(candles, "sma-cross", {fast: 3, slow: 5}),
+      warmupBars: 4,
+    });
+    expect(warm.equityCurve.length).toBe(series.length - 4); // 워밍업 이후만
+    // 워밍업 구간(t < 4*DAY)엔 체결 없음
+    expect(warm.trades.every((tr) => tr.t >= 4 * DAY)).toBe(true);
+    // warmup 이 SMA state 를 build → 이후 크로스 포착(state 미build 면 cold 라 놓침)
+    expect(warm.metrics.tradeCount).toBeGreaterThanOrEqual(1);
+    expect(warm.metrics.tradeCount).toBeLessThanOrEqual(full.metrics.tradeCount);
+  });
 });

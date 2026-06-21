@@ -26,6 +26,16 @@ export interface BacktestConfig {
   /** 백테스트 시작 시각 (unix sec). 미지정 시 candles[0].t. */
   startDate?: number;
   endDate?: number;
+  /**
+   * 앞 N봉을 워밍업으로 — strategy.onBar 로 state(지표)만 build 하고 거래·equity·
+   * 메트릭은 N봉 이후만 집계. walk-forward OOS 가 IS 이력으로 지표를 warm 한 채
+   * 평가하도록(streaming cold-start 비대칭 제거, 룩어헤드 없음 — 워밍업 봉은 미체결).
+   * 주의: 워밍업이 전략 state 를 **소비**한다 — one-shot(buy-and-hold) 이나 transition
+   * 트리거(prevSign 크로스 등)가 워밍업 구간에서 발생하면 워밍업 직후 즉시 진입이 억제될
+   * 수 있다(다음 트리거까지 대기). 연속 운용 walk-forward 의미와는 정합. cagrPct 의
+   * 연수는 full 기간 기준이라 warmup 시 약간 왜곡(WF 는 cagr 미사용).
+   */
+  warmupBars?: number;
 }
 
 export interface Trade {

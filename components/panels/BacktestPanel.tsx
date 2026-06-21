@@ -8,6 +8,13 @@ import type {Candle, AssetClass, IndicatorRow} from "@/lib/types";
 import {BacktestResultCard} from "./BacktestResultCard";
 import {ParamSweepPanel, type Sweep} from "./ParamSweepPanel";
 import {sweepValues, type SweepPoint} from "@/lib/backtest/sweep";
+import {WalkForwardPanel} from "./WalkForwardPanel";
+import {
+  splitISOOS,
+  selectISBest,
+  walkForwardVerdict,
+  type WalkForwardResult,
+} from "@/lib/backtest/walk-forward";
 import {ShareBacktestButton} from "./ShareBacktestButton";
 import {SaveStrategyButton} from "./SaveStrategyButton";
 import {CopyResultUrlButton} from "./CopyResultUrlButton";
@@ -247,6 +254,114 @@ export function BacktestPanel({
     };
   }, [strategy, candles, indicators, symbol, cls, strategyId, params]);
 
+  // Walk-forward 강건성 — 대표 파라미터(params[0])를 앞 70%(IS)에서 최적화 → 뒤 30%(OOS)
+  // 적용. candles/indicators 를 boundaryIdx 로 평행 슬라이스(run.ts 길이정합) — 둘 다 잘라
+  // 정렬, OOS indicator 는 전체과거 반영(warm, 룩어헤드 없음). 스윕과 동일 client 패턴.
+  const [wfResult, setWfResult] = useState<WalkForwardResult | null>(null);
+  const [wfLoading, setWfLoading] = useState(false);
+  const [wfInsufficient, setWfInsufficient] = useState(false);
+  useEffect(() => {
+    if (!strategy || strategy.params.length === 0 || candles.length < 2) {
+      setWfResult(null);
+      setWfLoading(false);
+      setWfInsufficient(false);
+      return;
+    }
+    const s = strategy;
+    const param = s.params[0];
+    const split = splitISOOS(candles, 0.3, 30);
+    if (!split) {
+      setWfResult(null);
+      setWfLoading(false);
+      setWfInsufficient(true);
+      return;
+    }
+    setWfInsufficient(false);
+    setWfLoading(true);
+    let cancelled = false;
+    const compute = () => {
+      if (cancelled) return;
+      // IS 는 슬라이스(데이터 시작=cold 자연), OOS 는 full candles + warmupBars=boundaryIdx
+      // (IS 전체로 지표 warm, 거래·수익은 OOS 만 집계 — cold-start 비대칭 제거).
+      const isCandles = candles.slice(0, split.boundaryIdx);
+      const isIndicators = indicators?.slice(0, split.boundaryIdx);
+      const baseCfg = {
+        symbol,
+        class: cls,
+        strategyId,
+        initialCapital: INITIAL_CAPITAL,
+        feePct: FEE_PCT,
+        slippagePct: SLIPPAGE_PCT,
+        fillModel: "next-open" as const,
+      };
+      const isRun = (
+        p: Record<string, number>
+      ): {pct: number; trades: number} | null => {
+        if (s.validateParams && s.validateParams(p)) return null;
+        try {
+          const m = runBacktest({
+            ...baseCfg,
+            candles: isCandles,
+            indicators: isIndicators,
+            params: p,
+          }).metrics;
+          return {pct: m.totalReturnPct, trades: m.tradeCount};
+        } catch {
+          return null;
+        }
+      };
+      const isBest = selectISBest(param, params, isRun);
+      if (cancelled) return;
+      if (!isBest) {
+        setWfResult(null);
+        setWfLoading(false);
+        return;
+      }
+      let oosPct: number;
+      let oosTrades: number;
+      try {
+        const m = runBacktest({
+          ...baseCfg,
+          candles,
+          indicators,
+          warmupBars: split.boundaryIdx,
+          params: {...params, [param.key]: isBest.value},
+        }).metrics;
+        oosPct = m.totalReturnPct;
+        oosTrades = m.tradeCount;
+      } catch {
+        setWfResult(null);
+        setWfLoading(false);
+        return;
+      }
+      if (cancelled) return;
+      setWfResult({
+        paramLabel: param.labelKo,
+        isBestValue: isBest.value,
+        isPct: isBest.isPct,
+        isTrades: isBest.isTrades,
+        oosPct,
+        oosTrades,
+        degradationPp: isBest.isPct - oosPct,
+        verdict: walkForwardVerdict(isBest.isPct, oosPct, oosTrades),
+        isBars: split.isBars,
+        oosBars: split.oosBars,
+      });
+      setWfLoading(false);
+    };
+    const t = setTimeout(() => {
+      const ric = (
+        window as unknown as {requestIdleCallback?: (cb: () => void) => number}
+      ).requestIdleCallback;
+      if (typeof ric === "function") ric(compute);
+      else compute();
+    }, 280);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [strategy, candles, indicators, symbol, cls, strategyId, params]);
+
   const currencyFmt = useMemo(
     () =>
       new Intl.NumberFormat(undefined, {
@@ -467,6 +582,11 @@ export function BacktestPanel({
             benchmark={benchmark}
           />
           <ParamSweepPanel sweeps={sweeps} loading={sweepLoading} />
+          <WalkForwardPanel
+            result={wfResult}
+            loading={wfLoading}
+            insufficient={wfInsufficient}
+          />
         </>
       ) : candles.length < 2 ? (
         <p className="rounded-md border border-line bg-surface p-4 text-sm text-fg-muted">
