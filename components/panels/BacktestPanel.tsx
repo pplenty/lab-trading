@@ -260,11 +260,13 @@ export function BacktestPanel({
   const [wfResult, setWfResult] = useState<WalkForwardResult | null>(null);
   const [wfLoading, setWfLoading] = useState(false);
   const [wfInsufficient, setWfInsufficient] = useState(false);
+  const [wfNoTrades, setWfNoTrades] = useState(false);
   useEffect(() => {
     if (!strategy || strategy.params.length === 0 || candles.length < 2) {
       setWfResult(null);
       setWfLoading(false);
       setWfInsufficient(false);
+      setWfNoTrades(false);
       return;
     }
     const s = strategy;
@@ -274,9 +276,11 @@ export function BacktestPanel({
       setWfResult(null);
       setWfLoading(false);
       setWfInsufficient(true);
+      setWfNoTrades(false);
       return;
     }
     setWfInsufficient(false);
+    setWfNoTrades(false);
     setWfLoading(true);
     let cancelled = false;
     const compute = () => {
@@ -313,7 +317,10 @@ export function BacktestPanel({
       const isBest = selectISBest(param, params, isRun);
       if (cancelled) return;
       if (!isBest) {
+        // 학습 구간에서 어떤 파라미터도 거래 안 함 → 검증할 최적값 없음(조용히 숨기지
+        // 말고 안내). 봉 부족(insufficient)과는 다른 상태.
         setWfResult(null);
+        setWfNoTrades(true);
         setWfLoading(false);
         return;
       }
@@ -586,6 +593,7 @@ export function BacktestPanel({
             result={wfResult}
             loading={wfLoading}
             insufficient={wfInsufficient}
+            noTrades={wfNoTrades}
           />
         </>
       ) : candles.length < 2 ? (

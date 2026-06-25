@@ -9,12 +9,15 @@ export function WalkForwardPanel({
   result,
   loading,
   insufficient,
+  noTrades,
 }: {
   result: WalkForwardResult | null;
   loading: boolean;
   insufficient: boolean;
+  /** 학습 구간에서 어떤 파라미터도 거래 안 함 → 검증할 최적값 없음. */
+  noTrades: boolean;
 }) {
-  if (!result && !loading && !insufficient) return null;
+  if (!result && !loading && !insufficient && !noTrades) return null;
 
   return (
     <section className="rounded-lg border border-line bg-surface/30 p-4">
@@ -28,6 +31,10 @@ export function WalkForwardPanel({
       {insufficient ? (
         <p className="py-2 text-xs text-fg-subtle">
           검증 구간을 나눌 봉이 부족합니다 (학습·검증 각 최소 30봉 필요).
+        </p>
+      ) : noTrades ? (
+        <p className="py-2 text-xs text-fg-subtle">
+          학습 구간에서 거래가 발생하지 않아 검증할 최적 파라미터가 없습니다.
         </p>
       ) : loading && !result ? (
         <p className="py-2 text-center text-xs text-fg-subtle">
