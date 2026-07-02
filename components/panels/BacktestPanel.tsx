@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect, useMemo, useState} from "react";
-import {Anchor, TrendingUp, Repeat, Mountain, Activity, GitBranch} from "lucide-react";
+import {Anchor, TrendingUp, Repeat, Mountain, Activity, GitBranch, Gauge, Zap} from "lucide-react";
 import {runBacktest} from "@/lib/backtest/run";
 import {strategies, getStrategy} from "@/lib/backtest/strategies/registry";
 import type {Candle, AssetClass, IndicatorRow} from "@/lib/types";
@@ -15,12 +15,19 @@ import {
   walkForwardVerdict,
   type WalkForwardResult,
 } from "@/lib/backtest/walk-forward";
+import {CostSensitivityPanel} from "./CostSensitivityPanel";
+import {
+  analyzeCostSensitivity,
+  COST_MULTIPLES,
+  type CostPoint,
+  type CostSensitivity,
+} from "@/lib/backtest/cost-sensitivity";
 import {ShareBacktestButton} from "./ShareBacktestButton";
 import {SaveStrategyButton} from "./SaveStrategyButton";
 import {CopyResultUrlButton} from "./CopyResultUrlButton";
 import {SymbolPicker} from "./SymbolPicker";
 
-// 6 preset 별 icon + 짧은 캐치프레이즈. 카드 grid 의 빠른 직관 인식.
+// 8 preset 별 icon + 짧은 캐치프레이즈. 카드 grid 의 빠른 직관 인식.
 const STRATEGY_META: Record<
   string,
   {Icon: typeof Anchor; tagline: string}
@@ -31,6 +38,8 @@ const STRATEGY_META: Record<
   "donchian-breakout": {Icon: Mountain, tagline: "N일 신고가 돌파"},
   "macd-cross": {Icon: Activity, tagline: "MACD 교차"},
   "bollinger-reversion": {Icon: GitBranch, tagline: "밴드 평균 회귀"},
+  "trend-rsi": {Icon: Gauge, tagline: "추세 속 눌림목 매수"},
+  supertrend: {Icon: Zap, tagline: "ATR 추세 밴드 추종"},
 };
 
 // 백테스트 클라이언트 패널 — 전략 selector + 파라미터 슬라이더 + 결과.
@@ -369,6 +378,90 @@ export function BacktestPanel({
     };
   }, [strategy, candles, indicators, symbol, cls, strategyId, params]);
 
+  // 거래비용 민감도 — 수수료·슬리피지 0×~3× 배율 재실행. 신호는 비용과 무관(거래 동일,
+  // equity 만 변화)이므로 6회 재실행이 곧 비용 곡선. 스윕·walk-forward 와 동일 client 패턴.
+  const [costSens, setCostSens] = useState<CostSensitivity | null>(null);
+  const [costLoading, setCostLoading] = useState(false);
+  const [costNoTrades, setCostNoTrades] = useState(false);
+  useEffect(() => {
+    // buy-and-hold 는 우위 기준선 자기 자신 — next-open 1봉 지연 진입 아티팩트가
+    // edge(±첫봉 갭)를 지배해 "비용" verdict 가 거짓이 됨 (backtest-validator P1).
+    // 스윕·walk-forward 도 B&H(파라미터 0)엔 렌더 안 되므로 숨김이 일관.
+    if (!strategy || candles.length < 2 || strategyId === "buy-and-hold") {
+      setCostSens(null);
+      setCostLoading(false);
+      setCostNoTrades(false);
+      return;
+    }
+    setCostLoading(true);
+    let cancelled = false;
+    const compute = () => {
+      if (cancelled) return;
+      const points: CostPoint[] = [];
+      let buyHoldPct: number | null = null;
+      for (const m of COST_MULTIPLES) {
+        try {
+          const r = runBacktest({
+            symbol,
+            class: cls,
+            candles,
+            indicators,
+            strategyId,
+            params,
+            initialCapital: INITIAL_CAPITAL,
+            feePct: FEE_PCT * m,
+            slippagePct: SLIPPAGE_PCT * m,
+            fillModel: "next-open",
+          });
+          // fills = 체결 횟수 (round-trip tradeCount 아님 — buy-and-hold 도 진입 1회 비용 발생).
+          points.push({
+            multiple: m,
+            pct: r.metrics.totalReturnPct,
+            fills: r.trades.length,
+          });
+          // 단순 보유는 비용 무관(엔진이 cost-free baseline) — 첫 run 에서 한 번만.
+          // ResultCard 의 outperformance 와 동일 기준 (final / initialCapital).
+          if (buyHoldPct === null && r.buyHoldCurve.length > 0) {
+            const final = r.buyHoldCurve[r.buyHoldCurve.length - 1].v;
+            buyHoldPct = (final / INITIAL_CAPITAL - 1) * 100;
+          }
+        } catch {
+          /* invalid 조합 skip — 0×/1× 누락 시 analyze 가 null */
+        }
+      }
+      if (cancelled) return;
+      const at1 = points.find((p) => p.multiple === 1);
+      if (!at1 || buyHoldPct === null) {
+        setCostSens(null);
+        setCostNoTrades(false);
+        setCostLoading(false);
+        return;
+      }
+      if (at1.fills === 0) {
+        // 무체결 → 비용 무영향. 조용히 숨기지 말고 안내 (walk-forward P2 교훈).
+        setCostSens(null);
+        setCostNoTrades(true);
+        setCostLoading(false);
+        return;
+      }
+      setCostSens(analyzeCostSensitivity(points, buyHoldPct));
+      setCostNoTrades(false);
+      setCostLoading(false);
+    };
+    // 300ms debounce(드래그 억제) → idle 양보 (스윕·walk-forward 와 동일 패턴).
+    const t = setTimeout(() => {
+      const ric = (
+        window as unknown as {requestIdleCallback?: (cb: () => void) => number}
+      ).requestIdleCallback;
+      if (typeof ric === "function") ric(compute);
+      else compute();
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [strategy, candles, indicators, symbol, cls, strategyId, params]);
+
   const currencyFmt = useMemo(
     () =>
       new Intl.NumberFormat(undefined, {
@@ -594,6 +687,11 @@ export function BacktestPanel({
             loading={wfLoading}
             insufficient={wfInsufficient}
             noTrades={wfNoTrades}
+          />
+          <CostSensitivityPanel
+            sensitivity={costSens}
+            loading={costLoading}
+            noTrades={costNoTrades}
           />
         </>
       ) : candles.length < 2 ? (
