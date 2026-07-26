@@ -38,12 +38,12 @@ const TF_FETCH_LIMIT = {"1d": 200, "1w": 1000, "1mo": 1500} as const;
 export const metadata: Metadata = {
   title: "일봉 백테스트",
   description:
-    "전략을 일봉으로 검증 — 수익률 · MDD · Sharpe · Profit Factor. 6 프리셋 + 커스텀 AND/OR 조건.",
+    "전략을 일봉으로 검증 — 수익률 · MDD · Sharpe · Profit Factor. 8 프리셋 + 커스텀 AND/OR 조건.",
   alternates: {canonical: absoluteUrl("/ko/backtest/new")},
   openGraph: {
     title: "일봉 백테스트",
     description:
-      "전략을 일봉으로 검증 — 수익률 · MDD · Sharpe. 6 프리셋 + 커스텀 AND/OR 조건.",
+      "전략을 일봉으로 검증 — 수익률 · MDD · Sharpe. 8 프리셋 + 커스텀 AND/OR 조건.",
     url: absoluteUrl("/ko/backtest/new"),
     siteName: "trading",
     locale: "ko",
@@ -264,7 +264,7 @@ export default async function BacktestNewPage({params, searchParams}: Props) {
           </div>
         </details>
         <div className="mt-2 text-[11px] text-fg-subtle">
-          기성 6 preset 이 모자라면 →{" "}
+          기성 8 preset 이 모자라면 →{" "}
           <Link
             href={`/backtest/custom?asset=${assetClass}&symbol=${symbol}`}
             className="font-medium text-fg-muted underline hover:text-fg"

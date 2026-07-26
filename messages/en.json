@@ -47,6 +47,7 @@
       "news": "News",
       "kospi": "KOSPI",
       "kosdaq": "KOSDAQ",
+      "backtest-hub": "Overview",
       "backtest-new": "New strategy",
       "backtest-portfolio": "Portfolio",
       "backtest-saved": "My strategies",

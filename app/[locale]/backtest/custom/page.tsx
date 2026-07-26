@@ -242,7 +242,7 @@ export default async function CustomBacktestPage({params, searchParams}: Props) 
         <p>{tDisc("general")}</p>
         <p className="mt-1">{tDisc("backtest")}</p>
         <p className="mt-2">
-          기존 6 preset 백테스트는{" "}
+          기존 8 preset 백테스트는{" "}
           <Link href="/backtest/new" className="underline hover:text-fg">
             /backtest/new
           </Link>.

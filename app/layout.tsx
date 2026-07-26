@@ -17,6 +17,11 @@ const GA_ID = "G-KVKVBMCWYE";
 const ADSENSE_CLIENT = "ca-pub-1005049417920340";
 const isProd = process.env.NODE_ENV === "production";
 
+// Google Search Console HTML 태그 소유 확인 코드 (공개 값 — 시크릿 아님).
+// 미설정이면 google verification 메타를 아예 출력하지 않는다.
+const GOOGLE_VERIFICATION =
+  process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION?.trim() || "";
+
 export const metadata: Metadata = {
   // app/icon.svg + app/apple-icon.svg 가 자동으로 link 태그 생성. 명시 X.
   other: {
@@ -24,10 +29,16 @@ export const metadata: Metadata = {
   },
   // 검색엔진 사이트 소유 확인 — 전역 적용 (네이버 서치어드바이저는 / → /ko 리다이렉트 추적).
   // verification.other → <meta name="naver-site-verification" content="..."/>.
+  //
+  // Google Search Console 은 HTML 태그 방식이면 아래 env 에 코드만 박으면 된다
+  // (Search Console → 속성 추가 → HTML 태그 → content 값). 값이 비면 태그 자체를 생략 —
+  // 빈 verification 메타는 소유 확인 실패로 잡힌다.
+  // 대안: 이미 붙어 있는 GA4 태그(G-KVKVBMCWYE)로 "Google 애널리틱스" 방식 확인 → 코드 변경 0.
   verification: {
     other: {
       "naver-site-verification": "fd30e2a4bcac41e625bc1490de04424b5eabebe0",
     },
+    ...(GOOGLE_VERIFICATION ? {google: GOOGLE_VERIFICATION} : {}),
   },
 };
 

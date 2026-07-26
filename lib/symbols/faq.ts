@@ -1,4 +1,5 @@
 import type {AssetClass} from "@/lib/types";
+import {strategies} from "@/lib/backtest/strategies/registry";
 
 // 종목 상세 "자주 묻는 질문" — D1 파생 고유 Q&A 생성 (검색 진입 콘텐츠 깊이).
 //
@@ -135,7 +136,7 @@ export function buildSymbolFaq(input: SymbolFaqInput): FaqItem[] {
   // Q5. 백테스트
   items.push({
     q: `lab-trading에서 ${displayName} 백테스트가 가능한가요?`,
-    a: `네. ${displayName} 일봉 데이터로 매수 후 보유·이동평균 교차·RSI 역추세·MACD 교차 등 6가지 전략을 백테스트하고 총수익률·MDD·샤프지수·승률을 즉시 확인할 수 있습니다.`,
+    a: `네. ${displayName} 일봉 데이터로 매수 후 보유·이동평균 교차·RSI 역추세·MACD 교차 등 ${strategies.length}가지 전략을 백테스트하고 총수익률·MDD·샤프지수·승률을 즉시 확인할 수 있습니다.`,
   });
 
   return items;

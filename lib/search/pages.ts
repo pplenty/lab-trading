@@ -24,7 +24,7 @@ export const pageIndex: PageEntry[] = [
     titleKo: "백테스트",
     href: "/backtest/new",
     keywords: ["backtest", "백테", "전략", "시뮬레이션", "strategy"],
-    descKo: "6 preset 전략을 과거 데이터로 시뮬레이션",
+    descKo: "8 preset 전략을 과거 데이터로 시뮬레이션",
     icon: "⚡",
   },
   {

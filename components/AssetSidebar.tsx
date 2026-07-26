@@ -65,6 +65,7 @@ const GROUPS: Group[] = [
     id: "backtest",
     Icon: FlaskConical,
     items: [
+      {href: "/backtest", labelKey: "backtest-hub"},
       {href: "/backtest/new", labelKey: "backtest-new"},
       {href: "/backtest/custom", labelKey: "backtest-custom"},
       {href: "/backtest/vs", labelKey: "backtest-vs"},

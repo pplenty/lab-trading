@@ -15,7 +15,7 @@ import {VsBacktestPanel} from "@/components/panels/VsBacktestPanel";
 import type {AssetClass, Candle} from "@/lib/types";
 
 // 2-strategy 비교 백테스트 — /backtest/vs?asset=us&symbol=aapl&a=sma-cross&b=rsi-reversion
-// 같은 종목에 전략 A vs B 결과 side-by-side. 6 preset.
+// 같은 종목에 전략 A vs B 결과 side-by-side. 8 preset.
 
 export const revalidate = 60;
 

@@ -34,6 +34,7 @@ const STATIC_PATHS = [
   "/kr/losers",
   "/kr/volume",
   "/kr/news",
+  "/backtest",
   "/backtest/new",
   "/market",
   "/indices",
