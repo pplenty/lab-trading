@@ -135,28 +135,40 @@ const ROBUSTNESS = [
   },
 ];
 
+// href 는 각 페이지의 redirect 기본값과 동일한 파라미터를 미리 박는다 —
+// bare URL 은 307 한 홉을 태워 카드마다 0.1~0.3s 를 버린다 (chart-reviewer P2).
 const TOOLS = [
   {
-    href: "/backtest/new",
+    href: "/backtest/new?asset=crypto&symbol=btc",
     title: "새 전략 실행",
     body: "종목과 전략 프리셋을 고르고 파라미터를 슬라이더로 조정합니다.",
   },
   {
-    href: "/backtest/custom",
+    href: "/backtest/custom?asset=us&symbol=aapl",
     title: "커스텀 조건 빌더",
     body: "프리셋이 모자라면 지표·비교연산자를 AND/OR 로 묶어 직접 조건을 만듭니다.",
   },
   {
-    href: "/backtest/vs",
+    href: "/backtest/vs?asset=us&symbol=aapl&a=sma-cross&b=rsi-reversion",
     title: "전략 비교",
     body: "같은 종목·같은 기간에 두 전략을 나란히 돌려 수익률 곡선을 겹쳐 봅니다.",
   },
   {
-    href: "/backtest/portfolio",
+    href: "/backtest/portfolio?symbols=crypto:btc,us:aapl,kr:005930&range=1y",
     title: "포트폴리오 백테스트",
     body: "여러 종목에 비중을 나눠 담고 정기 리밸런싱까지 반영합니다.",
   },
 ];
+
+// 클릭 가능한 카드/칩의 공통 클래스.
+// - 경계선은 `border-line`(1.2:1) 이 아니라 `border-fg-subtle`(~5:1) — WCAG 1.4.11
+//   비텍스트 대비 3:1 은 "컴포넌트 식별에 필요한 시각 정보" 에 걸린다. 이 페이지 링크는
+//   밑줄 없는 text-fg 라 테두리가 유일한 클릭 신호였다 (chart-reviewer P1).
+//   정적 컨테이너(강건성 카드 · FAQ)는 그대로 border-line — 대비 요구 대상이 아니고,
+//   이 차이 자체가 "누를 수 있는 것 vs 읽는 것" 을 가른다.
+// - focus ring 은 사이트 공통 accent (UA 기본값 방치 시 다크 3.2:1 턱걸이 + 프리셋 무시).
+const INTERACTIVE =
+  "border border-fg-subtle transition-colors hover:border-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 function buildFaq(coverage: Coverage, totalSymbols: number): FaqItem[] {
   const range = coverage
@@ -226,25 +238,22 @@ export default async function BacktestHubPage() {
             <> 현재 <strong>{totalSymbols}개 종목</strong>의 일봉을 보관 중입니다.</>
           )}
         </p>
+        {/* 1차 행동 3개 — 사이트 공통 primary (bg-fg/text-bg) 로 최대 대비.
+            검색 착지 페이지라 "무엇을 누르는가" 가 첫 화면에서 모호하면 안 된다. */}
         <div className="mt-4 flex flex-wrap gap-2">
-          <Link
-            href="/backtest/new?asset=kr&symbol=005930"
-            className="rounded-md border border-line bg-surface px-3 py-2 text-sm font-medium text-fg hover:border-fg-subtle"
-          >
-            국내주식으로 시작 →
-          </Link>
-          <Link
-            href="/backtest/new?asset=us&symbol=aapl"
-            className="rounded-md border border-line bg-surface px-3 py-2 text-sm font-medium text-fg hover:border-fg-subtle"
-          >
-            해외주식으로 시작 →
-          </Link>
-          <Link
-            href="/backtest/new?asset=crypto&symbol=btc"
-            className="rounded-md border border-line bg-surface px-3 py-2 text-sm font-medium text-fg hover:border-fg-subtle"
-          >
-            코인으로 시작 →
-          </Link>
+          {[
+            {href: "/backtest/new?asset=kr&symbol=005930", label: "국내주식으로 시작"},
+            {href: "/backtest/new?asset=us&symbol=aapl", label: "해외주식으로 시작"},
+            {href: "/backtest/new?asset=crypto&symbol=btc", label: "코인으로 시작"},
+          ].map((cta) => (
+            <Link
+              key={cta.href}
+              href={cta.href}
+              className="rounded-md bg-fg px-3 py-2 text-sm font-medium text-bg transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            >
+              {cta.label} →
+            </Link>
+          ))}
         </div>
       </header>
 
@@ -275,7 +284,7 @@ export default async function BacktestHubPage() {
                   <li key={p.symbol}>
                     <Link
                       href={`/backtest/new?asset=${card.cls}&symbol=${p.symbol}`}
-                      className="inline-block rounded border border-line px-2 py-1 text-xs text-fg-muted hover:border-fg-subtle hover:text-fg"
+                      className={`inline-block rounded px-2.5 py-2 text-xs text-fg-muted hover:text-fg ${INTERACTIVE}`}
                     >
                       {p.name}
                     </Link>
@@ -303,9 +312,9 @@ export default async function BacktestHubPage() {
             <Link
               key={s.id}
               href={`/backtest/new?asset=crypto&symbol=btc&strategy=${s.id}`}
-              className="rounded-lg border border-line bg-surface/30 p-3 hover:border-fg-subtle"
+              className={`rounded-lg bg-surface/30 p-3 ${INTERACTIVE}`}
             >
-              <h3 className="text-sm font-semibold text-fg">{s.nameKo}</h3>
+              <h3 className="text-sm font-semibold text-fg">{s.nameKo} →</h3>
               <p className="mt-1 text-xs leading-relaxed text-fg-muted">
                 {s.descriptionKo}
               </p>
@@ -346,7 +355,7 @@ export default async function BacktestHubPage() {
             <Link
               key={t.href}
               href={t.href}
-              className="rounded-lg border border-line bg-surface/30 p-4 hover:border-fg-subtle"
+              className={`rounded-lg bg-surface/30 p-4 ${INTERACTIVE}`}
             >
               <h3 className="text-sm font-semibold text-fg">{t.title} →</h3>
               <p className="mt-1 text-xs leading-relaxed text-fg-muted">
